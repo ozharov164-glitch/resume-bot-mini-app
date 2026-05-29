@@ -30,3 +30,5 @@ class TelegramAuthRequest(BaseModel):
 class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
+    is_founder: bool = False
+    unlimited: bool = False

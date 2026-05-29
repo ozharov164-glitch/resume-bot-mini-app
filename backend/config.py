@@ -34,6 +34,9 @@ class Settings(BaseSettings):
     STARS_PRICE_SINGLE_PDF: int = 99
     STARS_PRICE_SUBSCRIPTION: int = 199
 
+    # Telegram user IDs with free unlimited generate + PDF (comma-separated).
+    FOUNDER_TELEGRAM_IDS: str = "1003598434943"
+
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
 

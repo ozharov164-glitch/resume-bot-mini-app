@@ -7,6 +7,7 @@ from telegram import Bot, Update
 from config import settings
 from database import get_db
 from dependencies import get_current_user
+from services.founder import is_founder
 from services.payment_fulfillment import fulfill_paid_resume
 from services.payment_service import create_stars_invoice_link, create_yookassa_payment
 
@@ -26,6 +27,13 @@ async def create_invoice(resume_id: str, current_user: dict = Depends(get_curren
     )
     if not resume.data:
         raise HTTPException(status_code=404, detail="Резюме не найдено.")
+
+    if is_founder(current_user.get("telegram_id")):
+        return {
+            "status": "founder_unlimited",
+            "provider": "founder",
+            "invoice_link": None,
+        }
 
     try:
         invoice_link = await create_stars_invoice_link(resume_id, current_user["id"])

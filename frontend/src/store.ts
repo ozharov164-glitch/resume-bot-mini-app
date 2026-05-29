@@ -18,6 +18,8 @@ interface AppState {
   setLoading: (value: boolean) => void;
   isPaid: boolean;
   setPaid: (value: boolean) => void;
+  isFounder: boolean;
+  setFounder: (value: boolean) => void;
 }
 
 export const useAppStore = create<AppState>((set) => ({
@@ -34,4 +36,6 @@ export const useAppStore = create<AppState>((set) => ({
   setLoading: (value) => set({ isLoading: value }),
   isPaid: false,
   setPaid: (value) => set({ isPaid: value }),
+  isFounder: false,
+  setFounder: (value) => set({ isFounder: value }),
 }));

@@ -6,6 +6,7 @@ from jose import jwt
 from config import settings
 from database import get_db
 from models.schemas import TelegramAuthRequest, TokenResponse
+from services.founder import is_founder
 from services.telegram_service import verify_telegram_init_data
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
@@ -33,9 +34,10 @@ async def auth_with_telegram(payload: TelegramAuthRequest, db=Depends(get_db)):
 
     now = datetime.now(timezone.utc)
     expire = now + timedelta(hours=settings.JWT_EXPIRE_HOURS)
+    founder = is_founder(telegram_id)
     access_token = jwt.encode(
-        {"sub": str(telegram_id), "exp": int(expire.timestamp())},
+        {"sub": str(telegram_id), "exp": int(expire.timestamp()), "founder": founder},
         settings.JWT_SECRET,
         algorithm=settings.JWT_ALGORITHM,
     )
-    return TokenResponse(access_token=access_token)
+    return TokenResponse(access_token=access_token, is_founder=founder, unlimited=founder)

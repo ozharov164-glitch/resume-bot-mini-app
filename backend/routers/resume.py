@@ -9,6 +9,7 @@ from database import get_db
 from dependencies import get_current_user
 from models.schemas import GenerateResumeRequest, ResumeGenerationResponse
 from services.ai_service import generate_resume
+from services.founder import is_founder
 from services.payment_fulfillment import parse_resume_data
 from services.pdf_service import generate_pdf
 from services.telegram_service import send_document_to_user
@@ -22,17 +23,20 @@ async def create_resume(user_data: GenerateResumeRequest, current_user: dict = D
     try:
         resume_data = await generate_resume(user_data.model_dump())
         resume_id = str(uuid.uuid4())
+        founder = is_founder(current_user.get("telegram_id"))
         db.table("resumes").insert(
             {
                 "id": resume_id,
                 "user_id": current_user["id"],
                 "data": resume_data,
                 "user_answers": user_data.model_dump(),
-                "is_paid": False,
+                "is_paid": founder,
                 "created_at": datetime.utcnow().isoformat(),
             }
         ).execute()
-        return ResumeGenerationResponse(resume_id=resume_id, resume=resume_data, paid=False)
+        if founder:
+            logger.info("founder resume generated telegram_id=%s resume_id=%s", current_user.get("telegram_id"), resume_id)
+        return ResumeGenerationResponse(resume_id=resume_id, resume=resume_data, paid=founder)
     except Exception as exc:
         logger.exception("resume generate failed user_id=%s", current_user.get("id"))
         raise HTTPException(status_code=500, detail="Не удалось сгенерировать резюме. Попробуйте еще раз.") from exc
@@ -67,8 +71,13 @@ async def download_pdf(resume_id: str, current_user: dict = Depends(get_current_
         raise HTTPException(status_code=404, detail="Резюме не найдено.")
 
     resume = result.data[0]
-    if not resume.get("is_paid"):
+    founder = is_founder(current_user.get("telegram_id"))
+    if not resume.get("is_paid") and not founder:
         raise HTTPException(status_code=403, detail="Для скачивания PDF требуется оплата.")
+    if founder and not resume.get("is_paid"):
+        db.table("resumes").update({"is_paid": True, "paid_at": datetime.utcnow().isoformat()}).eq(
+            "id", resume_id
+        ).execute()
 
     resume_data = parse_resume_data(resume["data"])
     pdf_bytes = generate_pdf(resume_data)

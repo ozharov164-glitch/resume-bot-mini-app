@@ -11,7 +11,7 @@ import { useAppStore } from "./store";
 import { initTelegramTheme, tg } from "./telegram";
 
 export default function App() {
-  const { page, setAuthToken, isLoading, setLoading, setPage } = useAppStore();
+  const { page, setAuthToken, setFounder, isLoading, setLoading, setPage } = useAppStore();
 
   useEffect(() => {
     initTelegramTheme();
@@ -22,6 +22,7 @@ export default function App() {
         if (!initData) return;
         const auth = await authWithTelegram(initData);
         setAuthToken(auth.access_token);
+        setFounder(Boolean(auth.is_founder || auth.unlimited));
       } catch (error) {
         console.error(error);
       } finally {
@@ -29,7 +30,7 @@ export default function App() {
       }
     };
     void bootstrap();
-  }, [setAuthToken, setLoading]);
+  }, [setAuthToken, setFounder, setLoading]);
 
   if (isLoading) {
     return (
