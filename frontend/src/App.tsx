@@ -34,10 +34,17 @@ export default function App() {
   if (isLoading) {
     return (
       <div
-        className="min-h-screen flex items-center justify-center text-base"
+        className="min-h-screen flex flex-col items-center justify-center gap-4 px-6"
         style={{ background: "var(--tg-bg)", color: "var(--tg-text)" }}
       >
-        Загружаем приложение...
+        <div
+          className="w-10 h-10 rounded-full border-2 border-t-transparent animate-spin"
+          style={{ borderColor: "var(--accent)", borderTopColor: "transparent" }}
+          aria-hidden
+        />
+        <p className="text-base font-semibold" style={{ color: "var(--text-muted)" }}>
+          Загружаем приложение...
+        </p>
       </div>
     );
   }

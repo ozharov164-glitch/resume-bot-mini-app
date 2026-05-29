@@ -27,6 +27,7 @@ export interface TelegramWebApp {
   };
   ready: () => void;
   expand: () => void;
+  close?: () => void;
 }
 
 declare global {
@@ -35,6 +36,8 @@ declare global {
   }
 }
 
+import { applySemanticTheme } from "./lib/theme";
+
 export const tg = window.Telegram?.WebApp;
 
 export function initTelegramTheme() {
@@ -42,9 +45,11 @@ export function initTelegramTheme() {
   tg.ready();
   tg.expand();
   const p = tg.themeParams || {};
-  document.documentElement.style.setProperty("--tg-bg", p.bg_color || "#ffffff");
+  const bg = p.bg_color || "#ffffff";
+  document.documentElement.style.setProperty("--tg-bg", bg);
   document.documentElement.style.setProperty("--tg-text", p.text_color || "#0f172a");
   document.documentElement.style.setProperty("--tg-button", p.button_color || "#3390ec");
   document.documentElement.style.setProperty("--tg-button-text", p.button_text_color || "#ffffff");
   document.documentElement.style.setProperty("--tg-secondary-bg", p.secondary_bg_color || "#f4f4f5");
+  applySemanticTheme(bg);
 }

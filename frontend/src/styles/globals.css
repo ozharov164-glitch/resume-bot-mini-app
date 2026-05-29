@@ -8,20 +8,98 @@
   --tg-button: #3390ec;
   --tg-button-text: #ffffff;
   --tg-secondary-bg: #f4f4f5;
+  --tg-safe-bottom: env(safe-area-inset-bottom, 0px);
   --accent: #e8962a;
   --accent-light: #fdf3e3;
   --accent-dark: #b36b0e;
+  --surface-elevated: #f4f4f5;
+  --border-subtle: color-mix(in srgb, var(--tg-text) 10%, transparent);
+  --text-muted: color-mix(in srgb, var(--tg-text) 55%, transparent);
+  --benefit-bg: color-mix(in srgb, var(--accent) 12%, var(--tg-secondary-bg));
+  --benefit-border: color-mix(in srgb, var(--accent) 38%, transparent);
+  --benefit-text: var(--tg-text);
+  --hint-bg: var(--accent-light);
+  --hint-text: var(--accent-dark);
+  --on-accent: #ffffff;
 }
 
 * {
   box-sizing: border-box;
 }
 
+html {
+  -webkit-tap-highlight-color: transparent;
+}
+
 body {
   margin: 0;
   font-family: "Nunito", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
   background: var(--tg-bg);
   color: var(--tg-text);
+  touch-action: manipulation;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+.accent-highlight {
+  color: var(--accent);
+}
+
+.stat-line {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.stat-number {
+  color: var(--accent-dark);
+  font-weight: 800;
+}
+
+[data-theme-mode="dark"] .stat-number {
+  color: var(--accent);
+}
+
+.hint-pill {
+  background: var(--hint-bg);
+  color: var(--hint-text);
+  border-radius: 0.75rem;
+  padding: 0.625rem 0.875rem;
+  font-size: 0.875rem;
+  line-height: 1.4;
+}
+
+.skill-chip {
+  display: inline-block;
+  padding: 0.35rem 0.65rem;
+  border-radius: 9999px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  background: color-mix(in srgb, var(--accent) 18%, var(--tg-secondary-bg));
+  color: var(--tg-text);
+  border: 1px solid var(--benefit-border);
+}
+
+.success-icon {
+  width: 4.5rem;
+  height: 4.5rem;
+  border-radius: 9999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+  margin: 0 auto;
+  background: color-mix(in srgb, var(--accent) 22%, var(--tg-secondary-bg));
+  border: 2px solid var(--benefit-border);
 }
 
 @keyframes shimmer {

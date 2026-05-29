@@ -1,6 +1,10 @@
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 
+import { Card } from "../components/ui/Card";
+import { PageHeader } from "../components/ui/PageHeader";
+import { Screen } from "../components/ui/Screen";
+
 const PHRASES = [
   "✍️ Пишу раздел «О себе»...",
   "📋 Оформляю опыт работы...",
@@ -38,53 +42,50 @@ export function LoadingPage() {
   }, []);
 
   return (
-    <div
-      className="min-h-screen px-4 py-6 flex flex-col gap-8"
-      style={{ background: "var(--tg-bg)", color: "var(--tg-text)" }}
-    >
-      <div className="flex flex-col gap-2">
+    <Screen className="gap-8">
+      <PageHeader eyebrow="Почти готово" title="Пишу твоё резюме" subtitle="Обычно занимает 4–6 секунд" />
+
+      <div
+        className="h-2.5 w-full rounded-full overflow-hidden"
+        style={{ background: "var(--tg-secondary-bg)" }}
+        role="progressbar"
+        aria-valuenow={Math.round(progress)}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-label="Прогресс составления резюме"
+      >
         <div
-          className="h-2 w-full rounded-full overflow-hidden"
-          style={{ background: "var(--tg-secondary-bg)" }}
-          role="progressbar"
-          aria-valuenow={Math.round(progress)}
-          aria-valuemin={0}
-          aria-valuemax={100}
-        >
-          <div
-            className="h-full rounded-full transition-[width] duration-300 ease-out"
-            style={{ width: `${progress}%`, background: "var(--tg-button)" }}
-          />
-        </div>
+          className="h-full rounded-full transition-[width] duration-300 ease-out"
+          style={{
+            width: `${progress}%`,
+            background: "linear-gradient(90deg, var(--tg-button), var(--accent))",
+          }}
+        />
       </div>
 
-      <div className="flex-1 flex flex-col items-center justify-center gap-3 text-center min-h-[120px]">
+      <div className="flex-1 flex flex-col items-center justify-center gap-3 text-center min-h-[100px]">
         <AnimatePresence mode="wait">
           <motion.p
             key={phraseIndex}
-            className="text-lg font-semibold leading-snug px-2"
+            className="text-lg font-bold leading-snug px-2"
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
             transition={{ duration: 0.25 }}
+            aria-live="polite"
           >
             {PHRASES[phraseIndex]}
           </motion.p>
         </AnimatePresence>
-        <p className="text-sm opacity-60">обычно занимает 4–6 секунд</p>
       </div>
 
-      <div
-        className="rounded-2xl p-5 flex flex-col gap-3"
-        style={{ background: "var(--tg-secondary-bg)" }}
-        aria-hidden
-      >
+      <Card variant="resume" className="!p-5 flex flex-col gap-3" aria-hidden>
         <div className="skeleton-line h-5 w-[55%]" />
         <div className="skeleton-line h-4 w-[40%]" />
         {SKELETON_WIDTHS.map((width) => (
           <div key={width} className="skeleton-line h-3" style={{ width }} />
         ))}
-      </div>
-    </div>
+      </Card>
+    </Screen>
   );
 }
