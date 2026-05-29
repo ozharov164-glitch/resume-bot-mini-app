@@ -8,6 +8,7 @@ class GenerateResumeRequest(BaseModel):
     experience_level: str = "нет опыта"
     last_job: str = "опыта работы нет"
     education: str = "среднее"
+    education_place: str = ""
     skills: list[str] = Field(default_factory=list)
     city: str = ""
     salary: str = ""

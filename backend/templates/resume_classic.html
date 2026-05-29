@@ -20,7 +20,7 @@
     {% if resume.salary %}
     <div class="sidebar-block">
       <div class="sidebar-title">Зарплата</div>
-      <div class="sidebar-line">{{ resume.salary }} ₽/мес</div>
+      <div class="sidebar-line">{{ resume.salary }}</div>
     </div>
     {% endif %}
 
@@ -106,9 +106,13 @@
       </div>
       {% for edu in resume.education %}
       <div class="edu-entry">
-        <span class="edu-institution">{{ edu.institution }}</span>
-        {% if edu.degree %}<span class="edu-degree"> — {{ edu.degree }}</span>{% endif %}
-        {% if edu.year %}<span class="edu-degree"> ({{ edu.year }})</span>{% endif %}
+        {% if edu.institution and edu.institution not in ['Среднее', 'Колледж', 'ВУЗ', 'Высшее', 'Курсы', ''] %}
+          <span class="edu-institution">{{ edu.institution }}</span>
+          {% if edu.degree %} — <span class="edu-degree">{{ edu.degree }}</span>{% endif %}
+        {% else %}
+          <span class="edu-degree">{{ edu.degree or (edu.institution + ' образование') }}</span>
+        {% endif %}
+        {% if edu.year %} ({{ edu.year }}){% endif %}
       </div>
       {% endfor %}
     </div>

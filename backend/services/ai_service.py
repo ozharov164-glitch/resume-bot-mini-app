@@ -22,6 +22,17 @@ SYSTEM_PROMPT = """Ты HR-редактор резюме для российск
 6. Навыки — объедини указанные пользователем с уместными для должности; без дубликатов.
 7. Сертификаты/лицензии — только из запроса; иначе пустой массив.
 8. Языки — всегда включай «Русский — родной»; добавь иностранные из запроса.
+9. Период работы: используй формат «Янв 2023 — Мар 2025» если есть месяцы,
+    «2019 — 2024» если только годы, «2023 — настоящее время» если работает сейчас.
+    НЕЛЬЗЯ писать «(2 месяца)» или «(N лет)» — это не формат резюме hh.ru.
+10. Если опыт передан структурированно (несколько мест работы):
+    создай ОТДЕЛЬНУЮ запись experience[] для каждого места.
+    Не объединяй разные компании в одну запись.
+11. Образование: если в institution только уровень-заглушка
+    («Среднее», «ВУЗ», «Колледж», «Высшее») без конкретного названия —
+    запиши institution как пустую строку, а degree как «[Уровень] образование».
+12. Зарплата: если salary передана как число («50000») —
+    верни ровно это число в поле salary без суффиксов.
 
 Ответ: ТОЛЬКО JSON, без markdown и комментариев:
 {"full_name":"","target_position":"","city":"","phone":"","email":"","salary":"","summary":"","experience":[{"company":"","position":"","period":"","description":""}],"education":[{"institution":"","degree":"","year":""}],"skills":[],"languages":["Русский — родной"],"certificates":[]}"""
@@ -93,11 +104,22 @@ def _format_skills(skills: Any) -> str:
 
 def _build_user_payload(user_data: dict) -> str:
     """Структурированные факты — модель лучше понимает, чем сжатые однострочники."""
+    last_job = user_data.get("last_job", "опыта нет")
+    if "должность:" in str(last_job):
+        last_job_block = f"Опыт работы (структурированный):\n{last_job}"
+    else:
+        last_job_block = f"Последняя работа / обязанности:\n{_truncate(last_job, MAX_FIELD_LEN['last_job'])}"
+
+    education_line = f"Образование: {user_data.get('education', 'среднее')}"
+    education_place = (user_data.get("education_place") or "").strip()
+    if education_place:
+        education_line += f"\nУчебное заведение: {education_place}"
+
     blocks = [
         f"Целевая должность: {_truncate(user_data.get('target_position', ''), MAX_FIELD_LEN['target_position'])}",
         f"Уровень опыта: {user_data.get('experience_level', 'нет опыта')}",
-        f"Последняя работа / обязанности:\n{_truncate(user_data.get('last_job', 'опыта нет'), MAX_FIELD_LEN['last_job'])}",
-        f"Образование: {user_data.get('education', 'среднее')}",
+        last_job_block,
+        education_line,
         f"Город: {_truncate(user_data.get('city', ''), MAX_FIELD_LEN['city'])}",
         f"О себе (исходник от кандидата):\n{_truncate(user_data.get('about', ''), MAX_FIELD_LEN['about'])}",
         f"Имя: {_truncate(user_data.get('name', ''), MAX_FIELD_LEN['name'])}",

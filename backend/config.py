@@ -14,7 +14,7 @@ class Settings(BaseSettings):
     # Fastest providers for v4-flash (OpenRouter latency p50, auto-updated via deploy script).
     OPENROUTER_PROVIDER_ONLY: str = "parasail,alibaba,deepseek,morph"
     # Достаточно для полноценного резюме; меньше 2000 — без лишнего запаса.
-    OPENROUTER_MAX_TOKENS: int = 1600
+    OPENROUTER_MAX_TOKENS: int = 2500
 
     SUPABASE_URL: str
     SUPABASE_KEY: str

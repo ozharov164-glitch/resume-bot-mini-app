@@ -1,10 +1,19 @@
+export interface WorkEntry {
+  company: string;
+  position: string;
+  period: string;
+  duties: string;
+}
+
 export interface UserAnswers {
   name: string;
   phone: string;
   target_position: string;
   experience_level: string;
   last_job: string;
+  work_history: WorkEntry[];
   education: string;
+  education_place: string;
   skills: string[];
   city: string;
   salary: string;

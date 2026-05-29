@@ -1,3 +1,4 @@
+import re
 from pathlib import Path
 
 from jinja2 import Environment, FileSystemLoader
@@ -224,7 +225,9 @@ h1 {{
     padding: 2pt 6pt;
     font-size: 8.5pt;
     color: {BRAND_PRIMARY};
-    white-space: nowrap;
+    word-break: break-word;
+    white-space: normal;
+    max-width: 100%;
 }}
 
 .footer {{
@@ -240,6 +243,12 @@ h1 {{
 
 
 def generate_pdf(resume_data: dict, template_name: str = "classic") -> bytes:
+    salary = resume_data.get("salary", "")
+    if salary:
+        salary_clean = re.sub(r"[^\d\s]", "", str(salary)).strip()
+        if salary_clean:
+            resume_data["salary"] = salary_clean + " ₽/мес"
+
     env = Environment(loader=FileSystemLoader(str(TEMPLATES_DIR)))
     template = env.get_template(f"resume_{template_name}.html")
     html_content = template.render(resume=resume_data)

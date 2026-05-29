@@ -1,4 +1,4 @@
-import type { UserAnswers } from "../types";
+import type { UserAnswers, WorkEntry } from "../types";
 
 export type StepType =
   | "text"
@@ -7,7 +7,8 @@ export type StepType =
   | "profession"
   | "contacts_dual"
   | "options_with_input"
-  | "multi_select";
+  | "multi_select"
+  | "work_history";
 
 export interface OnboardingStep {
   id: keyof UserAnswers | string;
@@ -18,6 +19,8 @@ export interface OnboardingStep {
   hint?: string;
   skipText?: string;
   optional?: boolean;
+  required?: boolean;
+  showIf?: (answers: Partial<UserAnswers>) => boolean;
   optionsByPosition?: Record<string, readonly string[]>;
   allowCustomInput?: boolean;
   customInputPlaceholder?: string;
@@ -73,17 +76,28 @@ export const ONBOARDING_STEPS: OnboardingStep[] = [
     optional: true,
   },
   {
-    id: "last_job",
-    question: "Где работал и что делал?",
-    type: "textarea",
-    placeholder: "Компания, период (2019–2024). Что делал и чего добился: цифры, объёмы, результаты.",
-    hint: "Укажи компанию, сроки и 2–3 достижения с цифрами — это усилит резюме.",
+    id: "work_history",
+    question: "Где ты работал?",
+    type: "work_history",
+    hint: "Добавь до 3 мест работы — чем больше деталей, тем лучше резюме.",
+    skipText: "Нет опыта работы",
+    required: false,
   },
   {
     id: "education",
     question: "Образование",
     type: "options",
     options: ["Среднее", "Колледж", "Незаконченное высшее", "Высшее", "Курсы"],
+  },
+  {
+    id: "education_place",
+    question: "Название учебного заведения",
+    type: "text",
+    placeholder: "Например: МГТУ им. Баумана, Рязанский колледж",
+    hint: "Необязательно — можно пропустить",
+    skipText: "Пропустить",
+    required: false,
+    showIf: (answers) => answers.education !== "Среднее",
   },
   {
     id: "certificates",
@@ -118,6 +132,20 @@ export const ONBOARDING_STEPS: OnboardingStep[] = [
 ];
 
 export const OPTIONS_ONLY = new Set(["experience_level", "education", "languages"]);
+
+export function getVisibleSteps(answers: Partial<UserAnswers>): OnboardingStep[] {
+  return ONBOARDING_STEPS.filter((s) => !s.showIf || s.showIf(answers));
+}
+
+export function buildLastJobFromWorkHistory(workHistory: WorkEntry[] | undefined): string {
+  return (workHistory || [])
+    .filter((j) => j.company.trim() || j.duties.trim())
+    .map(
+      (j) =>
+        `${j.company} (${j.period}), должность: ${j.position}.\n${j.duties}`,
+    )
+    .join("\n\n");
+}
 
 export function professionOtherSelected(value: string) {
   const presetValues = PROFESSION_PRESETS.map((p) => p.value).filter(Boolean);

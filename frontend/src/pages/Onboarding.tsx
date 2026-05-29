@@ -9,25 +9,32 @@ import { AppHeader } from "../components/ui/AppHeader";
 import { Button } from "../components/ui/Button";
 import { FixedBottomBar } from "../components/ui/FixedBottomBar";
 import { Screen } from "../components/ui/Screen";
-import { TextArea, TextInput } from "../components/ui/TextField";
+import { TextInput } from "../components/ui/TextField";
+import { VoiceTextArea } from "../components/ui/VoiceTextArea";
+import { WorkHistoryStep } from "../components/ui/WorkHistoryStep";
 import { useTelegramBackButton } from "../hooks/useTelegramBackButton";
 import {
-  ONBOARDING_STEPS,
   OPTIONS_ONLY,
   PROFESSION_PRESETS,
   SALARY_CUSTOM_OPTION,
+  buildLastJobFromWorkHistory,
+  getVisibleSteps,
   normalizeSalaryDigits,
   professionOtherSelected,
   salaryFromOption,
 } from "../lib/onboardingSteps";
 import { useAppStore } from "../store";
 import { getTg } from "../telegram";
-import type { UserAnswers } from "../types";
+import type { UserAnswers, WorkEntry } from "../types";
 
 function readStringAnswer(answers: Partial<UserAnswers>, key: string): string {
   const raw = answers[key as keyof UserAnswers];
   if (Array.isArray(raw)) return "";
   return String(raw ?? "");
+}
+
+function defaultWorkEntry(position = ""): WorkEntry {
+  return { company: "", position, period: "", duties: "" };
 }
 
 export function OnboardingPage() {
@@ -44,9 +51,13 @@ export function OnboardingPage() {
     setOnboardingStep,
   } = useAppStore();
 
-  const step = onboardingStep;
+  const visibleSteps = useMemo(() => getVisibleSteps(answers), [answers]);
+  const step = Math.min(onboardingStep, Math.max(visibleSteps.length - 1, 0));
   const [value, setValue] = useState(() =>
-    readStringAnswer(answers, ONBOARDING_STEPS[step]?.id ?? "name"),
+    readStringAnswer(answers, visibleSteps[step]?.id ?? "name"),
+  );
+  const [workHistory, setWorkHistory] = useState<WorkEntry[]>(
+    () => answers.work_history?.length ? answers.work_history : [defaultWorkEntry(String(answers.target_position ?? ""))],
   );
   const [contactPhone, setContactPhone] = useState(() => readStringAnswer(answers, "phone"));
   const [contactEmail, setContactEmail] = useState(() => readStringAnswer(answers, "email"));
@@ -57,10 +68,11 @@ export function OnboardingPage() {
   const [submitting, setSubmitting] = useState(false);
 
   const isEdit = onboardingMode === "edit";
-  const current = ONBOARDING_STEPS[step];
-  const isLast = step === ONBOARDING_STEPS.length - 1;
+  const current = visibleSteps[step];
+  const isLast = step === visibleSteps.length - 1;
   const isContactsStep = current.type === "contacts_dual";
   const isSalaryStep = current.type === "options_with_input";
+  const isWorkHistoryStep = current.type === "work_history";
   const salaryCustomMode = isSalaryStep && value === SALARY_CUSTOM_OPTION;
 
   const showTextInput =
@@ -73,6 +85,11 @@ export function OnboardingPage() {
     if (current.type === "contacts_dual") {
       setAnswer("phone", contactPhone.trim());
       setAnswer("email", contactEmail.trim());
+      return;
+    }
+    if (current.type === "work_history") {
+      setAnswer("work_history", workHistory);
+      setAnswer("last_job", buildLastJobFromWorkHistory(workHistory));
       return;
     }
     if (current.type === "options_with_input" && id === "salary") {
@@ -94,24 +111,36 @@ export function OnboardingPage() {
     current.id,
     current.type,
     salaryCustomDigits,
+    workHistory,
     setAnswer,
     value,
   ]);
 
   const canContinue = useMemo(() => {
-    if (current.optional) return true;
+    if (current.required === false || current.optional) return true;
     if (current.type === "contacts_dual") return true;
     if (current.type === "options_with_input") return true;
+    if (current.type === "work_history") return true;
     return value.trim().length > 0;
-  }, [current.optional, current.type, value]);
+  }, [current.optional, current.required, current.type, value]);
 
   const goToStep = useCallback(
     (nextStep: number) => {
       setOnboardingStep(nextStep);
-      const next = ONBOARDING_STEPS[nextStep];
+      const steps = getVisibleSteps(useAppStore.getState().answers);
+      const next = steps[nextStep];
+      if (!next) return;
       if (next.type === "contacts_dual") {
         setContactPhone(readStringAnswer(answers, "phone"));
         setContactEmail(readStringAnswer(answers, "email"));
+        setValue("");
+      } else if (next.type === "work_history") {
+        const saved = useAppStore.getState().answers.work_history;
+        setWorkHistory(
+          saved?.length
+            ? saved
+            : [defaultWorkEntry(String(useAppStore.getState().answers.target_position ?? ""))],
+        );
         setValue("");
       } else if (next.type === "options_with_input" && next.id === "salary") {
         const saved = readStringAnswer(answers, "salary");
@@ -176,7 +205,13 @@ export function OnboardingPage() {
     setPage("loading");
     try {
       const token = await ensureAuthToken();
-      const payload = { ...useAppStore.getState().answers };
+      const state = useAppStore.getState();
+      const payload = { ...state.answers };
+      const last_job = buildLastJobFromWorkHistory(state.answers.work_history);
+      if (last_job) {
+        payload.last_job = last_job;
+      }
+      setAnswer("last_job", last_job);
       const response = await generateResume(token, payload);
       setResumeResult(response.resume_id, response.resume, response.paid);
       if (response.paid) {
@@ -218,13 +253,27 @@ export function OnboardingPage() {
     } else if (current.id === "certificates") {
       setAnswer("certificates", "");
       setValue("");
+    } else if (current.id === "education_place") {
+      setAnswer("education_place", "");
+      setValue("");
+    } else if (isWorkHistoryStep) {
+      setAnswer("work_history", []);
+      setAnswer("last_job", "");
+      setAnswer("experience_level", "Нет опыта");
+      setWorkHistory([defaultWorkEntry(String(answers.target_position ?? ""))]);
     }
     goToStep(step + 1);
   };
 
   const showSkip =
     Boolean(current.skipText) &&
-    (isContactsStep || isSalaryStep || current.id === "languages" || current.id === "certificates" || current.optional);
+    !isWorkHistoryStep &&
+    (isContactsStep ||
+      isSalaryStep ||
+      current.id === "languages" ||
+      current.id === "certificates" ||
+      current.id === "education_place" ||
+      current.optional);
 
   return (
     <Screen withBottomBar className="px-4">
@@ -239,7 +288,7 @@ export function OnboardingPage() {
           </div>
         )}
 
-        <ProgressBar current={step + 1} total={ONBOARDING_STEPS.length} />
+        <ProgressBar current={step + 1} total={visibleSteps.length} />
 
         <AnimatePresence mode="wait">
           <motion.div
@@ -350,10 +399,20 @@ export function OnboardingPage() {
               />
             )}
 
+            {current.type === "work_history" && (
+              <WorkHistoryStep
+                entries={workHistory}
+                targetPosition={String(answers.target_position ?? "")}
+                onChange={setWorkHistory}
+                onNoExperience={skipOptional}
+              />
+            )}
+
             {current.type === "textarea" && (
-              <TextArea
+              <VoiceTextArea
+                fieldId={`onboarding-${current.id}`}
                 value={value}
-                onChange={(e) => setValue(e.target.value)}
+                onChange={setValue}
                 placeholder={current.placeholder}
                 rows={5}
               />

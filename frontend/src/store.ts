@@ -1,6 +1,6 @@
 import { create } from "zustand";
 
-import type { ResumeData, UserAnswers } from "./types";
+import type { ResumeData, UserAnswers, WorkEntry } from "./types";
 
 type Page = "home" | "onboarding" | "skill_pick" | "loading" | "preview" | "payment" | "success" | "history";
 type OnboardingMode = "create" | "edit";
@@ -9,7 +9,7 @@ interface AppState {
   page: Page;
   setPage: (page: Page) => void;
   answers: Partial<UserAnswers>;
-  setAnswer: (key: keyof UserAnswers, value: string | string[]) => void;
+  setAnswer: (key: keyof UserAnswers, value: string | string[] | WorkEntry[]) => void;
   setAnswers: (answers: Partial<UserAnswers>) => void;
   authToken: string | null;
   setAuthToken: (token: string) => void;
