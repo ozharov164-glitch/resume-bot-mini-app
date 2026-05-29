@@ -28,26 +28,34 @@ export function PaymentPage() {
       const { invoice_link: invoiceLink } = await createStarsInvoice(authToken, resumeId);
 
       await new Promise<void>((resolve, reject) => {
+        let settled = false;
+        const finish = (fn: () => void) => {
+          if (settled) return;
+          settled = true;
+          clearTimeout(timer);
+          fn();
+        };
+        const timer = window.setTimeout(() => finish(() => reject(new Error("timeout"))), 120_000);
+
         tg.openInvoice!(invoiceLink, async (status: InvoiceStatus) => {
+          if (status === "pending") return;
           if (status === "paid") {
             const confirmed = await waitUntilPaid(authToken, resumeId);
             if (confirmed) {
               setPaid(true);
               tg.HapticFeedback?.notificationOccurred("success");
-              setPage("success");
-              resolve();
+              finish(() => resolve());
             } else {
-              reject(new Error("timeout"));
+              finish(() => reject(new Error("timeout")));
             }
             return;
           }
           if (status === "cancelled") {
-            reject(new Error("cancelled"));
+            finish(() => reject(new Error("cancelled")));
             return;
           }
           if (status === "failed") {
-            reject(new Error("failed"));
-            return;
+            finish(() => reject(new Error("failed")));
           }
         });
       });
