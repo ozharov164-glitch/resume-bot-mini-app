@@ -73,7 +73,7 @@ const STEPS: Step[] = [
 const OPTIONS_ONLY = new Set(["experience_level", "education"]);
 
 export function OnboardingPage() {
-  const { authToken, answers, setAnswer, setResumeResult, setPage } = useAppStore();
+  const { authToken, answers, setAnswer, setResumeResult, setPage, setFounder, setPaid } = useAppStore();
   const [step, setStep] = useState(0);
   const [value, setValue] = useState("");
   const firstName = useFirstName();
@@ -109,6 +109,10 @@ export function OnboardingPage() {
     try {
       const response = await generateResume(authToken, payload);
       setResumeResult(response.resume_id, response.resume);
+      if (response.paid) {
+        setFounder(true);
+        setPaid(true);
+      }
       setPage("preview");
     } catch (error) {
       setPage("onboarding");

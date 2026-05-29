@@ -15,9 +15,17 @@ export async function authWithTelegram(initData: string) {
   return http<{ access_token: string; token_type: string; is_founder?: boolean; unlimited?: boolean }>(
     "/api/auth/telegram",
     {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ init_data: initData }),
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ init_data: initData }),
+    },
+  );
+}
+
+export async function fetchMe(token: string) {
+  return http<{ telegram_id: number; is_founder: boolean; unlimited: boolean }>("/api/auth/me", {
+    method: "GET",
+    headers: { Authorization: `Bearer ${token}` },
   });
 }
 

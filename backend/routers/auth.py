@@ -5,11 +5,22 @@ from jose import jwt
 
 from config import settings
 from database import get_db
+from dependencies import get_current_user
 from models.schemas import TelegramAuthRequest, TokenResponse
 from services.founder import is_founder
 from services.telegram_service import verify_telegram_init_data
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
+
+
+@router.get("/me")
+async def auth_me(current_user: dict = Depends(get_current_user)):
+    founder = is_founder(current_user.get("telegram_id"))
+    return {
+        "telegram_id": current_user.get("telegram_id"),
+        "is_founder": founder,
+        "unlimited": founder,
+    }
 
 
 @router.post("/telegram", response_model=TokenResponse)

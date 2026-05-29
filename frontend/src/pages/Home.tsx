@@ -6,8 +6,9 @@ import { Card } from "../components/ui/Card";
 import { PageHeader } from "../components/ui/PageHeader";
 import { Screen } from "../components/ui/Screen";
 import { useFirstName } from "../hooks/useFirstName";
+import { useFounderStatus } from "../hooks/useFounderStatus";
 import { useMainButton } from "../hooks/useMainButton";
-import { tg } from "../telegram";
+import { getTg } from "../telegram";
 
 interface HomeProps {
   onStart: () => void;
@@ -43,14 +44,15 @@ export function HomePage({ onStart }: HomeProps) {
   const [statsCount, setStatsCount] = useState(1200);
   const displayCount = useCountUp(statsCount);
   const firstName = useFirstName();
-  const hasMainButton = Boolean(tg?.MainButton);
+  const isFounder = useFounderStatus();
+  const hasMainButton = Boolean(getTg()?.MainButton);
 
   useEffect(() => {
     void fetchStatsCount().then(setStatsCount);
   }, []);
 
   useMainButton("Начать бесплатно →", () => {
-    tg?.HapticFeedback?.impactOccurred("light");
+    getTg()?.HapticFeedback?.impactOccurred("light");
     onStart();
   });
 
@@ -61,6 +63,15 @@ export function HomePage({ onStart }: HomeProps) {
       <p className="text-sm font-semibold" style={{ color: "var(--text-muted)" }}>
         {greeting}
       </p>
+
+      {isFounder && (
+        <p
+          className="text-xs font-bold uppercase tracking-wide px-3 py-1.5 rounded-full w-fit"
+          style={{ background: "var(--accent)", color: "var(--tg-button-text, #fff)" }}
+        >
+          Режим основателя · безлимит
+        </p>
+      )}
 
       <PageHeader
         title={

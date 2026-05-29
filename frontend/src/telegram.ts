@@ -2,6 +2,7 @@ export interface TelegramWebApp {
   initData: string;
   initDataUnsafe?: {
     user?: {
+      id?: number;
       first_name?: string;
       last_name?: string;
       username?: string;
@@ -42,13 +43,36 @@ declare global {
 
 import { applySemanticTheme } from "./lib/theme";
 
-export const tg = window.Telegram?.WebApp;
+/** Always read fresh — WebApp may attach after module load. */
+export function getTg(): TelegramWebApp | undefined {
+  return window.Telegram?.WebApp;
+}
+
+/** @deprecated use getTg() */
+export const tg = getTg();
+
+export function getTelegramUserId(): number | undefined {
+  const id = getTg()?.initDataUnsafe?.user?.id;
+  return typeof id === "number" ? id : undefined;
+}
+
+export async function waitForInitData(timeoutMs = 4000): Promise<string> {
+  const started = Date.now();
+  while (Date.now() - started < timeoutMs) {
+    const data = getTg()?.initData;
+    if (data) return data;
+    getTg()?.ready();
+    await new Promise((r) => setTimeout(r, 80));
+  }
+  return getTg()?.initData || "";
+}
 
 export function initTelegramTheme() {
-  if (!tg) return;
-  tg.ready();
-  tg.expand();
-  const p = tg.themeParams || {};
+  const webApp = getTg();
+  if (!webApp) return;
+  webApp.ready();
+  webApp.expand();
+  const p = webApp.themeParams || {};
   const bg = p.bg_color || "#ffffff";
   document.documentElement.style.setProperty("--tg-bg", bg);
   document.documentElement.style.setProperty("--tg-text", p.text_color || "#0f172a");

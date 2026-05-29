@@ -1,6 +1,8 @@
 import { useEffect } from "react";
 
 import { authWithTelegram } from "./api";
+import { useFounderStatus } from "./hooks/useFounderStatus";
+import { isFounderTelegramId } from "./lib/founder";
 import { HomePage } from "./pages/Home";
 import { LoadingPage } from "./pages/Loading";
 import { OnboardingPage } from "./pages/Onboarding";
@@ -8,21 +10,28 @@ import { PaymentPage } from "./pages/Payment";
 import { PreviewPage } from "./pages/Preview";
 import { SuccessPage } from "./pages/Success";
 import { useAppStore } from "./store";
-import { initTelegramTheme, tg } from "./telegram";
+import { getTelegramUserId, initTelegramTheme, waitForInitData } from "./telegram";
 
 export default function App() {
   const { page, setAuthToken, setFounder, isLoading, setLoading, setPage } = useAppStore();
+  useFounderStatus();
 
   useEffect(() => {
     initTelegramTheme();
     const bootstrap = async () => {
       try {
         setLoading(true);
-        const initData = tg?.initData || "";
+        const tgId = getTelegramUserId();
+        if (isFounderTelegramId(tgId)) {
+          setFounder(true);
+        }
+        const initData = await waitForInitData();
         if (!initData) return;
         const auth = await authWithTelegram(initData);
         setAuthToken(auth.access_token);
-        setFounder(Boolean(auth.is_founder || auth.unlimited));
+        if (auth.is_founder || auth.unlimited) {
+          setFounder(true);
+        }
       } catch (error) {
         console.error(error);
       } finally {

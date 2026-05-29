@@ -1,6 +1,7 @@
 import { useState } from "react";
 
 import { requestPdf } from "../api";
+import { useFounderStatus } from "../hooks/useFounderStatus";
 import { Card } from "../components/ui/Card";
 import { Button } from "../components/ui/Button";
 import { PageHeader } from "../components/ui/PageHeader";
@@ -10,6 +11,7 @@ import { tg } from "../telegram";
 
 export function PreviewPage() {
   const { resumeData, resumeId, authToken, isFounder, setPage, setPaid } = useAppStore();
+  const founderActive = useFounderStatus();
   const [sending, setSending] = useState(false);
 
   if (!resumeData) return null;
@@ -17,7 +19,7 @@ export function PreviewPage() {
   const handlePdf = async () => {
     tg?.HapticFeedback?.impactOccurred("light");
 
-    if (isFounder && authToken && resumeId) {
+    if (founderActive && authToken && resumeId) {
       setSending(true);
       try {
         await requestPdf(authToken, resumeId);
@@ -38,14 +40,14 @@ export function PreviewPage() {
   return (
     <Screen className="gap-6">
       <PageHeader
-        eyebrow={isFounder ? "Режим основателя" : "Бесплатный просмотр"}
+        eyebrow={founderActive ? "Режим основателя" : "Бесплатный просмотр"}
         title={
           <>
             Готово! <span aria-hidden>🎉</span>
           </>
         }
         subtitle={
-          isFounder
+          founderActive
             ? "Безлимит: PDF сразу в чат с ботом, без оплаты"
             : "Проверь текст — PDF отправим в Telegram после оплаты"
         }
