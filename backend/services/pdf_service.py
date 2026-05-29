@@ -13,10 +13,27 @@ TEXT_MUTED = "#4a5c52"
 
 
 def get_pdf_styles() -> str:
+    # Color tokens
+    SIDEBAR_BG    = "#0d1f14"   # deep dark forest green
+    SIDEBAR_TITLE = "#2de08a"   # bright mint — section titles on dark
+    SIDEBAR_TEXT  = "#c8e0d0"   # light cream — body text on dark
+    SIDEBAR_MUTED = "#6ea882"   # muted sage — labels, secondary
+    SIDEBAR_CHIP_BG     = "rgba(255,255,255,0.09)"
+    SIDEBAR_CHIP_BORDER = "rgba(255,255,255,0.22)"
+    BRAND_PRIMARY = "#006c49"   # section titles on white, position
+    BRAND_ACCENT  = "#1a8a52"   # divider, subtle accents
+    TEXT_DARK     = "#0a1a0f"   # near-black (slightly green)
+    TEXT_BODY     = "#2c3a30"   # body text
+    TEXT_MUTED    = "#5a7060"   # muted — periods, labels
+
     return f"""
 @page {{
     size: A4;
-    margin: 18mm 14mm 16mm 14mm;
+    margin: 16mm 13mm 14mm 13mm;
+}}
+
+* {{
+    box-sizing: border-box;
 }}
 
 body {{
@@ -25,130 +42,173 @@ body {{
     line-height: 1.55;
     color: {TEXT_DARK};
     margin: 0;
+    padding: 0;
 }}
+
+/* ─── LAYOUT ─────────────────────────────────────────── */
 
 .page-layout {{
     display: flex;
-    align-items: flex-start;
-    gap: 14pt;
+    align-items: stretch;
+    gap: 16pt;
+    min-height: 240mm;
 }}
 
+/* ─── SIDEBAR ────────────────────────────────────────── */
+
 .sidebar {{
-    width: 30%;
+    width: 29%;
     flex-shrink: 0;
-    background: #f4faf7;
-    border: 0.5pt solid #d4ebe2;
-    border-radius: 6pt;
-    padding: 10pt 9pt;
+    background: {SIDEBAR_BG};
+    border-radius: 5pt;
+    padding: 14pt 11pt 14pt 11pt;
 }}
+
+.sidebar-block {{
+    margin-bottom: 13pt;
+    break-inside: avoid;
+}}
+
+.sidebar-title {{
+    font-size: 7.5pt;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: {SIDEBAR_TITLE};
+    border-bottom: 0.5pt solid rgba(45,224,138,0.35);
+    padding-bottom: 3.5pt;
+    margin-bottom: 6pt;
+}}
+
+.sidebar-line {{
+    font-size: 9pt;
+    color: {SIDEBAR_TEXT};
+    line-height: 1.55;
+    margin-bottom: 4pt;
+    word-break: break-word;
+}}
+
+.sidebar-line .label {{
+    font-size: 7.5pt;
+    font-weight: 700;
+    color: {SIDEBAR_MUTED};
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    display: block;
+    margin-bottom: 1pt;
+}}
+
+/* Зарплата — выделить ярче */
+.sidebar-block.salary-block .sidebar-line {{
+    font-size: 11pt;
+    font-weight: 700;
+    color: {SIDEBAR_TITLE};
+    letter-spacing: -0.2pt;
+}}
+
+/* Навыки — chips на тёмном фоне */
+.skills-grid {{
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4pt;
+}}
+
+.skill-tag {{
+    background: {SIDEBAR_CHIP_BG};
+    border: 0.5pt solid {SIDEBAR_CHIP_BORDER};
+    border-radius: 3pt;
+    padding: 2.5pt 6pt;
+    font-size: 8pt;
+    color: {SIDEBAR_TEXT};
+    word-break: break-word;
+    white-space: normal;
+    max-width: 100%;
+}}
+
+/* ─── MAIN AREA ──────────────────────────────────────── */
 
 .main {{
     flex: 1;
     min-width: 0;
 }}
 
-.sidebar-block {{
-    margin-bottom: 10pt;
-    break-inside: avoid;
-}}
-
-.sidebar-title {{
-    font-size: 8.5pt;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    color: {BRAND_PRIMARY};
-    border-bottom: 1pt solid {BRAND_BRIGHT};
-    padding-bottom: 3pt;
-    margin-bottom: 5pt;
-}}
-
-.sidebar-line {{
-    font-size: 9pt;
-    color: {TEXT_MUTED};
-    line-height: 1.5;
-    margin-bottom: 3pt;
-}}
-
-.sidebar-line .label {{
-    font-weight: 700;
-    color: {TEXT_DARK};
-    display: block;
-    font-size: 8pt;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-}}
+/* ─── HERO ───────────────────────────────────────────── */
 
 .hero {{
-    margin-bottom: 10pt;
+    margin-bottom: 13pt;
+    padding-bottom: 10pt;
+    border-bottom: 1pt solid #c8ddd2;
 }}
 
 h1 {{
-    font-size: 22pt;
+    font-size: 23pt;
     font-weight: 700;
     color: {TEXT_DARK};
-    margin: 0 0 2pt 0;
-    letter-spacing: -0.2pt;
-    line-height: 1.05;
+    margin: 0 0 3pt 0;
+    letter-spacing: -0.4pt;
+    line-height: 1.08;
 }}
 
 .position {{
-    font-size: 11.5pt;
+    font-size: 11pt;
     color: {BRAND_PRIMARY};
-    margin: 0;
     font-weight: 600;
+    letter-spacing: 0.02em;
+    margin: 0;
 }}
 
+/* убрать старый градиентный divider — теперь border-bottom в .hero */
 .hero-divider {{
-    height: 2.5pt;
-    background: linear-gradient(90deg, {BRAND_PRIMARY} 0%, {BRAND_BRIGHT} 70%, transparent 100%);
-    border-radius: 2pt;
-    margin-top: 8pt;
+    display: none;
 }}
+
+/* ─── SECTIONS ───────────────────────────────────────── */
 
 .section {{
-    margin-bottom: 11pt;
+    margin-bottom: 12pt;
     break-inside: avoid-page;
 }}
 
 .section-header {{
     display: flex;
     align-items: center;
-    gap: 6pt;
-    margin-bottom: 5pt;
+    gap: 0;
+    margin-bottom: 6pt;
+    border-bottom: 0.5pt solid #c8ddd2;
+    padding-bottom: 3pt;
 }}
 
+/* убрать старый marker — теперь не нужен */
 .section-marker {{
-    width: 3pt;
-    height: 13pt;
-    background: {BRAND_BRIGHT};
-    border-radius: 2pt;
-    flex-shrink: 0;
+    display: none;
 }}
 
 .section-title {{
-    font-size: 10pt;
+    font-size: 8.5pt;
     font-weight: 700;
     color: {BRAND_PRIMARY};
     text-transform: uppercase;
-    letter-spacing: 0.08em;
-    border-bottom: 0.6pt solid #c8e6d8;
-    padding-bottom: 2pt;
-    flex: 1;
+    letter-spacing: 0.12em;
     margin: 0;
+    padding: 0;
+    border: none;
+    flex: 1;
 }}
+
+/* ─── SUMMARY ────────────────────────────────────────── */
 
 .summary-text {{
-    font-size: 10pt;
-    line-height: 1.65;
-    color: #2a3530;
-    border-left: 2.5pt solid {BRAND_BRIGHT};
-    padding-left: 8pt;
+    font-size: 9.5pt;
+    line-height: 1.70;
+    color: {TEXT_BODY};
     margin: 0;
+    padding: 0;
 }}
 
+/* ─── EXPERIENCE ─────────────────────────────────────── */
+
 .job-entry {{
-    margin-bottom: 9pt;
+    margin-bottom: 10pt;
     break-inside: avoid;
 }}
 
@@ -163,20 +223,23 @@ h1 {{
     font-weight: 700;
     font-size: 10.5pt;
     color: {TEXT_DARK};
+    letter-spacing: -0.1pt;
 }}
 
 .job-period {{
-    font-size: 9pt;
-    color: #7a8a82;
+    font-size: 8.5pt;
+    color: {TEXT_MUTED};
     flex-shrink: 0;
-    margin-left: 6pt;
+    margin-left: 8pt;
+    font-style: italic;
 }}
 
 .job-position {{
-    font-size: 10pt;
+    font-size: 9.5pt;
     color: {BRAND_PRIMARY};
     font-weight: 600;
-    margin-bottom: 3pt;
+    margin-bottom: 4pt;
+    letter-spacing: 0.01em;
 }}
 
 .job-bullets {{
@@ -187,57 +250,58 @@ h1 {{
 
 .job-bullets li {{
     font-size: 9.5pt;
-    line-height: 1.55;
-    color: #2a3530;
-    padding-left: 11pt;
+    line-height: 1.58;
+    color: {TEXT_BODY};
+    padding-left: 12pt;
     position: relative;
-    margin-bottom: 2pt;
+    margin-bottom: 2.5pt;
 }}
 
 .job-bullets li::before {{
-    content: '—';
+    content: '·';
     position: absolute;
-    left: 0;
-    color: {BRAND_BRIGHT};
+    left: 2pt;
+    color: {BRAND_ACCENT};
+    font-size: 14pt;
+    line-height: 0.85;
     font-weight: 700;
 }}
 
+/* ─── EDUCATION ──────────────────────────────────────── */
+
 .edu-entry {{
-    font-size: 10pt;
-    color: #2a3530;
-    line-height: 1.5;
-    margin-bottom: 3pt;
+    font-size: 9.5pt;
+    color: {TEXT_BODY};
+    line-height: 1.55;
+    margin-bottom: 4pt;
+    padding-left: 12pt;
+    position: relative;
+}}
+
+.edu-entry::before {{
+    content: '·';
+    position: absolute;
+    left: 2pt;
+    color: {BRAND_ACCENT};
+    font-size: 14pt;
+    line-height: 0.85;
+    font-weight: 700;
 }}
 
 .edu-institution {{ font-weight: 700; color: {TEXT_DARK}; }}
 .edu-degree {{ color: {TEXT_MUTED}; }}
 
-.skills-grid {{
-    display: flex;
-    flex-wrap: wrap;
-    gap: 4pt;
-}}
-
-.skill-tag {{
-    background: #ffffff;
-    border: 0.5pt solid #b8ddd0;
-    border-radius: 3pt;
-    padding: 2pt 6pt;
-    font-size: 8.5pt;
-    color: {BRAND_PRIMARY};
-    word-break: break-word;
-    white-space: normal;
-    max-width: 100%;
-}}
+/* ─── FOOTER ─────────────────────────────────────────── */
 
 .footer {{
-    margin-top: 10pt;
-    padding-top: 6pt;
-    border-top: 0.5pt solid #d4ebe2;
-    font-size: 7.5pt;
+    margin-top: 12pt;
+    padding-top: 5pt;
+    border-top: 0.5pt solid #d4e8db;
+    font-size: 7pt;
     color: #9aab9f;
     text-align: center;
-    letter-spacing: 0.06em;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
 }}
 """
 
