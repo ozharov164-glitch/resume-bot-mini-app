@@ -8,6 +8,11 @@ from jinja2 import Environment, FileSystemLoader
 from weasyprint import CSS, HTML
 from weasyprint.text.fonts import FontConfiguration
 
+try:
+    import pymupdf as fitz
+except ImportError:  # pragma: no cover
+    fitz = None  # type: ignore[assignment]
+
 logger = logging.getLogger(__name__)
 
 TEMPLATES_DIR = Path(__file__).parent.parent / "templates"
@@ -399,6 +404,24 @@ def generate_pdf(resume_data: dict, template_name: str = "classic") -> bytes:
     return _render_document(resume_data, template_name, preview=False).write_pdf()
 
 
+def _pdf_bytes_to_png(pdf_bytes: bytes, *, resolution: int = 110) -> bytes:
+    """Rasterize first PDF page to PNG (WeasyPrint 53+ has no write_png)."""
+    if fitz is None:
+        raise RuntimeError("pymupdf is required for PNG preview export")
+
+    doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+    try:
+        if doc.page_count == 0:
+            raise ValueError("Empty PDF")
+        page = doc[0]
+        scale = resolution / 72.0
+        matrix = fitz.Matrix(scale, scale)
+        pixmap = page.get_pixmap(matrix=matrix, alpha=False)
+        return pixmap.tobytes("png")
+    finally:
+        doc.close()
+
+
 def generate_preview_png(
     resume_data: dict,
     template_name: str = "classic",
@@ -408,9 +431,9 @@ def generate_preview_png(
 ) -> bytes:
     """First-page PNG for unpaid preview — not a downloadable PDF."""
     document = _render_document(resume_data, template_name, preview=watermark)
-    buffer = io.BytesIO()
+    pdf_buffer = io.BytesIO()
     if document.pages:
-        document.copy([document.pages[0]]).write_png(buffer, resolution=resolution)
+        document.copy([document.pages[0]]).write_pdf(pdf_buffer)
     else:
-        document.write_png(buffer, resolution=resolution)
-    return buffer.getvalue()
+        document.write_pdf(pdf_buffer)
+    return _pdf_bytes_to_png(pdf_buffer.getvalue(), resolution=resolution)
