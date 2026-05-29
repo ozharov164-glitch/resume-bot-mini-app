@@ -206,23 +206,34 @@ export function SkillPickPage() {
               ))}
             </div>
 
-            <div className="flex gap-2">
+            <div className="relative w-full">
               <TextInput
                 value={customSkill}
                 onChange={(e) => setCustomSkill(e.target.value)}
-                placeholder="Добавить свой навык..."
+                placeholder="Свой навык, например R-Keeper"
                 inputMode="text"
-                className="flex-1"
+                className="pr-14"
+                aria-label="Добавить свой навык"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    addCustomSkill();
+                  }
+                }}
               />
-              <Button
-                variant="secondary"
+              <button
                 type="button"
                 onClick={addCustomSkill}
                 disabled={!customSkill.trim()}
-                className="!min-h-[48px] shrink-0 px-4"
+                className="absolute right-2 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-lg text-xl font-semibold transition-opacity disabled:opacity-35"
+                style={{
+                  background: "var(--brand-muted)",
+                  color: "var(--brand)",
+                }}
+                aria-label="Добавить навык"
               >
                 +
-              </Button>
+              </button>
             </div>
 
             {selectedSkills.length > 0 && (

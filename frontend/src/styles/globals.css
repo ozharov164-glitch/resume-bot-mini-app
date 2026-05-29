@@ -151,6 +151,16 @@ input,
 textarea {
   user-select: text;
   -webkit-user-select: text;
+  color: #161d19;
+  -webkit-text-fill-color: #161d19;
+  caret-color: #161d19;
+  opacity: 1;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #707579;
+  opacity: 1;
 }
 
 .material-symbols-outlined {
