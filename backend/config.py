@@ -47,6 +47,8 @@ class Settings(BaseSettings):
     # HTTP proxy for Groq API, e.g. http://user:pass@host:port
     GROQ_PROXY_URL: str = ""
 
+    DADATA_API_KEY: str = ""
+
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
 

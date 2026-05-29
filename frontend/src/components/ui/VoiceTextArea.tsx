@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { ensureAuthToken } from "../../api";
 import { useAppStore } from "../../store";
@@ -31,6 +31,12 @@ export function VoiceTextArea({
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const streamRef = useRef<MediaStream | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const animFrameRef = useRef<number>();
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
+  const [recordSeconds, setRecordSeconds] = useState(0);
+  const timerRef = useRef<ReturnType<typeof setInterval>>();
   const targetPosition = useAppStore((s) => s.answers.target_position ?? "");
 
   const micAvailable = useMemo(() => {
@@ -69,11 +75,65 @@ export function VoiceTextArea({
     [onChange, value],
   );
 
+  const startWaveform = useCallback((stream: MediaStream) => {
+    const ctx = new AudioContext();
+    const analyser = ctx.createAnalyser();
+    analyser.fftSize = 128;
+    const source = ctx.createMediaStreamSource(stream);
+    source.connect(analyser);
+    audioCtxRef.current = ctx;
+    analyserRef.current = analyser;
+
+    const data = new Uint8Array(analyser.frequencyBinCount);
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const draw = () => {
+      analyser.getByteFrequencyData(data);
+      const c = canvas.getContext("2d");
+      if (!c) return;
+      c.clearRect(0, 0, canvas.width, canvas.height);
+      const barCount = 28;
+      const barW = 3;
+      const gap = 3;
+      const step = Math.floor(data.length / barCount);
+      for (let i = 0; i < barCount; i++) {
+        const amp = data[i * step] / 255;
+        const h = Math.max(3, amp * canvas.height * 0.85);
+        const x = i * (barW + gap);
+        const y = (canvas.height - h) / 2;
+        c.fillStyle = "#2de08a";
+        c.beginPath();
+        if (c.roundRect) {
+          c.roundRect(x, y, barW, h, 1.5);
+        } else {
+          c.rect(x, y, barW, h);
+        }
+        c.fill();
+      }
+      animFrameRef.current = requestAnimationFrame(draw);
+    };
+    draw();
+  }, []);
+
+  const stopWaveform = useCallback(() => {
+    if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
+    if (audioCtxRef.current) {
+      audioCtxRef.current.close();
+      audioCtxRef.current = null;
+    }
+    analyserRef.current = null;
+    const canvas = canvasRef.current;
+    if (canvas) canvas.getContext("2d")?.clearRect(0, 0, canvas.width, canvas.height);
+  }, []);
+
   const stopRecording = useCallback(() => {
     mediaRecorderRef.current?.stop();
     mediaRecorderRef.current = null;
     setListening(false);
-  }, []);
+    stopWaveform();
+    clearInterval(timerRef.current);
+  }, [stopWaveform]);
 
   const handleDictate = useCallback(async () => {
     if (transcribing) return;
@@ -101,6 +161,9 @@ export function VoiceTextArea({
       recorder.onstop = async () => {
         streamRef.current?.getTracks().forEach((track) => track.stop());
         streamRef.current = null;
+        stopWaveform();
+        clearInterval(timerRef.current);
+        setRecordSeconds(0);
         const blob = new Blob(chunksRef.current, {
           type: recorder.mimeType || mimeType || "audio/webm",
         });
@@ -113,11 +176,14 @@ export function VoiceTextArea({
       mediaRecorderRef.current = recorder;
       setListening(true);
       getTg()?.HapticFeedback?.impactOccurred("medium");
+      startWaveform(stream);
+      setRecordSeconds(0);
+      timerRef.current = setInterval(() => setRecordSeconds((s) => s + 1), 1000);
     } catch {
       getTg()?.HapticFeedback?.notificationOccurred("error");
       alert("Нет доступа к микрофону. Разреши запись в настройках Telegram/браузера.");
     }
-  }, [listening, stopRecording, transcribing, uploadAudio]);
+  }, [listening, startWaveform, stopRecording, stopWaveform, transcribing, uploadAudio]);
 
   const handlePolish = useCallback(async () => {
     if (polishing || value.length <= 20) return;
@@ -143,8 +209,15 @@ export function VoiceTextArea({
     }
   }, [onChange, polishing, targetPosition, value]);
 
+  useEffect(() => {
+    return () => {
+      stopWaveform();
+      clearInterval(timerRef.current);
+    };
+  }, [stopWaveform]);
+
   const dictateLabel = transcribing
-    ? "Расшифровываю…"
+    ? "Распознаю…"
     : listening
       ? "⏹ Стоп"
       : "🎤 Надиктовать";
@@ -163,6 +236,29 @@ export function VoiceTextArea({
           {hint}
         </p>
       )}
+
+      {listening && (
+        <div className="voice-recording-panel">
+          <span className="voice-rec-dot" />
+          <canvas
+            ref={canvasRef}
+            width={168}
+            height={32}
+            className="voice-waveform-canvas"
+          />
+          <span className="voice-timer">
+            {Math.floor(recordSeconds / 60)}:{String(recordSeconds % 60).padStart(2, "0")}
+          </span>
+        </div>
+      )}
+
+      {transcribing && (
+        <div className="voice-transcribing-panel">
+          <span className="voice-spinner" />
+          <span className="voice-transcribing-label">Распознаю речь…</span>
+        </div>
+      )}
+
       <div className="flex flex-wrap gap-2">
         {micAvailable && (
           <Button
@@ -178,7 +274,7 @@ export function VoiceTextArea({
           <Button
             variant="secondary"
             onClick={handlePolish}
-            disabled={polishing || transcribing}
+            disabled={polishing || transcribing || listening}
             className="!min-h-[44px] flex-1"
           >
             {polishing ? "Улучшаю…" : "✨ Улучшить текст"}

@@ -1,6 +1,5 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
-import { PreviewResumeCard } from "../components/preview/PreviewResumeCard";
 import { PreviewStatusHero } from "../components/preview/PreviewStatusHero";
 import { ensureAuthToken, requestPdf } from "../api";
 import { AppHeader } from "../components/ui/AppHeader";
@@ -14,16 +13,44 @@ import { useTelegramBackButton } from "../hooks/useTelegramBackButton";
 import { useAppStore } from "../store";
 import { getTg } from "../telegram";
 
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
+
 export function PreviewPage() {
-  const { resumeData, resumeId, authToken, setPage, setPaid, startEditResume, previewReturnPage } =
+  const { resumeId, authToken, setPage, setPaid, startEditResume, previewReturnPage } =
     useAppStore();
   const founderActive = useFounderStatus();
   const [sending, setSending] = useState(false);
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
 
   const handleBack = useCallback(() => setPage(previewReturnPage), [setPage, previewReturnPage]);
   useTelegramBackButton(handleBack);
 
-  if (!resumeData) return null;
+  useEffect(() => {
+    if (!resumeId) return;
+
+    let objectUrl: string | null = null;
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const token = authToken || (await ensureAuthToken());
+        const res = await fetch(`${API_URL}/api/resume/${resumeId}/preview-pdf`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok || cancelled) return;
+        const blob = await res.blob();
+        objectUrl = URL.createObjectURL(blob);
+        if (!cancelled) setPdfUrl(objectUrl);
+      } catch {
+        /* preview optional — buttons still work */
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [authToken, resumeId]);
 
   const handlePdf = async () => {
     getTg()?.HapticFeedback?.impactOccurred("medium");
@@ -58,12 +85,42 @@ export function PreviewPage() {
       <AppHeader onBack={handleBack} showBack title="Предпросмотр" />
       <main className="flex flex-1 flex-col gap-4 px-4 py-3 pb-2">
         <PreviewStatusHero />
-        <PreviewResumeCard resume={resumeData} />
+        {pdfUrl ? (
+          <iframe
+            src={pdfUrl}
+            className="w-full rounded-xl border border-zinc-800"
+            style={{ height: "520px" }}
+            title="Предпросмотр резюме"
+          />
+        ) : (
+          <div
+            className="flex items-center justify-center rounded-xl border border-zinc-800 py-16 text-sm"
+            style={{ color: "var(--text-muted)" }}
+          >
+            Загружаем PDF…
+          </div>
+        )}
         {founderActive && <FounderBadge />}
       </main>
 
       <FixedBottomBar>
         <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-1.5 mb-3">
+            {[
+              "Резюме готово к отправке",
+              "Оптимизировано под формат hh.ru",
+              "Профессиональное оформление",
+            ].map((text) => (
+              <div
+                key={text}
+                className="flex items-center gap-2 text-sm"
+                style={{ color: "var(--text-secondary)" }}
+              >
+                <span className="text-[#2de08a]">✓</span>
+                <span>{text}</span>
+              </div>
+            ))}
+          </div>
           <Button
             variant="secondary"
             onClick={() => {

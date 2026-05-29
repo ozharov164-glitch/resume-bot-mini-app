@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from config import settings
 from database import get_db, storage_mode
-from routers import auth, payment, resume, skills, stats, voice
+from routers import auth, enrich, payment, resume, skills, stats, voice
 
 logging.basicConfig(
     level=logging.INFO if not settings.DEBUG else logging.DEBUG,
@@ -38,6 +38,7 @@ app.include_router(skills.router)
 app.include_router(payment.router)
 app.include_router(stats.router)
 app.include_router(voice.router)
+app.include_router(enrich.router)
 
 
 @app.get("/health")

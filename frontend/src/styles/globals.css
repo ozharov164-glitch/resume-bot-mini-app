@@ -339,3 +339,71 @@ textarea {
     transform: translateX(100%);
   }
 }
+
+/* ── Voice recording UI ── */
+
+.voice-recording-panel {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background: rgba(45, 224, 138, 0.07);
+  border: 1px solid rgba(45, 224, 138, 0.25);
+  border-radius: 10px;
+}
+
+.voice-rec-dot {
+  width: 8px;
+  height: 8px;
+  min-width: 8px;
+  background: #ef4444;
+  border-radius: 50%;
+  animation: voice-rec-blink 1s ease-in-out infinite;
+}
+
+@keyframes voice-rec-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.25; }
+}
+
+.voice-waveform-canvas {
+  display: block;
+  flex: 1;
+}
+
+.voice-timer {
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: rgba(255, 255, 255, 0.55);
+  min-width: 28px;
+  text-align: right;
+}
+
+.voice-transcribing-panel {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+}
+
+.voice-spinner {
+  width: 14px;
+  height: 14px;
+  min-width: 14px;
+  border: 2px solid rgba(45, 224, 138, 0.25);
+  border-top-color: #2de08a;
+  border-radius: 50%;
+  animation: voice-spin 0.7s linear infinite;
+}
+
+@keyframes voice-spin {
+  to { transform: rotate(360deg); }
+}
+
+.voice-transcribing-label {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.55);
+}

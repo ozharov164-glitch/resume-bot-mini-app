@@ -1,126 +1,132 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-<meta charset="UTF-8">
-<title>Резюме — {{ resume.full_name }}</title>
+  <meta charset="UTF-8">
+  <title>Резюме — {{ resume.full_name }}</title>
 </head>
 <body>
-
 <div class="page-layout">
+
   <aside class="sidebar">
-    {% if resume.phone or resume.email or resume.city %}
-    <div class="sidebar-block">
-      <div class="sidebar-title">Контакты</div>
-      {% if resume.phone %}<div class="sidebar-line"><span class="label">Тел.</span> {{ resume.phone }}</div>{% endif %}
-      {% if resume.email %}<div class="sidebar-line"><span class="label">Email</span> {{ resume.email }}</div>{% endif %}
-      {% if resume.city %}<div class="sidebar-line"><span class="label">Город</span> {{ resume.city }}</div>{% endif %}
+
+    <div>
+      <div class="section-title">Контакты</div>
+      {% if resume.phone %}
+      <div class="contact-item">
+        <span class="contact-label">Телефон</span>{{ resume.phone }}
+      </div>
+      {% endif %}
+      {% if resume.email %}
+      <div class="contact-item">
+        <span class="contact-label">Email</span>{{ resume.email }}
+      </div>
+      {% endif %}
+      {% if resume.city %}
+      <div class="contact-item">
+        <span class="contact-label">Город</span>{{ resume.city }}
+      </div>
+      {% endif %}
     </div>
-    {% endif %}
 
     {% if resume.salary %}
-    <div class="sidebar-block salary-block">
-      <div class="sidebar-title">Зарплата</div>
-      <div class="sidebar-line">{{ resume.salary }}</div>
+    <div class="salary-block">
+      <div class="salary-value">{{ resume.salary }}</div>
+      <div class="salary-label">Желаемая зарплата</div>
     </div>
     {% endif %}
 
     {% if resume.skills %}
-    <div class="sidebar-block">
-      <div class="sidebar-title">Навыки</div>
-      <div class="skills-grid">
+    <div>
+      <div class="section-title">Навыки</div>
+      <div class="skills-list">
         {% for skill in resume.skills %}
-        <span class="skill-tag">{{ skill }}</span>
+        <span class="skill-chip">{{ skill }}</span>
         {% endfor %}
       </div>
     </div>
     {% endif %}
 
     {% if resume.languages %}
-    <div class="sidebar-block">
-      <div class="sidebar-title">Языки</div>
+    <div>
+      <div class="section-title">Языки</div>
       {% for lang in resume.languages %}
-      <div class="sidebar-line">{{ lang }}</div>
+      <div class="lang-item">{{ lang }}</div>
       {% endfor %}
     </div>
     {% endif %}
 
     {% if resume.certificates %}
-    <div class="sidebar-block">
-      <div class="sidebar-title">Документы</div>
+    <div>
+      <div class="section-title">Документы</div>
       {% for cert in resume.certificates %}
-      <div class="sidebar-line">{{ cert }}</div>
+      <div class="cert-item">{{ cert }}</div>
       {% endfor %}
     </div>
     {% endif %}
+
   </aside>
 
-  <main class="main">
-    <div class="hero">
-      <h1>{{ resume.full_name }}</h1>
-      <div class="position">{{ resume.target_position }}</div>
-      <div class="hero-divider"></div>
+  <main class="main-content">
+
+    <div class="hero-section">
+      <div class="main-name">{{ resume.full_name }}</div>
+      <div class="main-position">{{ resume.target_position }}</div>
     </div>
 
     {% if resume.summary %}
-    <div class="section">
-      <div class="section-header">
-        <div class="section-marker"></div>
-        <div class="section-title">О себе</div>
-      </div>
-      <p class="summary-text">{{ resume.summary }}</p>
+    <div class="section-block">
+      <div class="section-title">О себе</div>
+      <div class="summary-text">{{ resume.summary }}</div>
     </div>
     {% endif %}
 
     {% if resume.experience %}
-    <div class="section">
-      <div class="section-header">
-        <div class="section-marker"></div>
-        <div class="section-title">Опыт работы</div>
-      </div>
+    <div class="section-block">
+      <div class="section-title">Опыт работы</div>
       {% for job in resume.experience %}
-      <div class="job-entry">
-        <div class="job-header">
-          <span class="job-company">{{ job.company }}</span>
-          <span class="job-period">{{ job.period }}</span>
+      <div class="experience-entry">
+        <div class="exp-header">
+          <span class="exp-company">{{ job.company }}</span>
+          <span class="exp-period">{{ job.period }}</span>
         </div>
-        <div class="job-position">{{ job.position }}</div>
-        <ul class="job-bullets">
-          {% set bullets = job.description | replace('• ', '\n') | replace('. • ', '\n') | replace(' •', '\n') %}
-          {% for line in bullets.split('\n') %}
-            {% set clean = line.strip().lstrip('•—-').strip() %}
-            {% if clean %}
-            <li>{{ clean }}</li>
-            {% endif %}
+        <div class="exp-position">{{ job.position }}</div>
+        {% if job.description %}
+        <ul class="exp-bullets">
+          {% for bullet in job.description | split_bullets %}
+          {% if bullet %}
+          <li>{{ bullet }}</li>
+          {% endif %}
           {% endfor %}
         </ul>
+        {% endif %}
       </div>
       {% endfor %}
     </div>
     {% endif %}
 
     {% if resume.education %}
-    <div class="section">
-      <div class="section-header">
-        <div class="section-marker"></div>
-        <div class="section-title">Образование</div>
-      </div>
+    <div class="section-block">
+      <div class="section-title">Образование</div>
       {% for edu in resume.education %}
+      {% if edu.institution or edu.degree %}
       <div class="edu-entry">
-        {% if edu.institution and edu.institution not in ['Среднее', 'Колледж', 'ВУЗ', 'Высшее', 'Курсы', ''] %}
-          <span class="edu-institution">{{ edu.institution }}</span>
-          {% if edu.degree %} — <span class="edu-degree">{{ edu.degree }}</span>{% endif %}
-        {% else %}
-          <span class="edu-degree">{{ edu.degree or (edu.institution + ' образование') }}</span>
+        {% if edu.institution %}
+        <div class="edu-institution">{{ edu.institution }}</div>
         {% endif %}
-        {% if edu.year %} ({{ edu.year }}){% endif %}
+        <div class="edu-details">
+          {{ edu.degree }}{% if edu.year and edu.year != '0' %} · {{ edu.year }}{% endif %}
+        </div>
       </div>
+      {% endif %}
       {% endfor %}
     </div>
     {% endif %}
+
   </main>
+
 </div>
-
-<div class="footer">ResumeBot · hh.ru</div>
-
+<div class="page-footer">
+  <span class="footer-text">ResumeBot · Создано для hh.ru</span>
+</div>
 </body>
 </html>

@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { getTg } from "../../telegram";
 import type { WorkEntry } from "../../types";
 import { Button } from "./Button";
+import { CompanyAutocomplete } from "./CompanyAutocomplete";
 import { TextInput } from "./TextField";
 import { VoiceTextArea } from "./VoiceTextArea";
 
@@ -82,9 +83,9 @@ export function WorkHistoryStep({
               </button>
             )}
           </div>
-          <TextInput
+          <CompanyAutocomplete
             value={entry.company}
-            onChange={(e) => updateEntry(index, { company: e.target.value })}
+            onChange={(company) => updateEntry(index, { company })}
             placeholder="Компания"
           />
           <TextInput

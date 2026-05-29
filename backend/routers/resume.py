@@ -3,6 +3,7 @@ import uuid
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import Response
 
 from database import get_db
 from dependencies import get_current_user
@@ -73,6 +74,34 @@ async def get_resume(resume_id: str, current_user: dict = Depends(get_current_us
     if not resume:
         raise HTTPException(status_code=404, detail="Резюме не найдено.")
     return resume
+
+
+@router.get("/{resume_id}/preview-pdf")
+async def preview_resume_pdf(
+    resume_id: str,
+    current_user: dict = Depends(get_current_user),
+    db=Depends(get_db),
+):
+    """Возвращает PDF inline для предпросмотра в iframe."""
+    resume = db.find_resume(resume_id, current_user["id"])
+    if not resume:
+        raise HTTPException(status_code=404, detail="Резюме не найдено.")
+
+    resume_data = parse_resume_data(resume["data"])
+    try:
+        pdf_bytes = generate_pdf(resume_data)
+    except Exception as exc:
+        logger.exception("pdf preview failed resume_id=%s", resume_id)
+        raise HTTPException(
+            status_code=500,
+            detail="Не удалось сформировать PDF для предпросмотра.",
+        ) from exc
+
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": "inline; filename=preview.pdf"},
+    )
 
 
 @router.get("/{resume_id}/download")

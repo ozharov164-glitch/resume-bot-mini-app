@@ -6,304 +6,236 @@ from weasyprint import CSS, HTML
 
 TEMPLATES_DIR = Path(__file__).parent.parent / "templates"
 
-BRAND_PRIMARY = "#006c49"
-BRAND_BRIGHT = "#10b981"
-TEXT_DARK = "#161d19"
-TEXT_MUTED = "#4a5c52"
+
+def _split_bullets(text: str) -> list[str]:
+    if not text:
+        return []
+    parts = re.split(r"[•·\n]+", text)
+    return [p.strip() for p in parts if p.strip()]
 
 
 def get_pdf_styles() -> str:
-    # Color tokens
-    SIDEBAR_BG    = "#0d1f14"   # deep dark forest green
-    SIDEBAR_TITLE = "#2de08a"   # bright mint — section titles on dark
-    SIDEBAR_TEXT  = "#c8e0d0"   # light cream — body text on dark
-    SIDEBAR_MUTED = "#6ea882"   # muted sage — labels, secondary
-    SIDEBAR_CHIP_BG     = "rgba(255,255,255,0.09)"
-    SIDEBAR_CHIP_BORDER = "rgba(255,255,255,0.22)"
-    BRAND_PRIMARY = "#006c49"   # section titles on white, position
-    BRAND_ACCENT  = "#1a8a52"   # divider, subtle accents
-    TEXT_DARK     = "#0a1a0f"   # near-black (slightly green)
-    TEXT_BODY     = "#2c3a30"   # body text
-    TEXT_MUTED    = "#5a7060"   # muted — periods, labels
+    return """
+    @page { size: A4; margin: 0; }
 
-    return f"""
-@page {{
-    size: A4;
-    margin: 16mm 13mm 14mm 13mm;
-}}
+    * { box-sizing: border-box; margin: 0; padding: 0; }
 
-* {{
-    box-sizing: border-box;
-}}
+    body {
+        font-family: 'DejaVu Sans', 'Liberation Sans', Arial, sans-serif;
+        font-size: 9.5pt;
+        line-height: 1.45;
+        color: #2c2c2c;
+        background: #ffffff;
+    }
 
-body {{
-    font-family: 'DejaVu Sans', 'Liberation Sans', Arial, sans-serif;
-    font-size: 10pt;
-    line-height: 1.55;
-    color: {TEXT_DARK};
-    margin: 0;
-    padding: 0;
-}}
+    /* Layout */
+    .page-layout { display: flex; width: 100%; min-height: 297mm; }
 
-/* ─── LAYOUT ─────────────────────────────────────────── */
+    .sidebar {
+        width: 30%;
+        min-width: 30%;
+        background: #0d1f14;
+        color: #ffffff;
+        padding: 24px 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+    }
 
-.page-layout {{
-    display: flex;
-    align-items: stretch;
-    gap: 16pt;
-    min-height: 240mm;
-}}
+    .main-content {
+        flex: 1;
+        padding: 24px 22px 24px 20px;
+        background: #ffffff;
+    }
 
-/* ─── SIDEBAR ────────────────────────────────────────── */
+    /* Sidebar — section titles */
+    .sidebar .section-title {
+        font-size: 6.5pt;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 1.2px;
+        color: #2de08a;
+        margin-bottom: 6px;
+        padding-bottom: 3px;
+        border-bottom: 1px solid rgba(45, 224, 138, 0.2);
+    }
 
-.sidebar {{
-    width: 29%;
-    flex-shrink: 0;
-    background: {SIDEBAR_BG};
-    border-radius: 5pt;
-    padding: 14pt 11pt 14pt 11pt;
-}}
+    /* Contacts */
+    .contact-item {
+        font-size: 8pt;
+        color: rgba(255,255,255,0.82);
+        margin-bottom: 5px;
+        line-height: 1.3;
+        word-break: break-all;
+    }
+    .contact-label {
+        font-size: 6.5pt;
+        color: rgba(255,255,255,0.4);
+        text-transform: uppercase;
+        letter-spacing: 0.4px;
+        display: block;
+        margin-bottom: 1px;
+    }
 
-.sidebar-block {{
-    margin-bottom: 13pt;
-    break-inside: avoid;
-}}
+    /* Salary block */
+    .salary-block {
+        background: rgba(45, 224, 138, 0.1);
+        border: 1px solid rgba(45, 224, 138, 0.22);
+        border-radius: 5px;
+        padding: 7px 9px;
+    }
+    .salary-value {
+        font-size: 11.5pt;
+        font-weight: 700;
+        color: #2de08a;
+        line-height: 1.1;
+    }
+    .salary-label {
+        font-size: 6.5pt;
+        color: rgba(255,255,255,0.38);
+        text-transform: uppercase;
+        letter-spacing: 0.4px;
+        margin-top: 2px;
+    }
 
-.sidebar-title {{
-    font-size: 7.5pt;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.14em;
-    color: {SIDEBAR_TITLE};
-    border-bottom: 0.5pt solid rgba(45,224,138,0.35);
-    padding-bottom: 3.5pt;
-    margin-bottom: 6pt;
-}}
+    /* Skills */
+    .skills-list { display: flex; flex-wrap: wrap; gap: 3px; }
+    .skill-chip {
+        background: rgba(45, 224, 138, 0.09);
+        border: 1px solid rgba(45, 224, 138, 0.18);
+        border-radius: 3px;
+        padding: 2px 5px;
+        font-size: 7pt;
+        color: rgba(255,255,255,0.82);
+        line-height: 1.4;
+    }
 
-.sidebar-line {{
-    font-size: 9pt;
-    color: {SIDEBAR_TEXT};
-    line-height: 1.55;
-    margin-bottom: 4pt;
-    word-break: break-word;
-}}
+    /* Languages */
+    .lang-item {
+        font-size: 8pt;
+        color: rgba(255,255,255,0.82);
+        margin-bottom: 3px;
+        padding-left: 8px;
+        position: relative;
+    }
+    .lang-item::before { content: '·'; position: absolute; left: 0; color: #2de08a; font-weight: 700; }
 
-.sidebar-line .label {{
-    font-size: 7.5pt;
-    font-weight: 700;
-    color: {SIDEBAR_MUTED};
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    display: block;
-    margin-bottom: 1pt;
-}}
+    /* Certificates */
+    .cert-item {
+        font-size: 7.5pt;
+        color: rgba(255,255,255,0.72);
+        margin-bottom: 3px;
+        padding-left: 10px;
+        position: relative;
+        line-height: 1.3;
+    }
+    .cert-item::before { content: '✓'; position: absolute; left: 0; color: #2de08a; font-size: 6.5pt; }
 
-/* Зарплата — выделить ярче */
-.sidebar-block.salary-block .sidebar-line {{
-    font-size: 11pt;
-    font-weight: 700;
-    color: {SIDEBAR_TITLE};
-    letter-spacing: -0.2pt;
-}}
+    /* Main — Hero */
+    .hero-section {
+        border-bottom: 2px solid #0d1f14;
+        padding-bottom: 10px;
+        margin-bottom: 14px;
+    }
+    .main-name {
+        font-size: 17pt;
+        font-weight: 700;
+        color: #0d1f14;
+        line-height: 1.15;
+        letter-spacing: -0.3px;
+    }
+    .main-position {
+        font-size: 10pt;
+        color: #16a34a;
+        font-weight: 600;
+        margin-top: 2px;
+    }
 
-/* Навыки — chips на тёмном фоне */
-.skills-grid {{
-    display: flex;
-    flex-wrap: wrap;
-    gap: 4pt;
-}}
+    /* Main — section titles */
+    .main-content .section-title {
+        font-size: 7.5pt;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.9px;
+        color: #0d1f14;
+        margin-bottom: 8px;
+        padding-bottom: 3px;
+        border-bottom: 2px solid #2de08a;
+        display: inline-block;
+    }
+    .section-block { margin-bottom: 14px; }
 
-.skill-tag {{
-    background: {SIDEBAR_CHIP_BG};
-    border: 0.5pt solid {SIDEBAR_CHIP_BORDER};
-    border-radius: 3pt;
-    padding: 2.5pt 6pt;
-    font-size: 8pt;
-    color: {SIDEBAR_TEXT};
-    word-break: break-word;
-    white-space: normal;
-    max-width: 100%;
-}}
+    /* Summary */
+    .summary-text {
+        font-size: 9pt;
+        color: #374151;
+        line-height: 1.55;
+        background: #f7fdf9;
+        border-left: 3px solid #2de08a;
+        padding: 7px 10px;
+        border-radius: 0 4px 4px 0;
+    }
 
-/* ─── MAIN AREA ──────────────────────────────────────── */
+    /* Experience */
+    .experience-entry {
+        margin-bottom: 11px;
+        padding-bottom: 9px;
+        border-bottom: 1px solid #f0f0f0;
+    }
+    .experience-entry:last-child { border-bottom: none; margin-bottom: 0; }
 
-.main {{
-    flex: 1;
-    min-width: 0;
-}}
+    .exp-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        gap: 6px;
+        margin-bottom: 1px;
+    }
+    .exp-company { font-size: 9.5pt; font-weight: 700; color: #0d1f14; flex: 1; }
+    .exp-period { font-size: 7pt; color: #6b7280; white-space: nowrap; font-style: italic; }
+    .exp-position { font-size: 8.5pt; color: #16a34a; font-weight: 600; margin-bottom: 4px; }
 
-/* ─── HERO ───────────────────────────────────────────── */
+    .exp-bullets { list-style: none; padding: 0; }
+    .exp-bullets li {
+        font-size: 8.5pt;
+        color: #374151;
+        line-height: 1.45;
+        padding-left: 10px;
+        position: relative;
+        margin-bottom: 2px;
+    }
+    .exp-bullets li::before {
+        content: '·';
+        position: absolute;
+        left: 1px;
+        color: #2de08a;
+        font-size: 11pt;
+        line-height: 1.1;
+        font-weight: 700;
+    }
 
-.hero {{
-    margin-bottom: 13pt;
-    padding-bottom: 10pt;
-    border-bottom: 1pt solid #c8ddd2;
-}}
+    /* Education */
+    .edu-entry { margin-bottom: 7px; }
+    .edu-institution { font-size: 9pt; font-weight: 700; color: #0d1f14; }
+    .edu-details { font-size: 8pt; color: #6b7280; margin-top: 1px; }
 
-h1 {{
-    font-size: 23pt;
-    font-weight: 700;
-    color: {TEXT_DARK};
-    margin: 0 0 3pt 0;
-    letter-spacing: -0.4pt;
-    line-height: 1.08;
-}}
-
-.position {{
-    font-size: 11pt;
-    color: {BRAND_PRIMARY};
-    font-weight: 600;
-    letter-spacing: 0.02em;
-    margin: 0;
-}}
-
-/* убрать старый градиентный divider — теперь border-bottom в .hero */
-.hero-divider {{
-    display: none;
-}}
-
-/* ─── SECTIONS ───────────────────────────────────────── */
-
-.section {{
-    margin-bottom: 12pt;
-    break-inside: avoid-page;
-}}
-
-.section-header {{
-    display: flex;
-    align-items: center;
-    gap: 0;
-    margin-bottom: 6pt;
-    border-bottom: 0.5pt solid #c8ddd2;
-    padding-bottom: 3pt;
-}}
-
-/* убрать старый marker — теперь не нужен */
-.section-marker {{
-    display: none;
-}}
-
-.section-title {{
-    font-size: 8.5pt;
-    font-weight: 700;
-    color: {BRAND_PRIMARY};
-    text-transform: uppercase;
-    letter-spacing: 0.12em;
-    margin: 0;
-    padding: 0;
-    border: none;
-    flex: 1;
-}}
-
-/* ─── SUMMARY ────────────────────────────────────────── */
-
-.summary-text {{
-    font-size: 9.5pt;
-    line-height: 1.70;
-    color: {TEXT_BODY};
-    margin: 0;
-    padding: 0;
-}}
-
-/* ─── EXPERIENCE ─────────────────────────────────────── */
-
-.job-entry {{
-    margin-bottom: 10pt;
-    break-inside: avoid;
-}}
-
-.job-header {{
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    margin-bottom: 1pt;
-}}
-
-.job-company {{
-    font-weight: 700;
-    font-size: 10.5pt;
-    color: {TEXT_DARK};
-    letter-spacing: -0.1pt;
-}}
-
-.job-period {{
-    font-size: 8.5pt;
-    color: {TEXT_MUTED};
-    flex-shrink: 0;
-    margin-left: 8pt;
-    font-style: italic;
-}}
-
-.job-position {{
-    font-size: 9.5pt;
-    color: {BRAND_PRIMARY};
-    font-weight: 600;
-    margin-bottom: 4pt;
-    letter-spacing: 0.01em;
-}}
-
-.job-bullets {{
-    margin: 0;
-    padding: 0;
-    list-style: none;
-}}
-
-.job-bullets li {{
-    font-size: 9.5pt;
-    line-height: 1.58;
-    color: {TEXT_BODY};
-    padding-left: 12pt;
-    position: relative;
-    margin-bottom: 2.5pt;
-}}
-
-.job-bullets li::before {{
-    content: '·';
-    position: absolute;
-    left: 2pt;
-    color: {BRAND_ACCENT};
-    font-size: 14pt;
-    line-height: 0.85;
-    font-weight: 700;
-}}
-
-/* ─── EDUCATION ──────────────────────────────────────── */
-
-.edu-entry {{
-    font-size: 9.5pt;
-    color: {TEXT_BODY};
-    line-height: 1.55;
-    margin-bottom: 4pt;
-    padding-left: 12pt;
-    position: relative;
-}}
-
-.edu-entry::before {{
-    content: '·';
-    position: absolute;
-    left: 2pt;
-    color: {BRAND_ACCENT};
-    font-size: 14pt;
-    line-height: 0.85;
-    font-weight: 700;
-}}
-
-.edu-institution {{ font-weight: 700; color: {TEXT_DARK}; }}
-.edu-degree {{ color: {TEXT_MUTED}; }}
-
-/* ─── FOOTER ─────────────────────────────────────────── */
-
-.footer {{
-    margin-top: 12pt;
-    padding-top: 5pt;
-    border-top: 0.5pt solid #d4e8db;
-    font-size: 7pt;
-    color: #9aab9f;
-    text-align: center;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-}}
-"""
+    /* Footer */
+    .page-footer {
+        position: fixed;
+        bottom: 0; left: 0; right: 0;
+        height: 18px;
+        background: #0d1f14;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .footer-text {
+        font-size: 6pt;
+        color: rgba(255,255,255,0.3);
+        letter-spacing: 1px;
+        text-transform: uppercase;
+    }
+    """
 
 
 def generate_pdf(resume_data: dict, template_name: str = "classic") -> bytes:
@@ -314,6 +246,7 @@ def generate_pdf(resume_data: dict, template_name: str = "classic") -> bytes:
             resume_data["salary"] = salary_clean + " ₽/мес"
 
     env = Environment(loader=FileSystemLoader(str(TEMPLATES_DIR)))
+    env.filters["split_bullets"] = _split_bullets
     template = env.get_template(f"resume_{template_name}.html")
     html_content = template.render(resume=resume_data)
     return HTML(string=html_content).write_pdf(stylesheets=[CSS(string=get_pdf_styles())])

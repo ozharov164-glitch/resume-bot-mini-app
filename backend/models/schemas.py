@@ -3,10 +3,18 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 
+class WorkEntry(BaseModel):
+    company: str = ""
+    position: str = ""
+    period: str = ""
+    duties: str = ""
+
+
 class GenerateResumeRequest(BaseModel):
     target_position: str
     experience_level: str = "нет опыта"
     last_job: str = "опыта работы нет"
+    work_history: list[WorkEntry] = Field(default_factory=list)
     education: str = "среднее"
     education_place: str = ""
     skills: list[str] = Field(default_factory=list)
