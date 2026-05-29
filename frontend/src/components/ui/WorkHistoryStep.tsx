@@ -104,6 +104,9 @@ export function WorkHistoryStep({
             onChange={(duties) => updateEntry(index, { duties })}
             placeholder="Обязанности и достижения"
             rows={4}
+            workPeriod={entry.period}
+            workCompany={entry.company}
+            workPosition={entry.position || targetPosition}
           />
         </div>
       ))}

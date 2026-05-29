@@ -5,6 +5,7 @@ from typing import Any
 import httpx
 
 from config import settings
+from services.text_facts import sanitize_experience_descriptions
 
 logger = logging.getLogger(__name__)
 
@@ -21,6 +22,7 @@ SYSTEM_PROMPT = """Ты — старший HR-редактор резюме дл
 • Есть цифры от кандидата — обязательно включи
 • Нет цифр — описывай качественно («улучшил процесс», «снизил количество ошибок»)
 • Формат периода: «Янв 2023 — Мар 2025» | «2019 — 2024» | «2023 — настоящее время»
+• В description НЕ указывай «N лет/месяцев стажа» — длительность уже в period; не выдумывай цифры стажа
 • НЕЛЬЗЯ: «(2 месяца)», «(N лет)» — скобки с длительностью недопустимы
 
 О СЕБЕ (summary):
@@ -389,6 +391,10 @@ def finalize_resume_data(resume_data: dict, user_data: dict) -> dict:
             first["institution"] = edu_place
 
     _apply_work_history_to_experience(resume_data, user_data)
+    exp = resume_data.get("experience")
+    wh = user_data.get("work_history") or []
+    if isinstance(exp, list) and wh:
+        resume_data["experience"] = sanitize_experience_descriptions(exp, wh)
     return resume_data
 
 

@@ -4,6 +4,7 @@ from typing import Any
 import httpx
 
 from config import settings
+from services.text_facts import build_polish_user_message, sanitize_duration_claims
 
 logger = logging.getLogger(__name__)
 
@@ -12,7 +13,14 @@ GROQ_TRANSCRIBE_URL = "https://api.groq.com/openai/v1/audio/transcriptions"
 
 POLISH_PROMPT = """Перефразируй текст пользователя как профессиональное описание
 опыта работы для резюме hh.ru. Используй глаголы действия (организовывал, выполнял,
-обеспечивал). НЕ добавляй факты которых нет в тексте. Сохрани цифры и названия.
+обеспечивал).
+
+СТРОГО:
+- НЕ добавляй факты, цифры, сроки, годы/месяцы стажа, количество клиентов — если их НЕТ в тексте пользователя
+- Если указан период работы — описание НЕ должно противоречить его длительности
+- ЗАПРЕЩЕНО: «N лет опыта», «в течение N лет», «за N лет» без явного основания в исходнике
+- Сохрани цифры и названия только из исходного текста
+
 Верни ТОЛЬКО готовый текст, без JSON, без пояснений."""
 
 PUNCTUATE_PROMPT = """Ты редактор русского текста из распознавания речи.
@@ -170,17 +178,32 @@ async def transcribe_audio(audio_bytes: bytes, filename: str, content_type: str)
         return text
 
 
-async def polish_experience_text(text: str, position: str) -> str:
+async def polish_experience_text(
+    text: str,
+    position: str,
+    *,
+    period: str = "",
+    company: str = "",
+    job_position: str = "",
+) -> str:
     if not text.strip():
         return text
+
+    user_content = build_polish_user_message(
+        text=text,
+        position=position,
+        period=period,
+        company=company,
+        job_position=job_position,
+    )
 
     body = {
         "model": settings.GROQ_PUNCTUATE_MODEL,
         "messages": [
             {"role": "system", "content": POLISH_PROMPT},
-            {"role": "user", "content": f"Должность: {position}\nТекст: {text}"},
+            {"role": "user", "content": user_content},
         ],
-        "temperature": 0.35,
+        "temperature": 0.2,
         "max_tokens": 512,
     }
 
@@ -200,13 +223,13 @@ async def polish_experience_text(text: str, position: str) -> str:
         data = response.json()
         content = ((data.get("choices") or [{}])[0].get("message") or {}).get("content") or ""
         polished = content.strip()
-        return polished or text
+        return sanitize_duration_claims(text, polished or text, period)
     except Exception as exc:
         logger.warning("groq polish failed, trying openrouter: %s", exc)
 
     messages = [
         {"role": "system", "content": POLISH_PROMPT},
-        {"role": "user", "content": f"Должность: {position}\nТекст: {text}"},
+        {"role": "user", "content": user_content},
     ]
     or_body = {
         "model": settings.OPENROUTER_MODEL,
@@ -234,4 +257,5 @@ async def polish_experience_text(text: str, position: str) -> str:
         return text
 
     content = (choices[0].get("message") or {}).get("content") or ""
-    return content.strip() or text
+    polished = content.strip() or text
+    return sanitize_duration_claims(text, polished, period)

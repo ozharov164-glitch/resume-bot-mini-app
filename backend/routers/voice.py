@@ -35,5 +35,14 @@ async def transcribe_voice(
 async def polish_text(body: dict, current_user: dict = Depends(get_current_user)):
     text = str(body.get("text", ""))[:1000]
     position = str(body.get("position", ""))[:100]
-    result = await polish_experience_text(text, position)
+    period = str(body.get("period", ""))[:80]
+    company = str(body.get("company", ""))[:120]
+    job_position = str(body.get("job_position", ""))[:100]
+    result = await polish_experience_text(
+        text,
+        position,
+        period=period,
+        company=company,
+        job_position=job_position,
+    )
     return {"polished": result}

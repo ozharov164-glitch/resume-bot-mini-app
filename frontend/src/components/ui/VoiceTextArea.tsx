@@ -20,6 +20,10 @@ interface VoiceTextAreaProps {
   hint?: string;
   rows?: number;
   fieldId: string;
+  /** Контекст места работы — передаётся в polish, чтобы ИИ не выдумывал стаж */
+  workPeriod?: string;
+  workCompany?: string;
+  workPosition?: string;
 }
 
 export function VoiceTextArea({
@@ -29,6 +33,9 @@ export function VoiceTextArea({
   hint,
   rows = 5,
   fieldId,
+  workPeriod = "",
+  workCompany = "",
+  workPosition = "",
 }: VoiceTextAreaProps) {
   const [listening, setListening] = useState(false);
   const [transcribing, setTranscribing] = useState(false);
@@ -149,7 +156,13 @@ export function VoiceTextArea({
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ text: value, position: targetPosition }),
+        body: JSON.stringify({
+          text: value,
+          position: workPosition || targetPosition,
+          period: workPeriod,
+          company: workCompany,
+          job_position: workPosition,
+        }),
       });
       if (!res.ok) throw new Error("polish failed");
       const data = (await res.json()) as { polished?: string };
@@ -165,7 +178,7 @@ export function VoiceTextArea({
     } finally {
       setPolishing(false);
     }
-  }, [onChange, polishing, targetPosition, value]);
+  }, [onChange, polishing, targetPosition, value, workCompany, workPeriod, workPosition]);
 
   useEffect(() => {
     return () => {
