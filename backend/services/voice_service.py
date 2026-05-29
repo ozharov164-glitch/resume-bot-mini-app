@@ -24,6 +24,11 @@ def _groq_keys() -> list[str]:
     return [k.strip() for k in settings.GROQ_API_KEYS.split(",") if k.strip()]
 
 
+def _groq_client(timeout: float = 60.0) -> httpx.AsyncClient:
+    proxy = (settings.GROQ_PROXY_URL or "").strip() or None
+    return httpx.AsyncClient(timeout=timeout, proxy=proxy)
+
+
 def _retryable_status(code: int) -> bool:
     return code in (401, 403, 429, 500, 502, 503, 504)
 
@@ -38,7 +43,7 @@ async def _groq_request(
         raise RuntimeError("Groq API keys not configured")
 
     last_error: Exception | None = None
-    async with httpx.AsyncClient(timeout=60.0) as client:
+    async with _groq_client() as client:
         for index, key in enumerate(keys):
             try:
                 request = build_request(key)
@@ -112,7 +117,7 @@ async def transcribe_audio(audio_bytes: bytes, filename: str, content_type: str)
     last_error: Exception | None = None
     data: dict[str, Any] = {}
 
-    async with httpx.AsyncClient(timeout=60.0) as client:
+    async with _groq_client() as client:
         for index, key in enumerate(keys):
             try:
                 response = await client.post(

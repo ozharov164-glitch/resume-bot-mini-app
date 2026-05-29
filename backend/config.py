@@ -44,6 +44,8 @@ class Settings(BaseSettings):
     GROQ_API_KEYS: str = ""
     GROQ_STT_MODEL: str = "whisper-large-v3-turbo"
     GROQ_PUNCTUATE_MODEL: str = "llama-3.1-8b-instant"
+    # HTTP proxy for Groq API, e.g. http://user:pass@host:port
+    GROQ_PROXY_URL: str = ""
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
