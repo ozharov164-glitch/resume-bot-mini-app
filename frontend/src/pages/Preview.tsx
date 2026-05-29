@@ -1,5 +1,7 @@
 import { useCallback, useState } from "react";
 
+import { PreviewResumeCard } from "../components/preview/PreviewResumeCard";
+import { PreviewStatusHero } from "../components/preview/PreviewStatusHero";
 import { ensureAuthToken, requestPdf } from "../api";
 import { AppHeader } from "../components/ui/AppHeader";
 import { Button } from "../components/ui/Button";
@@ -51,88 +53,12 @@ export function PreviewPage() {
     setPage("payment");
   };
 
-  const contactLine = [resumeData.city, resumeData.phone].filter(Boolean).join(" · ");
-
   return (
     <Screen withBottomBar bottomBarButtons={2}>
       <AppHeader onBack={handleBack} showBack title="Предпросмотр" />
-      <main className="flex flex-1 flex-col gap-4 px-4 py-4">
-        <div
-          className="rounded-xl px-4 py-3 text-center text-sm leading-relaxed"
-          style={{
-            background: "var(--preview-banner-bg)",
-            color: "var(--preview-banner-text)",
-          }}
-        >
-          Бесплатный предпросмотр. Чтобы изменить данные — нажми «Изменить ответы».
-        </div>
-
-        <section
-          className="no-copy preview-protected relative overflow-hidden rounded-xl border p-4"
-          style={{ background: "#ffffff", borderColor: "var(--border-subtle)", boxShadow: "var(--card-shadow)" }}
-          onCopy={(e) => e.preventDefault()}
-        >
-          <div className="mb-4 border-b pb-4" style={{ borderColor: "var(--border-subtle)" }}>
-            <h3 className="text-xl font-bold">{resumeData.full_name}</h3>
-            <p className="mt-1 text-sm font-semibold" style={{ color: "var(--brand)" }}>
-              {resumeData.target_position}
-            </p>
-            {contactLine && (
-              <p className="mt-2 text-xs" style={{ color: "var(--text-muted)" }}>
-                {contactLine}
-              </p>
-            )}
-          </div>
-
-          <div className="mb-4">
-            <h4
-              className="mb-2 text-xs font-bold uppercase tracking-wider"
-              style={{ color: "var(--text-muted)" }}
-            >
-              Обо мне
-            </h4>
-            <p className="text-sm leading-relaxed">{resumeData.summary}</p>
-          </div>
-
-          {resumeData.experience?.length > 0 && (
-            <div className="mb-4">
-              <h4
-                className="mb-2 text-xs font-bold uppercase tracking-wider"
-                style={{ color: "var(--text-muted)" }}
-              >
-                Опыт работы
-              </h4>
-              <ul className="space-y-2 text-sm leading-relaxed" style={{ color: "var(--text-variant)" }}>
-                {resumeData.experience.slice(0, 3).map((job, i) => (
-                  <li key={`${job.company}-${i}`}>
-                    <span className="font-semibold">{job.company}</span>
-                    {job.period ? ` · ${job.period}` : ""}
-                    {job.description ? ` — ${job.description}` : ""}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          {resumeData.skills?.length > 0 && (
-            <div>
-              <h4
-                className="mb-2 text-xs font-bold uppercase tracking-wider"
-                style={{ color: "var(--text-muted)" }}
-              >
-                Навыки
-              </h4>
-              <div className="flex flex-wrap gap-2">
-                {resumeData.skills.map((skill) => (
-                  <span key={skill} className="skill-chip">
-                    {skill}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
-        </section>
-
+      <main className="flex flex-1 flex-col gap-4 px-4 py-3 pb-2">
+        <PreviewStatusHero />
+        <PreviewResumeCard resume={resumeData} />
         {founderActive && <FounderBadge />}
       </main>
 
@@ -153,8 +79,9 @@ export function PreviewPage() {
             variant="brand"
             onClick={handlePdf}
             disabled={sending}
-            className="flex items-center justify-center gap-2"
+            className="preview-pdf-btn relative flex items-center justify-center gap-2 overflow-hidden"
           >
+            <span className="preview-btn-shimmer pointer-events-none absolute inset-0" aria-hidden />
             <Icon name="picture_as_pdf" size={20} />
             {sending ? "Отправляем PDF…" : "Получить PDF в Telegram"}
           </Button>

@@ -68,6 +68,85 @@ body {
   -webkit-touch-callout: none !important;
 }
 
+/* Preview screen — Stitch Light Mode */
+.preview-eyebrow {
+  background: #fc7c78;
+  color: #711419;
+  border: 1px solid rgba(164, 58, 58, 0.15);
+}
+
+.preview-resume-card {
+  background: #ffffff;
+  border-color: rgba(187, 202, 191, 0.45);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+}
+
+.preview-watermark-text {
+  transform: rotate(-45deg);
+  font-size: 3.5rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: #161d19;
+  opacity: 0.03;
+  white-space: nowrap;
+}
+
+.preview-section-title {
+  margin-bottom: 0.5rem;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.preview-timeline {
+  position: relative;
+  margin-left: 0.25rem;
+  padding-left: 1.5rem;
+  border-left: 2px solid #e3eae3;
+}
+
+.preview-timeline-item {
+  padding-left: 0.25rem;
+}
+
+.preview-timeline-dot {
+  left: -1.875rem;
+  top: 0.35rem;
+  width: 0.75rem;
+  height: 0.75rem;
+  border-radius: 9999px;
+  border: 2px solid #ffffff;
+}
+
+.preview-skill-pill {
+  display: inline-block;
+  padding: 0.35rem 0.75rem;
+  border-radius: 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  background: var(--tg-secondary-bg);
+  color: var(--tg-text);
+  border: 1px solid rgba(187, 202, 191, 0.5);
+}
+
+.preview-btn-shimmer {
+  background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.45) 50%, transparent 100%);
+  background-size: 200% 100%;
+  animation: preview-shimmer 2s infinite linear;
+  opacity: 0.22;
+}
+
+@keyframes preview-shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
 input,
 textarea {
   user-select: text;
