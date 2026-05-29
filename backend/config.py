@@ -13,7 +13,8 @@ class Settings(BaseSettings):
     OPENROUTER_MODEL_FALLBACK: str = "deepseek/deepseek-v3.2"
     # Fastest providers for v4-flash (OpenRouter latency p50, auto-updated via deploy script).
     OPENROUTER_PROVIDER_ONLY: str = "parasail,alibaba,deepseek,morph"
-    OPENROUTER_MAX_TOKENS: int = 1200
+    # Достаточно для полноценного резюме; меньше 2000 — без лишнего запаса.
+    OPENROUTER_MAX_TOKENS: int = 1600
 
     SUPABASE_URL: str
     SUPABASE_KEY: str

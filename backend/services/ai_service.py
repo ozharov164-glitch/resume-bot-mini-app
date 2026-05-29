@@ -8,18 +8,30 @@ from config import settings
 
 logger = logging.getLogger(__name__)
 
-# Короткий system prompt — меньше input-токенов, тот же формат ответа.
-SYSTEM_PROMPT = """HR-редактор резюме под hh.ru. Русский язык, без воды.
-Верни ТОЛЬКО JSON:
-{"full_name":"","target_position":"","city":"","phone":"","email":"","summary":"","experience":[{"company":"","position":"","period":"","description":""}],"education":[{"institution":"","degree":"","year":""}],"skills":[],"languages":[]}
-Без markdown. Не выдумывай опыт."""
+# Компактный, но полный промпт: качество резюме важнее экономии на system-токенах.
+SYSTEM_PROMPT = """Ты HR-редактор резюме для российского рынка (формат hh.ru).
 
+Задача: по фактам кандидата сделать сильное, читаемое резюме — живое, конкретное, без канцелярита.
+
+Правила качества:
+1. Опыт: глаголы действия, обязанности + результат; в description — 2–4 содержательные фразы.
+2. «О себе» (summary): 3–5 предложений, по делу; не клише без фактов.
+3. Стиль под профессию (продавец, водитель, склад, офис и т.д.).
+4. Нет опыта — честно: обучаемость, надежность, релевантные навыки; не выдумывай стаж и компании.
+5. Используй только данные из запроса; даты и места работы не выдумывай.
+6. Навыки — только уместные для целевой должности.
+
+Ответ: ТОЛЬКО JSON, без markdown и комментариев:
+{"full_name":"","target_position":"","city":"","phone":"","email":"","summary":"","experience":[{"company":"","position":"","period":"","description":""}],"education":[{"institution":"","degree":"","year":""}],"skills":[],"languages":["Русский — родной"]}"""
+
+# Обрезаем только явный перебор (защита от спама), не режем нормальные ответы пользователя.
 MAX_FIELD_LEN = {
-    "last_job": 900,
-    "about": 400,
-    "target_position": 120,
-    "name": 80,
-    "city": 60,
+    "last_job": 2000,
+    "about": 800,
+    "target_position": 150,
+    "name": 100,
+    "city": 80,
+    "vacancy": 2000,
 }
 
 
@@ -30,27 +42,30 @@ def _truncate(value: str, limit: int) -> str:
     return value[: limit - 1].rstrip() + "…"
 
 
-def _compact_user_payload(user_data: dict) -> str:
-    """Минимальный user prompt — только факты, без лишних слов."""
-    skills = user_data.get("skills") or []
+def _format_skills(skills: Any) -> str:
     if isinstance(skills, list):
-        skills = ", ".join(skills[:12])
-    lines = [
-        f"должность: {_truncate(user_data.get('target_position', ''), MAX_FIELD_LEN['target_position'])}",
-        f"опыт: {user_data.get('experience_level', 'нет')}",
-        f"работа: {_truncate(user_data.get('last_job', 'нет'), MAX_FIELD_LEN['last_job'])}",
-        f"образование: {user_data.get('education', 'среднее')}",
-        f"навыки: {skills}",
-        f"город: {_truncate(user_data.get('city', ''), MAX_FIELD_LEN['city'])}",
-        f"зарплата: {user_data.get('salary', '')}",
-        f"о себе: {_truncate(user_data.get('about', ''), MAX_FIELD_LEN['about'])}",
-        f"имя: {_truncate(user_data.get('name', ''), MAX_FIELD_LEN['name'])}",
-        f"тел: {user_data.get('phone', '')}",
+        return ", ".join(str(s).strip() for s in skills[:16] if str(s).strip())
+    return str(skills or "").strip()
+
+
+def _build_user_payload(user_data: dict) -> str:
+    """Структурированные факты — модель лучше понимает, чем сжатые однострочники."""
+    blocks = [
+        f"Целевая должность: {_truncate(user_data.get('target_position', ''), MAX_FIELD_LEN['target_position'])}",
+        f"Уровень опыта: {user_data.get('experience_level', 'нет опыта')}",
+        f"Последняя работа / обязанности:\n{_truncate(user_data.get('last_job', 'опыта нет'), MAX_FIELD_LEN['last_job'])}",
+        f"Образование: {user_data.get('education', 'среднее')}",
+        f"Навыки: {_format_skills(user_data.get('skills'))}",
+        f"Город: {_truncate(user_data.get('city', ''), MAX_FIELD_LEN['city'])}",
+        f"Желаемая зарплата: {user_data.get('salary', '')} руб./мес",
+        f"О себе (исходник от кандидата):\n{_truncate(user_data.get('about', ''), MAX_FIELD_LEN['about'])}",
+        f"Имя: {_truncate(user_data.get('name', ''), MAX_FIELD_LEN['name'])}",
+        f"Телефон: {user_data.get('phone', '')}",
     ]
     email = (user_data.get("email") or "").strip()
     if email:
-        lines.append(f"email: {email}")
-    return "\n".join(lines)
+        blocks.append(f"Email: {email}")
+    return "\n\n".join(blocks)
 
 
 def _provider_routing() -> dict[str, Any]:
@@ -85,11 +100,11 @@ def _build_request_body(messages: list[dict], model: str, temperature: float) ->
     }
 
 
-async def _call_openrouter(messages: list[dict], model: str | None = None, temperature: float = 0.55) -> dict:
+async def _call_openrouter(messages: list[dict], model: str | None = None, temperature: float = 0.65) -> dict:
     model = model or settings.OPENROUTER_MODEL
     body = _build_request_body(messages, model, temperature)
 
-    async with httpx.AsyncClient(timeout=45.0) as client:
+    async with httpx.AsyncClient(timeout=50.0) as client:
         response = await client.post(
             "https://openrouter.ai/api/v1/chat/completions",
             headers={
@@ -101,7 +116,6 @@ async def _call_openrouter(messages: list[dict], model: str | None = None, tempe
             json=body,
         )
 
-        # Некоторые провайдеры не принимают response_format — повтор без него.
         if response.status_code == 400 and "response_format" in body:
             body.pop("response_format", None)
             response = await client.post(
@@ -120,10 +134,11 @@ async def _call_openrouter(messages: list[dict], model: str | None = None, tempe
 
     usage = data.get("usage") or {}
     logger.info(
-        "openrouter model=%s prompt_tokens=%s completion_tokens=%s",
+        "openrouter model=%s prompt_tokens=%s completion_tokens=%s total=%s",
         model,
         usage.get("prompt_tokens"),
         usage.get("completion_tokens"),
+        usage.get("total_tokens"),
     )
 
     content = data["choices"][0]["message"]["content"]
@@ -133,26 +148,35 @@ async def _call_openrouter(messages: list[dict], model: str | None = None, tempe
 async def generate_resume(user_data: dict) -> dict:
     messages = [
         {"role": "system", "content": SYSTEM_PROMPT},
-        {"role": "user", "content": _compact_user_payload(user_data)},
+        {"role": "user", "content": _build_user_payload(user_data)},
     ]
     try:
-        return await _call_openrouter(messages)
+        return await _call_openrouter(messages, temperature=0.68)
     except json.JSONDecodeError:
-        return await _call_openrouter(messages, model=settings.OPENROUTER_MODEL_FALLBACK, temperature=0.5)
+        logger.warning("JSON parse failed, retrying with fallback model")
+        return await _call_openrouter(
+            messages, model=settings.OPENROUTER_MODEL_FALLBACK, temperature=0.6
+        )
     except httpx.HTTPStatusError as exc:
         if exc.response.status_code in {402, 429, 503}:
-            return await _call_openrouter(messages, model=settings.OPENROUTER_MODEL_FALLBACK, temperature=0.5)
+            return await _call_openrouter(
+                messages, model=settings.OPENROUTER_MODEL_FALLBACK, temperature=0.6
+            )
         raise
 
 
 async def adapt_resume_for_vacancy(resume_data: dict, vacancy_text: str) -> dict:
     compact_resume = json.dumps(resume_data, ensure_ascii=False, separators=(",", ":"))
-    vacancy_text = _truncate(vacancy_text, 1500)
+    vacancy_text = _truncate(vacancy_text, MAX_FIELD_LEN["vacancy"])
     messages = [
         {"role": "system", "content": SYSTEM_PROMPT},
         {
             "role": "user",
-            "content": f"Адаптируй резюме под вакансию. Только JSON.\nрезюме:{compact_resume}\nвакансия:{vacancy_text}",
+            "content": (
+                "Адаптируй резюме под вакансию: усиль summary и skills под требования, "
+                "опыт не выдумывай. Только JSON той же схемы.\n\n"
+                f"Резюме:\n{compact_resume}\n\nВакансия:\n{vacancy_text}"
+            ),
         },
     ]
-    return await _call_openrouter(messages, temperature=0.45)
+    return await _call_openrouter(messages, temperature=0.5)
