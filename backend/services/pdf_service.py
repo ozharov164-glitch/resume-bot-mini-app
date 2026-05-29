@@ -1,3 +1,4 @@
+import io
 import re
 from pathlib import Path
 
@@ -238,15 +239,71 @@ def get_pdf_styles() -> str:
     """
 
 
-def generate_pdf(resume_data: dict, template_name: str = "classic") -> bytes:
-    salary = resume_data.get("salary", "")
+def get_preview_watermark_styles() -> str:
+    return """
+    .preview-watermark-layer {
+        position: fixed;
+        inset: 0;
+        z-index: 9999;
+        pointer-events: none;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='420' height='220'%3E%3Ctext x='50%25' y='50%25' font-family='DejaVu Sans,Arial,sans-serif' font-size='28' font-weight='700' fill='%230d1f14' fill-opacity='0.09' text-anchor='middle' dominant-baseline='middle' transform='rotate(-32 210 110)'%3E%D0%9F%D0%A0%D0%95%D0%94%D0%9F%D0%A0%D0%9E%D0%A1%D0%9C%D0%9E%D0%A2%D0%A0%3C/text%3E%3C/svg%3E");
+        background-repeat: repeat;
+    }
+
+    .preview-fade-layer {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        height: 38%;
+        z-index: 9998;
+        pointer-events: none;
+        background: linear-gradient(
+            to bottom,
+            rgba(255, 255, 255, 0) 0%,
+            rgba(255, 255, 255, 0.82) 55%,
+            rgba(255, 255, 255, 0.98) 100%
+        );
+    }
+    """
+
+
+def _normalize_salary(resume_data: dict) -> dict:
+    data = dict(resume_data)
+    salary = data.get("salary", "")
     if salary:
         salary_clean = re.sub(r"[^\d\s]", "", str(salary)).strip()
         if salary_clean:
-            resume_data["salary"] = salary_clean + " ₽/мес"
+            data["salary"] = salary_clean + " ₽/мес"
+    return data
 
+
+def _render_document(resume_data: dict, template_name: str = "classic", *, preview: bool = False):
+    data = _normalize_salary(resume_data)
     env = Environment(loader=FileSystemLoader(str(TEMPLATES_DIR)))
     env.filters["split_bullets"] = _split_bullets
     template = env.get_template(f"resume_{template_name}.html")
-    html_content = template.render(resume=resume_data)
-    return HTML(string=html_content).write_pdf(stylesheets=[CSS(string=get_pdf_styles())])
+    html_content = template.render(resume=data, preview=preview)
+    styles = get_pdf_styles()
+    if preview:
+        styles += get_preview_watermark_styles()
+    return HTML(string=html_content).render(stylesheets=[CSS(string=styles)])
+
+
+def generate_pdf(resume_data: dict, template_name: str = "classic") -> bytes:
+    return _render_document(resume_data, template_name, preview=False).write_pdf()
+
+
+def generate_preview_png(
+    resume_data: dict,
+    template_name: str = "classic",
+    *,
+    watermark: bool = True,
+    resolution: int = 110,
+) -> bytes:
+    """First-page PNG for unpaid preview — not a downloadable PDF."""
+    document = _render_document(resume_data, template_name, preview=watermark)
+    page = document.copy(document.pages[0]) if document.pages else document
+    buffer = io.BytesIO()
+    page.write_png(buffer, resolution=resolution)
+    return buffer.getvalue()

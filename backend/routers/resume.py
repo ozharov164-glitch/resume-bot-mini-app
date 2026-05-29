@@ -11,7 +11,7 @@ from models.schemas import GenerateResumeRequest, ResumeGenerationResponse
 from services.ai_service import generate_resume
 from services.founder import is_founder
 from services.payment_fulfillment import parse_resume_data
-from services.pdf_service import generate_pdf
+from services.pdf_service import generate_pdf, generate_preview_png
 from services.telegram_service import send_document_to_user
 
 logger = logging.getLogger(__name__)
@@ -93,16 +93,60 @@ async def get_resume(resume_id: str, current_user: dict = Depends(get_current_us
     return resume
 
 
+@router.get("/{resume_id}/preview-image")
+async def preview_resume_image(
+    resume_id: str,
+    current_user: dict = Depends(get_current_user),
+    db=Depends(get_db),
+):
+    """Watermarked PNG preview — not the final PDF file."""
+    resume = db.find_resume(resume_id, current_user["id"])
+    if not resume:
+        raise HTTPException(status_code=404, detail="Резюме не найдено.")
+
+    founder = is_founder(current_user.get("telegram_id"))
+    paid = bool(resume.get("is_paid") or founder)
+    resume_data = parse_resume_data(resume["data"])
+    try:
+        png_bytes = generate_preview_png(
+            resume_data,
+            watermark=not paid,
+            resolution=130 if paid else 110,
+        )
+    except Exception as exc:
+        logger.exception("preview image failed resume_id=%s", resume_id)
+        raise HTTPException(
+            status_code=500,
+            detail="Не удалось сформировать предпросмотр.",
+        ) from exc
+
+    return Response(
+        content=png_bytes,
+        media_type="image/png",
+        headers={
+            "Content-Disposition": "inline; filename=preview.png",
+            "Cache-Control": "private, no-store",
+        },
+    )
+
+
 @router.get("/{resume_id}/preview-pdf")
 async def preview_resume_pdf(
     resume_id: str,
     current_user: dict = Depends(get_current_user),
     db=Depends(get_db),
 ):
-    """Возвращает PDF inline для предпросмотра в iframe."""
+    """PDF до оплаты недоступен — только PNG-превью или доставка в Telegram."""
     resume = db.find_resume(resume_id, current_user["id"])
     if not resume:
         raise HTTPException(status_code=404, detail="Резюме не найдено.")
+
+    founder = is_founder(current_user.get("telegram_id"))
+    if not resume.get("is_paid") and not founder:
+        raise HTTPException(
+            status_code=403,
+            detail="PDF доступен после оплаты. Используйте предпросмотр на экране оплаты.",
+        )
 
     resume_data = parse_resume_data(resume["data"])
     try:
@@ -117,7 +161,10 @@ async def preview_resume_pdf(
     return Response(
         content=pdf_bytes,
         media_type="application/pdf",
-        headers={"Content-Disposition": "inline; filename=preview.pdf"},
+        headers={
+            "Content-Disposition": "inline; filename=preview.pdf",
+            "Cache-Control": "private, no-store",
+        },
     )
 
 

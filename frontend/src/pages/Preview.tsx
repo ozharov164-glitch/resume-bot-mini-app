@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 
+import { PreviewImageFrame } from "../components/preview/PreviewImageFrame";
+import { PreviewLoadingSkeleton } from "../components/preview/PreviewLoadingSkeleton";
 import { PreviewResumeCard } from "../components/preview/PreviewResumeCard";
 import { PreviewStatusHero } from "../components/preview/PreviewStatusHero";
 import { ensureAuthToken, requestPdf } from "../api";
@@ -17,12 +19,13 @@ import { getTg } from "../telegram";
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
 export function PreviewPage() {
-  const { resumeData, resumeId, authToken, setPage, setPaid, startEditResume, previewReturnPage } =
+  const { resumeData, resumeId, authToken, setPage, setPaid, startEditResume, previewReturnPage, isPaid } =
     useAppStore();
   const founderActive = useFounderStatus();
   const [sending, setSending] = useState(false);
-  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
-  const [pdfError, setPdfError] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewError, setPreviewError] = useState(false);
+  const previewLocked = !isPaid && !founderActive;
 
   const handleBack = useCallback(() => setPage(previewReturnPage), [setPage, previewReturnPage]);
   useTelegramBackButton(handleBack);
@@ -36,24 +39,24 @@ export function PreviewPage() {
     (async () => {
       try {
         const token = authToken || (await ensureAuthToken());
-        const res = await fetch(`${API_URL}/api/resume/${resumeId}/preview-pdf`, {
+        const res = await fetch(`${API_URL}/api/resume/${resumeId}/preview-image`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (cancelled) return;
         if (!res.ok) {
-          setPdfError(true);
+          setPreviewError(true);
           return;
         }
         const blob = await res.blob();
         if (blob.size < 100) {
-          setPdfError(true);
+          setPreviewError(true);
           return;
         }
         objectUrl = URL.createObjectURL(blob);
-        setPdfUrl(objectUrl);
-        setPdfError(false);
+        setPreviewUrl(objectUrl);
+        setPreviewError(false);
       } catch {
-        if (!cancelled) setPdfError(true);
+        if (!cancelled) setPreviewError(true);
       }
     })();
 
@@ -98,22 +101,12 @@ export function PreviewPage() {
       <AppHeader onBack={handleBack} showBack title="Предпросмотр" />
       <main className="flex flex-1 flex-col gap-4 px-4 py-3 pb-2">
         <PreviewStatusHero />
-        {pdfUrl && !pdfError ? (
-          <iframe
-            src={pdfUrl}
-            className="w-full rounded-xl border border-zinc-800"
-            style={{ height: "520px" }}
-            title="Предпросмотр резюме"
-          />
-        ) : pdfError ? (
+        {previewUrl && !previewError ? (
+          <PreviewImageFrame src={previewUrl} locked={previewLocked} />
+        ) : previewError ? (
           <PreviewResumeCard resume={resumeData} />
         ) : (
-          <div
-            className="flex items-center justify-center rounded-xl border border-zinc-800 py-16 text-sm"
-            style={{ color: "var(--text-muted)" }}
-          >
-            Загружаем PDF…
-          </div>
+          <PreviewLoadingSkeleton />
         )}
         {founderActive && <FounderBadge />}
       </main>
