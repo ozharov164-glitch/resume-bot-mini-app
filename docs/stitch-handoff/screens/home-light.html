@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+
+<html lang="ru"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
+<title>ResumeBot - Главная</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-tint": "#006c49",
+                        "surface": "#f4fbf4",
+                        "surface-container": "#e8f0e9",
+                        "accent": "#10b981",
+                        "primary": "#006c49",
+                        "on-accent": "#ffffff",
+                        "inverse-primary": "#4edea3",
+                        "on-background": "#161d19",
+                        "on-primary-fixed-variant": "#005236",
+                        "tertiary": "#a43a3a",
+                        "secondary-container": "#4aa1fe",
+                        "outline": "#6c7a71",
+                        "on-secondary-fixed-variant": "#004881",
+                        "on-primary": "#ffffff",
+                        "on-surface": "#161d19",
+                        "surface-bright": "#f4fbf4",
+                        "on-secondary-container": "#003663",
+                        "tertiary-fixed-dim": "#ffb3af",
+                        "zinc-light": "#f4f4f5",
+                        "inverse-on-surface": "#ebf3eb",
+                        "tg-blue": "#3390ec",
+                        "on-primary-container": "#00422b",
+                        "slate-dark": "#0f172a",
+                        "surface-container-high": "#e3eae3",
+                        "on-surface-variant": "#3c4a42",
+                        "surface-container-low": "#eef6ee",
+                        "tertiary-fixed": "#ffdad7",
+                        "secondary-fixed-dim": "#a2c9ff",
+                        "surface-variant": "#dde4dd",
+                        "surface-container-highest": "#dde4dd",
+                        "inverse-surface": "#2b322d",
+                        "error": "#ba1a1a",
+                        "tertiary-container": "#fc7c78",
+                        "on-error": "#ffffff",
+                        "on-tertiary-fixed-variant": "#842225",
+                        "background": "#f4fbf4",
+                        "primary-fixed-dim": "#4edea3",
+                        "surface-dim": "#d4dcd5",
+                        "on-tertiary": "#ffffff",
+                        "on-primary-fixed": "#002113",
+                        "primary-fixed": "#6ffbbe",
+                        "on-secondary": "#ffffff",
+                        "secondary": "#0060a9",
+                        "on-error-container": "#93000a",
+                        "surface-container-lowest": "#ffffff",
+                        "secondary-fixed": "#d3e4ff",
+                        "error-container": "#ffdad6",
+                        "primary-container": "#10b981",
+                        "on-tertiary-fixed": "#410005",
+                        "on-secondary-fixed": "#001c38",
+                        "on-tertiary-container": "#711419",
+                        "outline-variant": "#bbcabf"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "space-4": "16px",
+                        "gutter": "16px",
+                        "space-2": "8px",
+                        "space-8": "32px",
+                        "unit": "4px",
+                        "space-6": "24px",
+                        "margin-x": "16px",
+                        "space-3": "12px",
+                        "space-1": "4px"
+                    },
+                    "fontFamily": {
+                        "label-lg": ["Nunito Sans"],
+                        "label-sm": ["Nunito Sans"],
+                        "body-lg": ["Nunito Sans"],
+                        "body-md": ["Nunito Sans"],
+                        "headline-lg": ["Nunito Sans"],
+                        "headline-md": ["Nunito Sans"],
+                        "headline-lg-mobile": ["Nunito Sans"]
+                    },
+                    "fontSize": {
+                        "label-lg": ["14px", { "lineHeight": "18px", "letterSpacing": "0.02em", "fontWeight": "600" }],
+                        "label-sm": ["12px", { "lineHeight": "16px", "letterSpacing": "0.04em", "fontWeight": "600" }],
+                        "body-lg": ["17px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "body-md": ["15px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "headline-lg": ["24px", { "lineHeight": "32px", "fontWeight": "700" }],
+                        "headline-md": ["20px", { "lineHeight": "28px", "fontWeight": "700" }],
+                        "headline-lg-mobile": ["22px", { "lineHeight": "28px", "fontWeight": "700" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        /* Base styles to ensure proper rendering */
+        body { -webkit-tap-highlight-color: transparent; }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-background font-body-md text-body-md antialiased min-h-screen flex flex-col pb-[90px]">
+<!-- TopAppBar Component -->
+<header class="fixed top-0 w-full z-50 bg-surface flex items-center h-14 px-margin-x shadow-sm shadow-surface-variant/30">
+<button aria-label="Назад" class="flex items-center justify-center p-2 -ml-2 text-primary hover:opacity-80 active:scale-95 transition-transform duration-150 rounded-full">
+<span class="material-symbols-outlined" style="font-variation-settings: 'wght' 400;">arrow_back</span>
+</button>
+<h1 class="ml-2 font-headline-md-mobile text-headline-md-mobile font-bold text-primary truncate flex-1">Конструктор резюме</h1>
+</header>
+<!-- Main Content Area -->
+<main class="flex-1 pt-14 px-margin-x flex flex-col items-center">
+<!-- Hero Illustration -->
+<div class="w-full max-w-[280px] mt-space-6 mb-space-4 aspect-square bg-surface-container-low rounded-full overflow-hidden flex items-center justify-center border-4 border-surface shadow-sm shadow-primary/5">
+<img alt="Hero" class="w-full h-full object-cover" data-alt="A clean, flat-vector style digital illustration designed for a mobile app hero section. The image depicts a cheerful, professional construction worker or driver holding a glowing, beautifully formatted resume document. The color palette strictly adheres to a light mode aesthetic, utilizing bright emerald greens, soft whites, and light grays to ensure high contrast and a modern, efficient, and approachable corporate vibe. The background is abstract and minimalistic with subtle geometric shapes suggesting upward mobility and career success." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCisLereZCayMuUQz7bX_6xmcjPXIoKzDR9YMPpUGOzKJTbaXH5TTA_2XRqDnA3uTmiW3S6soIPzE0rAoiyA8aEU8h4dukb76GBr5n9gl_jgmttzu2OJfTBZMbEfXyrQvvWnQa-Zz8xy7Bvb8fELSC7MHg7i7SaQoR3250ps3rhTlNI-p95ahg7bM9J1AMzguXvpg66fJjuuEUjwScgQQfMYdgQJKJsjYO0rhb6YU0X5aXRp3Az0XajqGqIuqevk6YBUwTRYVphzf6G"/>
+</div>
+<!-- Typography Stack -->
+<div class="text-center w-full flex flex-col gap-space-2 mb-space-6 px-space-2">
+<h2 class="font-headline-lg-mobile text-headline-lg-mobile text-on-background">Ваше профессиональное резюме за 5 минут</h2>
+<p class="font-body-md text-body-md text-on-surface-variant">Помогаем водителям, строителям и мастерам получить работу мечты.</p>
+</div>
+<!-- Trust Badges (Social Proof) -->
+<div class="flex flex-wrap justify-center gap-space-2 mb-space-8 w-full">
+<div class="flex items-center gap-space-2 bg-surface-container py-1.5 px-space-3 rounded-full border border-outline-variant/30">
+<span class="material-symbols-outlined text-primary text-[16px]" style="font-variation-settings: 'FILL' 1;">verified</span>
+<span class="font-label-sm text-label-sm text-on-surface">Соответствует стандартам hh.ru</span>
+</div>
+<div class="flex items-center gap-space-2 bg-surface-container py-1.5 px-space-3 rounded-full border border-outline-variant/30">
+<span class="material-symbols-outlined text-accent text-[16px]" style="font-variation-settings: 'FILL' 1;">group</span>
+<span class="font-label-sm text-label-sm text-on-surface">Уже помогли более 10,000 человек</span>
+</div>
+</div>
+<!-- Benefit Cards (Bento Style) -->
+<div class="w-full flex flex-col gap-space-3">
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-space-4 flex items-start gap-space-3 shadow-sm shadow-surface-variant/20 relative overflow-hidden">
+<div class="absolute -right-4 -top-4 w-16 h-16 bg-primary/5 rounded-full blur-xl"></div>
+<div class="p-2 bg-primary-container/20 rounded-lg text-primary flex-shrink-0">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">smart_toy</span>
+</div>
+<div class="flex flex-col justify-center min-h-[40px]">
+<span class="font-label-lg text-label-lg text-on-background">ИИ напишет текст за тебя</span>
+<span class="font-body-md text-[13px] text-on-surface-variant leading-tight mt-1">Ответь на пару вопросов, остальное сделает бот.</span>
+</div>
+</div>
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-space-4 flex items-start gap-space-3 shadow-sm shadow-surface-variant/20 relative overflow-hidden">
+<div class="absolute -right-4 -bottom-4 w-16 h-16 bg-accent/10 rounded-full blur-xl"></div>
+<div class="p-2 bg-accent/20 rounded-lg text-primary flex-shrink-0">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">send</span>
+</div>
+<div class="flex flex-col justify-center min-h-[40px]">
+<span class="font-label-lg text-label-lg text-on-background">Готовый PDF в чат сразу</span>
+<span class="font-body-md text-[13px] text-on-surface-variant leading-tight mt-1">Скачивай и отправляй работодателю без долгих регистраций.</span>
+</div>
+</div>
+</div>
+</main>
+<!-- Simulated Telegram MainButton (Fixed Bottom CTA) -->
+<div class="fixed bottom-0 left-0 w-full px-margin-x pb-safe pt-space-4 bg-gradient-to-t from-background via-background to-transparent z-50">
+<button class="w-full bg-accent hover:bg-inverse-primary text-on-accent font-label-lg text-label-lg py-3.5 rounded-xl flex justify-center items-center active:scale-[0.98] transition-all duration-150 shadow-md shadow-accent/20 mb-space-4">
+            Создать резюме
+        </button>
+</div>
+</body></html>

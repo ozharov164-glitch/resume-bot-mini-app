@@ -19,14 +19,14 @@ interface HomeProps {
 
 const BENEFITS = [
   {
-    icon: "auto_awesome" as const,
-    title: "ИИ выведет текст на новый уровень",
-    subtitle: "Современные формулировки под стандарты hh.ru.",
+    icon: "smart_toy" as const,
+    title: "ИИ напишет текст за тебя",
+    subtitle: "Ответь на пару вопросов, остальное сделает бот.",
   },
   {
     icon: "send" as const,
-    title: "Готовый PDF прямо в чат",
-    subtitle: "Отправляй работодателю сразу после оплаты.",
+    title: "Готовый PDF в чат сразу",
+    subtitle: "Скачивай и отправляй работодателю без долгих регистраций.",
   },
 ] as const;
 
@@ -68,31 +68,41 @@ export function HomePage({ onStart, onHistory }: HomeProps) {
   return (
     <Screen withBottomBar>
       <AppHeader />
-      <main className="flex flex-1 flex-col gap-5 px-4 pt-3">
+      <main className="flex flex-1 flex-col items-center gap-5 px-4 pt-3">
         {isFounder && <FounderBadge />}
 
         <HeroIllustration />
 
-        <div className="flex flex-col gap-2 text-center">
-          <h2 className="text-2xl font-bold leading-tight tracking-tight">
+        <div className="flex w-full flex-col gap-2 px-2 text-center">
+          <h2 className="text-[22px] font-bold leading-tight tracking-tight">
             Ваше профессиональное резюме за 5 минут
           </h2>
-          <p className="text-base leading-relaxed" style={{ color: "var(--text-muted)" }}>
-            Поможем составить грамотное и наглядное резюме, чтобы найти работу мечты.
+          <p className="text-[15px] leading-relaxed" style={{ color: "var(--text-muted)" }}>
+            Помогаем водителям, строителям и мастерам получить работу мечты.
           </p>
         </div>
 
-        <div className="flex flex-col items-center gap-1 text-center">
-          <div className="flex items-center gap-2 text-sm font-semibold" style={{ color: "var(--brand)" }}>
-            <Icon name="verified" filled size={18} />
+        <div className="flex w-full flex-wrap justify-center gap-2">
+          <div
+            className="flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium"
+            style={{ background: "var(--surface-card)", borderColor: "var(--border-subtle)", color: "var(--text-primary)" }}
+          >
+            <Icon name="verified" filled size={16} style={{ color: "var(--brand)" }} />
+            <span>Соответствует стандартам hh.ru</span>
+          </div>
+          <div
+            className="flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium"
+            style={{ background: "var(--surface-card)", borderColor: "var(--border-subtle)", color: "var(--text-primary)" }}
+          >
+            <Icon name="group" filled size={16} style={{ color: "var(--brand)" }} />
             <span>
-              Составили{" "}
-              <span className="stat-number tabular-nums">{displayCount.toLocaleString("ru-RU")}+</span> резюме
+              Уже помогли{" "}
+              <span className="stat-number tabular-nums">{displayCount.toLocaleString("ru-RU")}+</span> человек
             </span>
           </div>
         </div>
 
-        <div className="flex flex-col gap-3">
+        <div className="flex w-full flex-col gap-3">
           {BENEFITS.map((item, i) => (
             <motion.div
               key={item.title}
