@@ -1,0 +1,20 @@
+---
+description: VPS deploy for ResumeBot — use paramiko script, never commit secrets
+alwaysApply: true
+---
+
+# ResumeBot VPS deploy
+
+When the user asks to deploy, update VPS, or restart production:
+
+1. Run from repo root: `python3 scripts/vps_update.py`
+2. Credentials live in **gitignored** `scripts/.deploy_env` (`DEPLOY_PASSWORD`, optional `DEPLOY_HOST`, `DEPLOY_USER`) or env `DEPLOY_PASSWORD`.
+3. Do **not** commit passwords, BOT_TOKEN, or OpenRouter keys.
+4. Production paths:
+   - Host: `62.217.182.239` (HTTPS API: `https://62-217-182-239.nip.io`)
+   - Code: `/opt/resumebot`
+   - Services: `resumebot-api`, `resumebot-bot`
+5. Frontend deploys via GitHub Actions on push to `main` (`frontend/`). Backend/bot need `vps_update.py` after backend/bot changes.
+6. Verify: `curl https://62-217-182-239.nip.io/health` → `{"status":"ok"}`
+
+Full initial setup (rare): `DEPLOY_PASSWORD=... BOT_TOKEN=... python3 scripts/remote_deploy.py`

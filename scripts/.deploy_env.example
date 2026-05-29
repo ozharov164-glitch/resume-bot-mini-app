@@ -1,0 +1,3 @@
+DEPLOY_HOST=62.217.182.239
+DEPLOY_USER=root
+DEPLOY_PASSWORD=your-root-password

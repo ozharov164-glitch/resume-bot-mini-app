@@ -171,6 +171,10 @@ cd frontend && npm run dev
 ssh root@62.217.182.239
 systemctl status resumebot-api resumebot-bot
 journalctl -u resumebot-api -n 100 --no-pager
+# Локально (из корня репо, credentials в scripts/.deploy_env):
+python3 scripts/vps_update.py
+
+# Или вручную на VPS:
 cd /opt/resumebot && git pull && systemctl restart resumebot-api resumebot-bot
 
 # Проверки
