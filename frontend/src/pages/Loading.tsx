@@ -2,26 +2,27 @@ import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 
 import { AppHeader } from "../components/ui/AppHeader";
-import { Icon } from "../components/ui/Icon";
+import { LoadingIllustration } from "../components/ui/LoadingIllustration";
 import { Screen } from "../components/ui/Screen";
 import { getTg } from "../telegram";
 
 const PHRASES = [
-  "Подбираем идеальные слова...",
   "Структурируем навыки и опыт...",
   "Пишем раздел «О себе»...",
   "Оформляем опыт работы...",
+  "Подбираем ключевые навыки...",
+  "Полируем формулировки...",
   "Собираем финальный вариант...",
 ] as const;
 
 export function LoadingPage() {
   const [phraseIndex, setPhraseIndex] = useState(0);
-  const [progress, setProgress] = useState(8);
+  const [progress, setProgress] = useState(12);
 
   useEffect(() => {
     const phraseTimer = window.setInterval(() => {
       setPhraseIndex((i) => (i + 1) % PHRASES.length);
-    }, 2200);
+    }, 2000);
     return () => window.clearInterval(phraseTimer);
   }, []);
 
@@ -32,7 +33,7 @@ export function LoadingPage() {
       const elapsed = now - start;
       const ratio = Math.min(elapsed / duration, 1);
       const eased = 1 - Math.pow(1 - ratio, 2);
-      setProgress(Math.min(8 + eased * 87, 95));
+      setProgress(Math.min(12 + eased * 83, 95));
       if (ratio < 1) requestAnimationFrame(tick);
     };
     const frame = requestAnimationFrame(tick);
@@ -41,36 +42,31 @@ export function LoadingPage() {
 
   useEffect(() => {
     getTg()?.MainButton?.hide();
+    const tg = getTg();
+    if (!tg?.HapticFeedback) return;
+    const hapticTimer = window.setInterval(() => {
+      tg.HapticFeedback?.impactOccurred("light");
+    }, 1500);
+    return () => window.clearInterval(hapticTimer);
   }, []);
+
+  const progressLabel = Math.round(progress);
 
   return (
     <Screen centered className="px-4">
       <AppHeader />
-      <main className="flex flex-1 flex-col items-center justify-center px-4 py-10">
-        <div className="relative mb-10 flex h-44 w-44 items-center justify-center">
-          <div
-            className="animate-glow-pulse absolute inset-0 rounded-full"
-            style={{
-              background: "radial-gradient(circle, rgba(16,185,129,0.35) 0%, rgba(16,185,129,0) 70%)",
-            }}
-          />
-          <div
-            className="relative z-10 flex h-28 w-28 items-center justify-center rounded-full shadow-brand"
-            style={{ background: "var(--brand-bright)" }}
-          >
-            <Icon name="auto_awesome" filled size={52} style={{ color: "#ffffff" }} />
-          </div>
-        </div>
+      <main className="mx-auto flex w-full max-w-md flex-1 flex-col items-center justify-center px-4 py-8">
+        <LoadingIllustration />
 
-        <h2 className="mb-3 text-center text-2xl font-bold leading-snug">
+        <h2 className="mb-2 text-center text-2xl font-bold leading-snug">
           Создаем твое идеальное резюме...
         </h2>
 
         <AnimatePresence mode="wait">
           <motion.p
             key={phraseIndex}
-            className="mb-10 text-center text-base"
-            style={{ color: "var(--text-muted)" }}
+            className="mb-6 min-h-[24px] text-center text-base"
+            style={{ color: "var(--text-variant, #3c4a42)" }}
             initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -6 }}
@@ -81,19 +77,30 @@ export function LoadingPage() {
           </motion.p>
         </AnimatePresence>
 
-        <div className="w-full max-w-xs">
+        <div className="mt-4 w-full max-w-xs">
           <div
-            className="h-1.5 w-full overflow-hidden rounded-full"
-            style={{ background: "var(--surface-variant)" }}
+            className="loading-progress-track h-2 w-full overflow-hidden rounded-full"
             role="progressbar"
-            aria-valuenow={Math.round(progress)}
+            aria-valuenow={progressLabel}
             aria-valuemin={0}
             aria-valuemax={100}
+            aria-label="Прогресс составления резюме"
           >
             <div
-              className="h-full rounded-full transition-all duration-500 ease-out"
-              style={{ width: `${progress}%`, background: "var(--brand-bright)" }}
-            />
+              className="loading-progress-fill relative h-full rounded-full transition-[width] duration-1000 ease-out"
+              style={{ width: `${progress}%` }}
+            >
+              <div className="loading-progress-shimmer absolute inset-0" aria-hidden />
+            </div>
+          </div>
+          <div
+            className="mt-2 flex justify-between text-xs font-medium"
+            style={{ color: "var(--text-muted)" }}
+          >
+            <span>Анализ данных</span>
+            <span className="font-bold" style={{ color: "var(--brand)" }}>
+              {progressLabel}%
+            </span>
           </div>
         </div>
       </main>
