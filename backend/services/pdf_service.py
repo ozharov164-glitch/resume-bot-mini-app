@@ -410,7 +410,7 @@ def generate_preview_png(
     document = _render_document(resume_data, template_name, preview=watermark)
     buffer = io.BytesIO()
     if document.pages:
-        document.pages[0].write_png(buffer, resolution=resolution)
+        document.copy([document.pages[0]]).write_png(buffer, resolution=resolution)
     else:
         document.write_png(buffer, resolution=resolution)
     return buffer.getvalue()
