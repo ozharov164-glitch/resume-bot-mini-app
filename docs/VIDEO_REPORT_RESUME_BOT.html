@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ResumeBot — Видеоотчёт о проекте</title>
+  <style>
+    :root {
+      --bg: #0b0f1a;
+      --card: #141b2d;
+      --text: #eef2ff;
+      --muted: #94a3b8;
+      --accent: #3b82f6;
+      --accent2: #22c55e;
+      --warn: #f59e0b;
+      --border: rgba(148, 163, 184, 0.2);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.55;
+      overflow: hidden;
+      height: 100vh;
+    }
+    .deck { height: 100vh; position: relative; }
+    .slide {
+      display: none;
+      height: 100vh;
+      padding: 48px 64px 100px;
+      overflow-y: auto;
+      animation: fade 0.4s ease;
+    }
+    .slide.active { display: flex; flex-direction: column; }
+    @keyframes fade { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+    h1 { font-size: 2.4rem; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 12px; }
+    h2 { font-size: 1.5rem; color: var(--accent); margin: 28px 0 12px; font-weight: 600; }
+    h3 { font-size: 1.1rem; margin: 16px 0 8px; color: #cbd5e1; }
+    p, li { font-size: 1.05rem; color: #cbd5e1; max-width: 920px; }
+    .subtitle { font-size: 1.2rem; color: var(--muted); margin-bottom: 32px; }
+    .badge {
+      display: inline-block;
+      background: rgba(59, 130, 246, 0.15);
+      color: #93c5fd;
+      padding: 6px 14px;
+      border-radius: 999px;
+      font-size: 0.85rem;
+      margin-bottom: 20px;
+      border: 1px solid rgba(59, 130, 246, 0.3);
+    }
+    ul { margin: 12px 0 12px 24px; }
+    li { margin: 8px 0; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; margin-top: 20px; }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 20px;
+    }
+    .card strong { color: var(--text); display: block; margin-bottom: 8px; font-size: 1rem; }
+    .card span { color: var(--muted); font-size: 0.92rem; }
+    .flow {
+      display: flex; flex-wrap: wrap; align-items: center; gap: 10px;
+      margin: 24px 0; font-size: 0.95rem;
+    }
+    .flow .box {
+      background: var(--card);
+      border: 1px solid var(--border);
+      padding: 12px 18px;
+      border-radius: 12px;
+    }
+    .flow .arrow { color: var(--accent); font-size: 1.2rem; }
+    .url { color: #7dd3fc; word-break: break-all; font-family: ui-monospace, monospace; font-size: 0.9rem; }
+    .nav {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      background: rgba(11, 15, 26, 0.95);
+      border-top: 1px solid var(--border);
+      padding: 16px 32px;
+      display: flex; justify-content: space-between; align-items: center;
+      backdrop-filter: blur(12px);
+    }
+    .nav button {
+      background: var(--accent);
+      color: white;
+      border: none;
+      padding: 10px 24px;
+      border-radius: 10px;
+      font-size: 0.95rem;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    .nav button:disabled { opacity: 0.35; cursor: not-allowed; }
+    .progress { color: var(--muted); font-size: 0.9rem; }
+    .ok { color: var(--accent2); }
+    .warn { color: var(--warn); }
+    table { width: 100%; border-collapse: collapse; margin-top: 16px; font-size: 0.95rem; }
+    th, td { text-align: left; padding: 12px; border-bottom: 1px solid var(--border); }
+    th { color: var(--muted); font-weight: 500; }
+    .cover {
+      justify-content: center;
+      background: radial-gradient(ellipse at 30% 20%, rgba(59,130,246,0.2), transparent 50%),
+                  radial-gradient(ellipse at 80% 80%, rgba(34,197,94,0.12), transparent 40%);
+    }
+    .meta { margin-top: auto; font-size: 0.85rem; color: var(--muted); }
+    @media print {
+      .slide { display: block !important; page-break-after: always; height: auto; min-height: 100vh; }
+      .nav { display: none; }
+      body { overflow: visible; }
+    }
+  </style>
+</head>
+<body>
+  <div class="deck" id="deck">
+
+    <!-- Слайд 1 -->
+    <section class="slide cover active" data-i="0">
+      <span class="badge">Видеоотчёт · Май 2026</span>
+      <h1>ResumeBot</h1>
+      <p class="subtitle">Telegram Mini App для создания профессионального резюме за 5 минут.<br>Отчёт о реализации, архитектуре и текущем состоянии продакшена.</p>
+      <div class="grid">
+        <div class="card"><strong>Аудитория</strong><span>Рабочие специальности, 18–45 лет, Россия</span></div>
+        <div class="card"><strong>Модель</strong><span>Бесплатное превью → оплата → PDF в чат</span></div>
+        <div class="card"><strong>Бот</strong><span>@resumeez_bot</span></div>
+      </div>
+      <p class="meta">Листайте стрелками ← → или кнопками внизу. Для «видео» — откройте в браузере на весь экран и запишите экран (QuickTime / OBS).</p>
+    </section>
+
+    <!-- Слайд 2 -->
+    <section class="slide" data-i="1">
+      <span class="badge">Глава 1</span>
+      <h1>Архитектура продакшена</h1>
+      <p class="subtitle">Три независимых слоя: фронт, API, Telegram-бот.</p>
+      <div class="flow">
+        <div class="box">Пользователь<br><small>Telegram</small></div>
+        <span class="arrow">→</span>
+        <div class="box">Mini App<br><small>GitHub Pages</small></div>
+        <span class="arrow">→</span>
+        <div class="box">FastAPI<br><small>VPS + HTTPS</small></div>
+        <span class="arrow">→</span>
+        <div class="box">OpenRouter<br><small>DeepSeek V4 Flash</small></div>
+      </div>
+      <div class="flow">
+        <div class="box">Оплата Stars / ЮKassa</div>
+        <span class="arrow">→</span>
+        <div class="box">WeasyPrint PDF</div>
+        <span class="arrow">→</span>
+        <div class="box">PDF в чат бота</div>
+      </div>
+      <h2>URL продакшена</h2>
+      <ul>
+        <li>Mini App: <span class="url">https://ozharov164-glitch.github.io/resume-bot-mini-app/</span></li>
+        <li>API: <span class="url">https://62-217-182-239.nip.io</span></li>
+        <li>Репозиторий: <span class="url">https://github.com/ozharov164-glitch/resume-bot-mini-app</span></li>
+      </ul>
+    </section>
+
+    <!-- Слайд 3 -->
+    <section class="slide" data-i="2">
+      <span class="badge">Глава 2</span>
+      <h1>Что реализовано</h1>
+      <div class="grid">
+        <div class="card">
+          <strong>Frontend (React + Vite)</strong>
+          <span>8-шаговый онбординг, превью резюме, экран оплаты, успех. Тема Telegram, haptic, Zustand.</span>
+        </div>
+        <div class="card">
+          <strong>Backend (FastAPI)</strong>
+          <span>Auth по initData, генерация резюме, платежи, скачивание PDF, healthcheck.</span>
+        </div>
+        <div class="card">
+          <strong>Telegram-бот</strong>
+          <span>/start с кнопкой Web App, доставка PDF после оплаты.</span>
+        </div>
+        <div class="card">
+          <strong>База данных</strong>
+          <span>Supabase (PostgreSQL): users, resumes, payments.</span>
+        </div>
+        <div class="card">
+          <strong>PDF</strong>
+          <span>WeasyPrint + Jinja2 шаблон resume_classic.html.</span>
+        </div>
+        <div class="card">
+          <strong>CI/CD</strong>
+          <span>GitHub Actions → автодеплой фронта на Pages при push в main.</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Слайд 4 -->
+    <section class="slide" data-i="3">
+      <span class="badge">Глава 3</span>
+      <h1>Путь пользователя</h1>
+      <ol style="margin-left: 24px; color: #cbd5e1; font-size: 1.05rem;">
+        <li style="margin: 14px 0">Открывает бота <strong>@resumeez_bot</strong> → «Создать резюме»</li>
+        <li style="margin: 14px 0">Mini App: имя, должность, опыт, образование, навыки, город, о себе</li>
+        <li style="margin: 14px 0">Backend проверяет подпись Telegram → выдаёт JWT</li>
+        <li style="margin: 14px 0">ИИ формирует JSON-резюме → превью на экране</li>
+        <li style="margin: 14px 0">Оплата: Telegram Stars (основной) или ЮKassa (fallback)</li>
+        <li style="margin: 14px 0">PDF генерируется и приходит в личный чат с ботом</li>
+      </ol>
+      <h2>Безопасность</h2>
+      <ul>
+        <li>Секреты только на VPS в <code style="color:#7dd3fc">/opt/resumebot/backend/.env</code></li>
+        <li>В GitHub — только код, без ключей</li>
+        <li>Каждый API-запрос защищён JWT после верификации initData</li>
+      </ul>
+    </section>
+
+    <!-- Слайд 5 -->
+    <section class="slide" data-i="4">
+      <span class="badge">Глава 4</span>
+      <h1>ИИ-слой (OpenRouter)</h1>
+      <table>
+        <tr><th>Параметр</th><th>Значение</th></tr>
+        <tr><td>Основная модель</td><td>deepseek/deepseek-v4-flash</td></tr>
+        <tr><td>Fallback</td><td>deepseek/deepseek-v3.2 (только при ошибке)</td></tr>
+        <tr><td>Провайдеры (только быстрые)</td><td>parasail, alibaba, deepseek, morph</td></tr>
+        <tr><td>Маршрутизация</td><td>sort: latency, provider.only</td></tr>
+        <tr><td>Лимит ответа</td><td>1600 токенов (достаточно для качественного резюме)</td></tr>
+        <tr><td>Формат</td><td>JSON (response_format: json_object)</td></tr>
+      </table>
+      <h2>Баланс: качество ↔ экономия</h2>
+      <ul>
+        <li><span class="ok">✓</span> Полные HR-правила в system prompt (hh.ru, живой язык, без выдуманного опыта)</li>
+        <li><span class="ok">✓</span> Структурированный ввод от пользователя — без «воды» в запросе</li>
+        <li><span class="ok">✓</span> Нет двойных вызовов модели «на всякий случай»</li>
+        <li><span class="ok">✓</span> Логирование prompt/completion tokens в логах API</li>
+        <li>Ориентир стоимости: ~0,03–0,05 ₽ за одно резюме</li>
+      </ul>
+    </section>
+
+    <!-- Слайд 6 -->
+    <section class="slide" data-i="5">
+      <span class="badge">Глава 5</span>
+      <h1>Деплой и инфраструктура</h1>
+      <h2>VPS (62.217.182.239)</h2>
+      <ul>
+        <li>Проект: <code>/opt/resumebot</code> (git clone с GitHub)</li>
+        <li>systemd: <code>resumebot-api</code>, <code>resumebot-bot</code></li>
+        <li>HTTPS: Caddy → reverse proxy → uvicorn :8000</li>
+        <li>Скрипты: <code>scripts/remote_deploy.py</code>, <code>scripts/update_vps_openrouter.py</code></li>
+      </ul>
+      <h2>GitHub Pages</h2>
+      <ul>
+        <li>Workflow: <code>.github/workflows/deploy-pages.yml</code></li>
+        <li>Сборка Vite с base path <code>/resume-bot-mini-app/</code></li>
+        <li><code>VITE_API_URL</code> → HTTPS API на VPS</li>
+      </ul>
+      <h2>Статус на момент отчёта</h2>
+      <ul>
+        <li><span class="ok">✓</span> API /health — 200 OK</li>
+        <li><span class="ok">✓</span> Mini App — 200 OK</li>
+        <li><span class="ok">✓</span> GitHub Actions deploy — success</li>
+      </ul>
+    </section>
+
+    <!-- Слайд 7 -->
+    <section class="slide" data-i="6">
+      <span class="badge">Глава 6</span>
+      <h1>Структура репозитория</h1>
+      <pre style="background:var(--card);padding:20px;border-radius:12px;font-size:0.85rem;overflow:auto;color:#94a3b8;margin-top:16px;line-height:1.6;">resumebot/
+├── frontend/          # React Mini App → GitHub Pages
+├── backend/           # FastAPI, AI, PDF, платежи → VPS
+│   ├── routers/       # auth, resume, payment
+│   ├── services/      # ai_service, pdf, telegram, payment
+│   └── templates/     # resume_classic.html
+├── bot/               # python-telegram-bot → VPS
+├── deploy/            # nginx, systemd unit files
+├── scripts/           # деплой на VPS
+└── .github/workflows/ # CI Pages</pre>
+    </section>
+
+    <!-- Слайд 8 -->
+    <section class="slide" data-i="7">
+      <span class="badge">Глава 7</span>
+      <h1>Что осталось / рекомендации</h1>
+      <ul>
+        <li><span class="warn">!</span> Убедиться, что в Supabase созданы таблицы users, resumes, payments</li>
+        <li><span class="warn">!</span> Сменить root-пароль VPS и токен бота, если они светились в чатах</li>
+        <li>Подключить webhook Telegram для Stars (сейчас polling + отдельный webhook endpoint)</li>
+        <li>A/B тест цены: 79 / 99 / 129 Stars</li>
+        <li>Свой домен вместо nip.io — для бренда и стабильности</li>
+      </ul>
+      <h2>MVP готов к тесту</h2>
+      <p>Продуктовый цикл закрыт: бот → диалог → ИИ → превью → оплата → PDF. Следующий шаг — первые 50–100 реальных пользователей и сбор обратной связи по качеству текстов резюме.</p>
+    </section>
+
+    <!-- Слайд 9 -->
+    <section class="slide cover" data-i="8">
+      <span class="badge">Конец отчёта</span>
+      <h1>ResumeBot — в продакшене</h1>
+      <p class="subtitle">Спасибо за просмотр. Файл отчёта можно открыть в браузере,<br>распечатать (Ctrl+P) или записать как видеопрезентацию.</p>
+      <p class="url" style="margin-top:24px">docs/VIDEO_REPORT_RESUME_BOT.html</p>
+      <p class="meta" style="margin-top:32px">Сгенерировано: май 2026 · ResumeBot Team</p>
+    </section>
+
+  </div>
+
+  <nav class="nav">
+    <button type="button" id="prev" disabled>← Назад</button>
+    <span class="progress" id="prog">1 / 9</span>
+    <button type="button" id="next">Далее →</button>
+  </nav>
+
+  <script>
+    const slides = [...document.querySelectorAll(".slide")];
+    let i = 0;
+    const prev = document.getElementById("prev");
+    const next = document.getElementById("next");
+    const prog = document.getElementById("prog");
+    function show(n) {
+      i = Math.max(0, Math.min(n, slides.length - 1));
+      slides.forEach((s, j) => s.classList.toggle("active", j === i));
+      prev.disabled = i === 0;
+      next.disabled = i === slides.length - 1;
+      prog.textContent = `${i + 1} / ${slides.length}`;
+    }
+    prev.onclick = () => show(i - 1);
+    next.onclick = () => show(i + 1);
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "ArrowRight" || e.key === " ") { e.preventDefault(); show(i + 1); }
+      if (e.key === "ArrowLeft") show(i - 1);
+    });
+  </script>
+</body>
+</html>
