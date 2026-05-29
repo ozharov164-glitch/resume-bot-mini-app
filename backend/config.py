@@ -40,6 +40,11 @@ class Settings(BaseSettings):
     # Local SQLite when Supabase key is invalid or missing.
     SQLITE_PATH: str = "data/resumebot.db"
 
+    # Groq STT: comma-separated keys, first is primary; auto-fallback on 401/429/5xx.
+    GROQ_API_KEYS: str = ""
+    GROQ_STT_MODEL: str = "whisper-large-v3-turbo"
+    GROQ_PUNCTUATE_MODEL: str = "llama-3.1-8b-instant"
+
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
 
