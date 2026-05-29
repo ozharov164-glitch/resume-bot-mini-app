@@ -39,129 +39,101 @@ export function PreviewPage() {
     setPage("payment");
   };
 
+  const contactLine = [resumeData.city, resumeData.phone].filter(Boolean).join(" · ");
+
   return (
     <Screen withBottomBar>
       <AppHeader onBack={() => setPage("onboarding")} showBack />
-      <main className="flex flex-1 flex-col gap-6 px-4 py-4">
-        <section className="flex flex-col items-center gap-3 text-center">
-          <div
-            className="mb-1 flex h-16 w-16 items-center justify-center rounded-full"
-            style={{ background: "var(--brand-muted)" }}
-          >
-            <Icon name="check_circle" filled className="text-primary-container" size={36} />
+      <main className="flex flex-1 flex-col gap-4 px-4 py-4">
+        <div
+          className="rounded-xl px-4 py-3 text-center text-sm leading-relaxed"
+          style={{
+            background: "var(--preview-banner-bg)",
+            color: "var(--preview-banner-text)",
+          }}
+        >
+          Так выглядит предпросмотр. Оцени качество текста твоего будущего резюме.
+        </div>
+
+        <section
+          className="relative overflow-hidden rounded-xl border p-4"
+          style={{ background: "#ffffff", borderColor: "var(--border-subtle)", boxShadow: "var(--card-shadow)" }}
+        >
+          <div className="mb-4 border-b pb-4" style={{ borderColor: "var(--border-subtle)" }}>
+            <h3 className="text-xl font-bold">{resumeData.full_name}</h3>
+            <p className="mt-1 text-sm font-semibold" style={{ color: "var(--brand)" }}>
+              {resumeData.target_position}
+            </p>
+            {contactLine && (
+              <p className="mt-2 text-xs" style={{ color: "var(--text-muted)" }}>
+                {contactLine}
+              </p>
+            )}
           </div>
-          <h2 className="text-2xl font-bold">Готово к скачиванию</h2>
-          <p className="max-w-[280px] text-base" style={{ color: "var(--text-muted)" }}>
-            Твое резюме успешно создано. Проверь данные перед получением PDF.
-          </p>
-        </section>
 
-        <section className="relative mt-2">
-          <div
-            className="absolute -top-3 left-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-wider shadow-sm"
-            style={{
-              background: "#fc7c78",
-              color: "#711419",
-              borderColor: "rgba(164,58,58,0.2)",
-            }}
-          >
-            Бесплатный предпросмотр
+          <div className="mb-4">
+            <h4
+              className="mb-2 text-xs font-bold uppercase tracking-wider"
+              style={{ color: "var(--text-muted)" }}
+            >
+              Обо мне
+            </h4>
+            <p className="text-sm leading-relaxed">{resumeData.summary}</p>
           </div>
 
-          <div
-            className="relative overflow-hidden rounded-xl border p-4 shadow-card"
-            style={{ background: "#ffffff", borderColor: "var(--border-subtle)" }}
-          >
-            <div
-              className="pointer-events-none absolute inset-0 flex select-none items-center justify-center opacity-[0.03]"
-              aria-hidden
-            >
-              <div className="-rotate-45 text-7xl font-bold whitespace-nowrap">ПРЕДПРОСМОТР</div>
-            </div>
-
-            <div
-              className="mb-4 flex items-center gap-4 border-b pb-4"
-              style={{ borderColor: "var(--border-subtle)" }}
-            >
-              <div
-                className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full border"
-                style={{ background: "var(--surface-elevated)", borderColor: "var(--border-subtle)" }}
-              >
-                <Icon name="person" size={32} style={{ color: "var(--text-muted)" }} />
-              </div>
-              <div>
-                <h3 className="text-lg font-bold">{resumeData.full_name}</h3>
-                <p className="mt-1 text-sm font-semibold" style={{ color: "var(--brand)" }}>
-                  {resumeData.target_position}
-                </p>
-              </div>
-            </div>
-
+          {resumeData.experience?.length > 0 && (
             <div className="mb-4">
               <h4
-                className="mb-2 text-xs font-semibold uppercase tracking-wider"
+                className="mb-2 text-xs font-bold uppercase tracking-wider"
                 style={{ color: "var(--text-muted)" }}
               >
-                Обо мне
+                Опыт работы
               </h4>
-              <p className="text-sm leading-relaxed">{resumeData.summary}</p>
+              <ul className="space-y-2 text-sm leading-relaxed" style={{ color: "var(--text-variant)" }}>
+                {resumeData.experience.slice(0, 3).map((job, i) => (
+                  <li key={`${job.company}-${i}`}>
+                    <span className="font-semibold">{job.company}</span>
+                    {job.period ? ` · ${job.period}` : ""}
+                    {job.description ? ` — ${job.description}` : ""}
+                  </li>
+                ))}
+              </ul>
             </div>
+          )}
 
-            {resumeData.experience?.length > 0 && (
-              <div className="mb-4">
-                <h4
-                  className="mb-3 text-xs font-semibold uppercase tracking-wider"
-                  style={{ color: "var(--text-muted)" }}
-                >
-                  Опыт работы
-                </h4>
-                <div
-                  className="space-y-4 border-l-2 pl-6"
-                  style={{ borderColor: "var(--surface-container-high, #e3eae3)" }}
-                >
-                  {resumeData.experience.slice(0, 2).map((job, i) => (
-                    <div key={`${job.company}-${i}`} className="relative">
-                      <div
-                        className="absolute -left-[29px] top-1 h-3 w-3 rounded-full border-2"
-                        style={{
-                          background: i === 0 ? "var(--brand)" : "var(--surface-variant, #dde4dd)",
-                          borderColor: "#ffffff",
-                        }}
-                      />
-                      <div className="text-sm font-semibold">{job.company}</div>
-                      <div className="mb-1 text-xs" style={{ color: "var(--text-muted)" }}>
-                        {job.period}
-                      </div>
-                      <p className="text-sm" style={{ color: "var(--text-muted)" }}>
-                        {job.description}
-                      </p>
-                    </div>
-                  ))}
-                </div>
+          {resumeData.skills?.length > 0 && (
+            <div>
+              <h4
+                className="mb-2 text-xs font-bold uppercase tracking-wider"
+                style={{ color: "var(--text-muted)" }}
+              >
+                Навыки
+              </h4>
+              <div className="flex flex-wrap gap-2">
+                {resumeData.skills.map((skill) => (
+                  <span key={skill} className="skill-chip">
+                    {skill}
+                  </span>
+                ))}
               </div>
-            )}
-
-            {resumeData.skills?.length > 0 && (
-              <div>
-                <h4
-                  className="mb-2 text-xs font-semibold uppercase tracking-wider"
-                  style={{ color: "var(--text-muted)" }}
-                >
-                  Навыки
-                </h4>
-                <div className="flex flex-wrap gap-2">
-                  {resumeData.skills.map((skill) => (
-                    <span key={skill} className="skill-chip">
-                      {skill}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
+            </div>
+          )}
         </section>
 
         {founderActive && <FounderBadge />}
+
+        <Button
+          variant="secondary"
+          onClick={() => setPage("onboarding")}
+          className="!min-h-[44px] flex items-center justify-center gap-2"
+        >
+          <Icon name="edit" size={18} />
+          Редактировать данные
+        </Button>
+
+        <p className="text-center text-xs" style={{ color: "var(--text-muted)" }}>
+          Документ будет отправлен в чат
+        </p>
       </main>
 
       <FixedBottomBar>

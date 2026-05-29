@@ -29,11 +29,10 @@ interface Step {
 
 const PROFESSION_PRESETS = [
   { label: "Водитель", icon: "local_shipping", value: "Водитель" },
-  { label: "Строитель", icon: "construction", value: "Строитель" },
+  { label: "Охранник", icon: "security", value: "Охранник" },
   { label: "Курьер", icon: "directions_run", value: "Курьер" },
-  { label: "Мастер", icon: "handyman", value: "Мастер" },
-  { label: "Сварщик", icon: "home_repair_service", value: "Сварщик" },
-  { label: "Продавец", icon: "storefront", value: "Продавец-консультант" },
+  { label: "Маляр", icon: "format_paint", value: "Маляр" },
+  { label: "Другое", icon: "more_horiz", value: "" },
 ] as const;
 
 const STEPS: Step[] = [
@@ -49,7 +48,7 @@ const STEPS: Step[] = [
   },
   {
     id: "target_position",
-    question: "Какую работу ты ищешь?",
+    question: "На какую должность ты ищешь работу?",
     hint: "Выбери профессию из списка или напиши свой вариант.",
     type: "profession",
     placeholder: "Например: водитель-экспедитор",
@@ -87,6 +86,7 @@ export function OnboardingPage() {
   const { authToken, answers, setAnswer, setResumeResult, setPage, setFounder, setPaid } = useAppStore();
   const [step, setStep] = useState(0);
   const [value, setValue] = useState("");
+  const [otherProfession, setOtherProfession] = useState(false);
   const current = STEPS[step];
   const isLast = step === STEPS.length - 1;
   const isPhoneStep = current.id === "phone";
@@ -101,7 +101,14 @@ export function OnboardingPage() {
   const goToStep = (nextStep: number) => {
     setStep(nextStep);
     const next = STEPS[nextStep];
-    setValue(String(answers[next.id as keyof UserAnswers] ?? ""));
+    const saved = String(answers[next.id as keyof UserAnswers] ?? "");
+    setValue(saved);
+    if (next.type === "profession") {
+      const presetValues = PROFESSION_PRESETS.map((p) => p.value).filter(Boolean);
+      setOtherProfession(Boolean(saved) && !presetValues.includes(saved));
+    } else {
+      setOtherProfession(false);
+    }
   };
 
   const next = async () => {
@@ -164,15 +171,21 @@ export function OnboardingPage() {
 
             {current.type === "profession" && (
               <>
-                <div className="grid grid-cols-2 gap-4" role="group" aria-label={current.question}>
+                <div className="grid grid-cols-2 gap-3" role="group" aria-label={current.question}>
                   {PROFESSION_PRESETS.map((preset) => (
                     <ProfessionChip
-                      key={preset.value}
+                      key={preset.label}
                       label={preset.label}
                       icon={preset.icon}
-                      selected={value === preset.value}
+                      selected={preset.value ? value === preset.value : otherProfession}
                       onSelect={() => {
-                        setValue(preset.value);
+                        if (preset.value) {
+                          setOtherProfession(false);
+                          setValue(preset.value);
+                        } else {
+                          setOtherProfession(true);
+                          setValue("");
+                        }
                         getTg()?.HapticFeedback?.selectionChanged();
                       }}
                     />
@@ -180,7 +193,10 @@ export function OnboardingPage() {
                 </div>
                 <TextInput
                   value={value}
-                  onChange={(e) => setValue(e.target.value)}
+                  onChange={(e) => {
+                    setOtherProfession(true);
+                    setValue(e.target.value);
+                  }}
                   placeholder={current.placeholder}
                   inputMode="text"
                 />
@@ -235,7 +251,7 @@ export function OnboardingPage() {
             </Button>
           )}
           <Button variant="brand" onClick={next} disabled={!canContinue}>
-            {isLast ? "Сформировать резюме" : "Продолжить"}
+            {isLast ? "Сформировать резюме" : "Далее"}
           </Button>
         </div>
       </FixedBottomBar>

@@ -1,44 +1,63 @@
-/** Relative luminance (0–1) for contrast-aware theme tokens. */
-export function getLuminance(hex: string): number {
-  const normalized = hex.replace("#", "");
-  if (normalized.length !== 6) return 1;
-  const r = parseInt(normalized.slice(0, 2), 16) / 255;
-  const g = parseInt(normalized.slice(2, 4), 16) / 255;
-  const b = parseInt(normalized.slice(4, 6), 16) / 255;
-  const toLinear = (c: number) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4);
-  return 0.2126 * toLinear(r) + 0.7152 * toLinear(g) + 0.0722 * toLinear(b);
-}
+/** Locked light theme — never follows Telegram dark/light switch. */
+export const LIGHT_THEME = {
+  bg: "#ffffff",
+  text: "#161d19",
+  textMuted: "#707579",
+  textVariant: "#3c4a42",
+  secondaryBg: "#f4f4f5",
+  surfaceElevated: "#f8f9fa",
+  surfaceCard: "#f5f5f5",
+  surfaceVariant: "#ececec",
+  border: "rgba(60, 74, 66, 0.12)",
+  brand: "#006c49",
+  brandBright: "#10b981",
+  brandMuted: "rgba(16, 185, 129, 0.12)",
+  onBrand: "#ffffff",
+  headerBg: "#ffffff",
+  previewBanner: "#ecfdf5",
+  previewBannerText: "#065f46",
+  cardShadow: "0 2px 12px rgba(0, 0, 0, 0.06)",
+} as const;
 
-export function isDarkBackground(hex: string): boolean {
-  return getLuminance(hex) < 0.45;
-}
-
-export function applySemanticTheme(bgColor: string) {
-  const dark = isDarkBackground(bgColor);
+export function applyLockedLightTheme() {
   const root = document.documentElement;
+  const t = LIGHT_THEME;
 
-  root.style.setProperty(
-    "--surface-elevated",
-    dark ? "color-mix(in srgb, var(--tg-text) 6%, var(--tg-bg))" : "var(--tg-secondary-bg)",
-  );
-  root.style.setProperty(
-    "--border-subtle",
-    dark ? "color-mix(in srgb, var(--tg-text) 14%, transparent)" : "color-mix(in srgb, var(--tg-text) 10%, transparent)",
-  );
-  root.style.setProperty("--text-muted", dark ? "color-mix(in srgb, var(--tg-text) 62%, transparent)" : "color-mix(in srgb, var(--tg-text) 55%, transparent)");
-  root.style.setProperty(
-    "--benefit-bg",
-    dark
-      ? "color-mix(in srgb, var(--accent) 22%, var(--tg-secondary-bg))"
-      : "color-mix(in srgb, var(--accent) 12%, var(--tg-secondary-bg))",
-  );
-  root.style.setProperty("--benefit-border", "color-mix(in srgb, var(--accent) 38%, transparent)");
-  root.style.setProperty("--benefit-text", "var(--tg-text)");
-  root.style.setProperty(
-    "--hint-bg",
-    dark ? "color-mix(in srgb, var(--accent) 16%, var(--tg-secondary-bg))" : "var(--accent-light)",
-  );
-  root.style.setProperty("--hint-text", dark ? "var(--tg-text)" : "var(--accent-dark)");
-  root.style.setProperty("--on-accent", "#ffffff");
-  root.dataset.themeMode = dark ? "dark" : "light";
+  root.style.colorScheme = "light";
+  root.dataset.themeMode = "light";
+
+  root.style.setProperty("--tg-bg", t.bg);
+  root.style.setProperty("--tg-text", t.text);
+  root.style.setProperty("--tg-button", t.brandBright);
+  root.style.setProperty("--tg-button-text", t.onBrand);
+  root.style.setProperty("--tg-secondary-bg", t.secondaryBg);
+  root.style.setProperty("--brand", t.brand);
+  root.style.setProperty("--brand-bright", t.brandBright);
+  root.style.setProperty("--brand-muted", t.brandMuted);
+  root.style.setProperty("--accent", t.brandBright);
+  root.style.setProperty("--accent-light", t.brandMuted);
+  root.style.setProperty("--accent-dark", t.brand);
+  root.style.setProperty("--surface-elevated", t.surfaceElevated);
+  root.style.setProperty("--surface-card", t.surfaceCard);
+  root.style.setProperty("--surface-variant", t.surfaceVariant);
+  root.style.setProperty("--border-subtle", t.border);
+  root.style.setProperty("--text-muted", t.textMuted);
+  root.style.setProperty("--text-variant", t.textVariant);
+  root.style.setProperty("--benefit-bg", t.brandMuted);
+  root.style.setProperty("--benefit-border", "rgba(16, 185, 129, 0.25)");
+  root.style.setProperty("--benefit-text", t.text);
+  root.style.setProperty("--hint-bg", t.brandMuted);
+  root.style.setProperty("--hint-text", t.brand);
+  root.style.setProperty("--on-accent", t.onBrand);
+  root.style.setProperty("--card-shadow", t.cardShadow);
+  root.style.setProperty("--preview-banner-bg", t.previewBanner);
+  root.style.setProperty("--preview-banner-text", t.previewBannerText);
+
+  document.body.style.background = t.bg;
+  document.body.style.color = t.text;
+}
+
+/** @deprecated Theme is always locked to light — kept for import compatibility. */
+export function applySemanticTheme(_bgColor?: string) {
+  applyLockedLightTheme();
 }

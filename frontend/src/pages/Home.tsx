@@ -6,6 +6,7 @@ import { AppHeader } from "../components/ui/AppHeader";
 import { Button } from "../components/ui/Button";
 import { FixedBottomBar } from "../components/ui/FixedBottomBar";
 import { FounderBadge } from "../components/ui/FounderBadge";
+import { HeroIllustration } from "../components/ui/HeroIllustration";
 import { Icon } from "../components/ui/Icon";
 import { Screen } from "../components/ui/Screen";
 import { useFounderStatus } from "../hooks/useFounderStatus";
@@ -17,18 +18,16 @@ interface HomeProps {
 
 const BENEFITS = [
   {
-    icon: "edit_document" as const,
-    title: "ИИ напишет текст за тебя",
-    subtitle: "Просто ответь на пару вопросов.",
+    icon: "auto_awesome" as const,
+    title: "ИИ выведет текст на новый уровень",
+    subtitle: "Современные формулировки под стандарты hh.ru.",
   },
   {
-    icon: "picture_as_pdf" as const,
-    title: "Готовый PDF в чат сразу",
-    subtitle: "Скачай и отправляй работодателю.",
+    icon: "send" as const,
+    title: "Готовый PDF прямо в чат",
+    subtitle: "Отправляй работодателю сразу после оплаты.",
   },
 ] as const;
-
-const HERO_SRC = `${import.meta.env.BASE_URL}hero.jpg`;
 
 function useCountUp(target: number, durationMs = 1400) {
   const [value, setValue] = useState(0);
@@ -51,7 +50,7 @@ function useCountUp(target: number, durationMs = 1400) {
 }
 
 export function HomePage({ onStart }: HomeProps) {
-  const [statsCount, setStatsCount] = useState(12450);
+  const [statsCount, setStatsCount] = useState(10000);
   const displayCount = useCountUp(statsCount);
   const isFounder = useFounderStatus();
 
@@ -68,61 +67,48 @@ export function HomePage({ onStart }: HomeProps) {
   return (
     <Screen withBottomBar>
       <AppHeader />
-      <main className="flex flex-1 flex-col gap-6 px-4 pt-2">
+      <main className="flex flex-1 flex-col gap-5 px-4 pt-3">
         {isFounder && <FounderBadge />}
 
-        <div className="flex flex-col gap-3 text-center">
+        <HeroIllustration />
+
+        <div className="flex flex-col gap-2 text-center">
           <h2 className="text-2xl font-bold leading-tight tracking-tight">
-            Ваше профессиональное резюме за 5 минут.
+            Ваше профессиональное резюме за 5 минут
           </h2>
-          <p className="text-base" style={{ color: "var(--text-muted)" }}>
-            Помогаем водителям, строителям и мастерам получить работу мечты.
+          <p className="text-base leading-relaxed" style={{ color: "var(--text-muted)" }}>
+            Поможем составить грамотное и наглядное резюме, чтобы найти работу мечты.
           </p>
         </div>
-
-        <motion.div
-          className="overflow-hidden rounded-xl border shadow-sm"
-          style={{ borderColor: "var(--border-subtle)" }}
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4 }}
-        >
-          <img src={HERO_SRC} alt="" className="block h-auto w-full object-cover" />
-        </motion.div>
 
         <div className="flex flex-col items-center gap-1 text-center">
           <div className="flex items-center gap-2 text-sm font-semibold" style={{ color: "var(--brand)" }}>
-            <Icon name="verified" filled size={20} />
-            <span>Соответствует стандартам hh.ru</span>
+            <Icon name="verified" filled size={18} />
+            <span>
+              Составили{" "}
+              <span className="stat-number tabular-nums">{displayCount.toLocaleString("ru-RU")}+</span> резюме
+            </span>
           </div>
-          <p className="text-xs font-medium" style={{ color: "var(--text-muted)" }}>
-            Уже помогли{" "}
-            <span className="stat-number tabular-nums">{displayCount.toLocaleString("ru-RU")}</span> людям
-          </p>
         </div>
 
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-3">
           {BENEFITS.map((item, i) => (
             <motion.div
               key={item.title}
-              className="flex items-start gap-4 rounded-xl border p-4"
-              style={{
-                background: "var(--surface-elevated)",
-                borderColor: "var(--border-subtle)",
-              }}
+              className="stitch-card flex items-start gap-4 p-4"
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 + i * 0.08 }}
+              transition={{ delay: 0.08 + i * 0.08 }}
             >
               <div
                 className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
                 style={{ background: "var(--brand-muted)" }}
               >
-                <Icon name={item.icon} filled className="text-primary" size={22} />
+                <Icon name={item.icon} filled size={22} style={{ color: "var(--brand)" }} />
               </div>
               <div className="flex flex-col gap-1 pt-0.5">
-                <span className="text-sm font-semibold">{item.title}</span>
-                <span className="text-xs" style={{ color: "var(--text-muted)" }}>
+                <span className="text-sm font-semibold leading-snug">{item.title}</span>
+                <span className="text-xs leading-relaxed" style={{ color: "var(--text-muted)" }}>
                   {item.subtitle}
                 </span>
               </div>

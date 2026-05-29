@@ -15,43 +15,25 @@ export function ProfessionChip({ label, icon, selected, onSelect }: Props) {
     <motion.button
       type="button"
       onClick={onSelect}
-      whileTap={{ scale: 0.95 }}
+      whileTap={{ scale: 0.96 }}
       aria-pressed={selected}
       className={clsx(
-        "relative flex h-32 flex-col items-center justify-center rounded-xl border p-4 transition-colors",
-        selected ? "shadow-sm" : "",
+        "relative flex min-h-[88px] flex-col items-center justify-center rounded-xl border px-3 py-4 transition-all",
       )}
       style={{
-        background: selected ? "var(--brand-muted)" : "var(--tg-secondary-bg)",
-        borderColor: selected ? "var(--brand)" : "transparent",
+        background: selected ? "var(--brand-bright)" : "var(--tg-secondary-bg)",
+        borderColor: selected ? "var(--brand-bright)" : "var(--border-subtle)",
+        color: selected ? "#ffffff" : "var(--tg-text)",
       }}
     >
-      <div
-        className={clsx(
-          "absolute top-3 right-3 flex h-4 w-4 items-center justify-center rounded-full border-2 transition-colors",
-        )}
-        style={{ borderColor: selected ? "var(--brand)" : "var(--border-subtle)" }}
-      >
-        <div
-          className="h-2 w-2 rounded-full transition-transform"
-          style={{
-            background: "var(--brand)",
-            transform: selected ? "scale(1)" : "scale(0)",
-          }}
-        />
-      </div>
       <Icon
         name={icon}
-        size={36}
-        className="mb-2 transition-colors"
-        style={{ color: selected ? "var(--brand)" : "var(--text-muted)" }}
+        size={32}
+        filled={selected}
+        className="mb-2"
+        style={{ color: selected ? "#ffffff" : "var(--text-muted)" }}
       />
-      <span
-        className="text-center text-sm font-semibold transition-colors"
-        style={{ color: selected ? "var(--brand)" : "var(--tg-text)" }}
-      >
-        {label}
-      </span>
+      <span className="text-center text-sm font-semibold">{label}</span>
     </motion.button>
   );
 }

@@ -1,3 +1,5 @@
+import { applyLockedLightTheme, LIGHT_THEME } from "./lib/theme";
+
 export interface TelegramWebApp {
   initData: string;
   initDataUnsafe?: {
@@ -29,6 +31,10 @@ export interface TelegramWebApp {
   ready: () => void;
   expand: () => void;
   close?: () => void;
+  setHeaderColor?: (color: string) => void;
+  setBackgroundColor?: (color: string) => void;
+  onEvent?: (event: string, callback: () => void) => void;
+  offEvent?: (event: string, callback: () => void) => void;
   openInvoice?: (
     url: string,
     callback?: (status: "paid" | "cancelled" | "failed" | "pending") => void,
@@ -40,8 +46,6 @@ declare global {
     Telegram?: { WebApp?: TelegramWebApp };
   }
 }
-
-import { applySemanticTheme } from "./lib/theme";
 
 /** Always read fresh — WebApp may attach after module load. */
 export function getTg(): TelegramWebApp | undefined {
@@ -67,41 +71,28 @@ export async function waitForInitData(timeoutMs = 4000): Promise<string> {
   return getTg()?.initData || "";
 }
 
-const BRAND = {
-  bg: "#f4fbf4",
-  text: "#161d19",
-  button: "#10b981",
-  buttonText: "#ffffff",
-  secondaryBg: "#eef6ee",
-  accent: "#10b981",
-  accentDark: "#006c49",
-} as const;
+function syncTelegramChrome() {
+  const webApp = getTg();
+  if (!webApp) return;
+  webApp.setHeaderColor?.(LIGHT_THEME.headerBg);
+  webApp.setBackgroundColor?.(LIGHT_THEME.bg);
+}
+
+const onThemeChanged = () => applyLockedLightTheme();
 
 export function initTelegramTheme() {
+  applyLockedLightTheme();
+
   const webApp = getTg();
-  if (!webApp) {
-    document.documentElement.style.setProperty("--tg-bg", BRAND.bg);
-    document.documentElement.style.setProperty("--tg-text", BRAND.text);
-    document.documentElement.style.setProperty("--tg-button", BRAND.button);
-    document.documentElement.style.setProperty("--tg-button-text", BRAND.buttonText);
-    document.documentElement.style.setProperty("--tg-secondary-bg", BRAND.secondaryBg);
-    document.documentElement.style.setProperty("--accent", BRAND.accent);
-    document.documentElement.style.setProperty("--brand", BRAND.accentDark);
-    document.documentElement.style.setProperty("--brand-bright", BRAND.accent);
-    applySemanticTheme(BRAND.bg);
-    return;
-  }
+  if (!webApp) return;
+
   webApp.ready();
   webApp.expand();
-  const p = webApp.themeParams || {};
-  const bg = p.bg_color || BRAND.bg;
-  document.documentElement.style.setProperty("--tg-bg", bg);
-  document.documentElement.style.setProperty("--tg-text", p.text_color || BRAND.text);
-  document.documentElement.style.setProperty("--tg-button", BRAND.button);
-  document.documentElement.style.setProperty("--tg-button-text", p.button_text_color || BRAND.buttonText);
-  document.documentElement.style.setProperty("--tg-secondary-bg", p.secondary_bg_color || BRAND.secondaryBg);
-  document.documentElement.style.setProperty("--accent", BRAND.accent);
-  document.documentElement.style.setProperty("--brand", BRAND.accentDark);
-  document.documentElement.style.setProperty("--brand-bright", BRAND.accent);
-  applySemanticTheme(bg);
+  syncTelegramChrome();
+
+  webApp.offEvent?.("themeChanged", onThemeChanged);
+  webApp.onEvent?.("themeChanged", onThemeChanged);
+
+  applyLockedLightTheme();
+  syncTelegramChrome();
 }
