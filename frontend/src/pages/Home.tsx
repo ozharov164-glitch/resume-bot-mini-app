@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { motion } from "motion/react";
 
 import { fetchStatsCount } from "../api";
+import { ExamplesGallery } from "../components/examples/ExamplesGallery";
 import { AppHeader } from "../components/ui/AppHeader";
 import { Button } from "../components/ui/Button";
 import { FixedBottomBar } from "../components/ui/FixedBottomBar";
@@ -30,6 +31,8 @@ const BENEFITS = [
   },
 ] as const;
 
+type HomeTab = "main" | "examples";
+
 function useCountUp(target: number, durationMs = 1400) {
   const [value, setValue] = useState(0);
   const started = useRef(false);
@@ -51,6 +54,7 @@ function useCountUp(target: number, durationMs = 1400) {
 }
 
 export function HomePage({ onStart, onHistory }: HomeProps) {
+  const [tab, setTab] = useState<HomeTab>("main");
   const [statsCount, setStatsCount] = useState(10000);
   const displayCount = useCountUp(statsCount);
   const isFounder = useFounderStatus();
@@ -65,9 +69,44 @@ export function HomePage({ onStart, onHistory }: HomeProps) {
     onStart();
   };
 
+  const switchTab = (next: HomeTab) => {
+    getTg()?.HapticFeedback?.selectionChanged();
+    setTab(next);
+  };
+
   return (
     <Screen withBottomBar bottomBarButtons={2}>
       <AppHeader />
+
+      <div className="home-tabs px-4 pt-1">
+        <div className="home-tabs-track" role="tablist" aria-label="Разделы главной">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={tab === "main"}
+            className={`home-tab${tab === "main" ? " home-tab--active" : ""}`}
+            onClick={() => switchTab("main")}
+          >
+            Главная
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={tab === "examples"}
+            className={`home-tab${tab === "examples" ? " home-tab--active" : ""}`}
+            onClick={() => switchTab("examples")}
+          >
+            <Icon name="description" size={16} />
+            Примеры резюме
+          </button>
+        </div>
+      </div>
+
+      {tab === "examples" ? (
+        <main className="flex flex-1 flex-col gap-3 px-4 pb-2 pt-2">
+          <ExamplesGallery onStart={start} />
+        </main>
+      ) : (
       <main className="flex flex-1 flex-col items-center gap-4 px-4 pt-2 pb-2">
         {isFounder && <FounderBadge />}
 
@@ -127,6 +166,7 @@ export function HomePage({ onStart, onHistory }: HomeProps) {
           ))}
         </div>
       </main>
+      )}
 
       <FixedBottomBar>
         <div className="flex flex-col gap-2">

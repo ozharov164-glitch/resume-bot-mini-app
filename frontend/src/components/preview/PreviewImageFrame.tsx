@@ -1,6 +1,7 @@
 import { motion } from "motion/react";
 
 import { Icon } from "../ui/Icon";
+import { PreviewWatermarkOverlay } from "./PreviewWatermarkOverlay";
 
 interface PreviewImageFrameProps {
   src: string;
@@ -21,17 +22,19 @@ export function PreviewImageFrame({ src, locked }: PreviewImageFrameProps) {
       </div>
 
       <div className={`preview-image-frame${locked ? " preview-image-frame--locked" : ""}`}>
-        <div className="preview-image-paper">
+        <div className="no-copy preview-protected preview-image-paper">
           <img
             src={src}
             alt="Предпросмотр резюме"
             className="preview-image"
             draggable={false}
             onContextMenu={(e) => e.preventDefault()}
+            onDragStart={(e) => e.preventDefault()}
           />
 
           {locked ? (
             <>
+              <PreviewWatermarkOverlay />
               <div className="preview-image-vignette" aria-hidden />
               <div className="preview-image-fade" aria-hidden />
 

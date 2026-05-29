@@ -312,8 +312,40 @@ def get_preview_watermark_styles() -> str:
         inset: 0;
         z-index: 9999;
         pointer-events: none;
-        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='420' height='220'%3E%3Ctext x='50%25' y='50%25' font-family='DejaVu Sans,Arial,sans-serif' font-size='28' font-weight='700' fill='%230d1f14' fill-opacity='0.09' text-anchor='middle' dominant-baseline='middle' transform='rotate(-32 210 110)'%3E%D0%9F%D0%A0%D0%95%D0%94%D0%9F%D0%A0%D0%9E%D0%A1%D0%9C%D0%9E%D0%A2%D0%A0%3C/text%3E%3C/svg%3E");
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='160'%3E%3Ctext x='50%25' y='50%25' font-family='DejaVu Sans,Arial,sans-serif' font-size='26' font-weight='800' fill='%230d1f14' fill-opacity='0.24' text-anchor='middle' dominant-baseline='middle' transform='rotate(-32 150 80)'%3E%D0%9F%D0%A0%D0%95%D0%94%D0%9F%D0%A0%D0%9E%D0%A1%D0%9C%D0%9E%D0%A2%D0%A0%3C/text%3E%3C/svg%3E");
         background-repeat: repeat;
+    }
+
+    .preview-watermark-stripes {
+        position: fixed;
+        inset: 0;
+        z-index: 9998;
+        pointer-events: none;
+        opacity: 0.14;
+        background-image: repeating-linear-gradient(
+            -35deg,
+            rgba(13, 31, 20, 0.08) 0,
+            rgba(13, 31, 20, 0.08) 2px,
+            transparent 2px,
+            transparent 14px
+        );
+    }
+
+    .preview-center-watermark {
+        position: fixed;
+        inset: 0;
+        z-index: 10000;
+        pointer-events: none;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: 'NunitoSans', 'DejaVu Sans', Arial, sans-serif;
+        font-size: 52pt;
+        font-weight: 800;
+        letter-spacing: 0.12em;
+        color: rgba(13, 31, 20, 0.16);
+        transform: rotate(-28deg);
+        white-space: nowrap;
     }
 
     .preview-fade-layer {
@@ -321,14 +353,14 @@ def get_preview_watermark_styles() -> str:
         left: 0;
         right: 0;
         bottom: 0;
-        height: 38%;
-        z-index: 9998;
+        height: 42%;
+        z-index: 10001;
         pointer-events: none;
         background: linear-gradient(
             to bottom,
             rgba(255, 255, 255, 0) 0%,
-            rgba(255, 255, 255, 0.82) 55%,
-            rgba(255, 255, 255, 0.98) 100%
+            rgba(255, 255, 255, 0.72) 45%,
+            rgba(255, 255, 255, 0.96) 100%
         );
     }
     """

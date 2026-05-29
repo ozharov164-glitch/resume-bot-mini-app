@@ -2,6 +2,7 @@ import { motion } from "motion/react";
 
 import type { ResumeData } from "../../types";
 import { Icon } from "../ui/Icon";
+import { PreviewWatermarkOverlay } from "./PreviewWatermarkOverlay";
 
 function initialsFromName(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -31,7 +32,8 @@ export function PreviewResumeCard({ resume }: PreviewResumeCardProps) {
         className="no-copy preview-protected preview-resume-card relative overflow-hidden rounded-xl border p-4"
         onCopy={(e) => e.preventDefault()}
       >
-        <div className="preview-watermark pointer-events-none absolute inset-0 flex select-none items-center justify-center">
+        <PreviewWatermarkOverlay />
+        <div className="preview-watermark pointer-events-none absolute inset-0 z-[4] flex select-none items-center justify-center">
           <span className="preview-watermark-text">ПРЕДПРОСМОТР</span>
         </div>
 
