@@ -5,9 +5,6 @@ on:
     branches: ["main"]
     paths:
       - "frontend/**"
-      - "backend/services/pdf_service.py"
-      - "backend/templates/**"
-      - "scripts/generate_example_pngs.py"
       - ".github/workflows/deploy-pages.yml"
   workflow_dispatch:
 
@@ -32,14 +29,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - name: Generate example resume PNGs
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
-            python3-pip \
-            libpango-1.0-0 libpangocairo-1.0-0 libgdk-pixbuf-2.0-0 libffi-dev shared-mime-info
-          pip install pymupdf weasyprint==63.1 jinja2 pydyf
-          PYTHONPATH=backend python3 scripts/generate_example_pngs.py
       - name: Install dependencies
         run: npm install
         working-directory: frontend
