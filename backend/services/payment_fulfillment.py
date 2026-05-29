@@ -38,7 +38,11 @@ async def fulfill_paid_resume(db: Any, resume_id: str, telegram_id: int) -> bool
         logger.exception("fulfill: invalid resume data for %s", resume_id)
         raise exc
 
-    pdf_bytes = generate_pdf(resume_data)
+    try:
+        pdf_bytes = generate_pdf(resume_data)
+    except Exception:
+        logger.exception("fulfill: pdf generation failed resume_id=%s", resume_id)
+        raise
     safe_name = resume_data.get("full_name", "resume").replace(" ", "_")[:80]
     filename = f"resume_{safe_name}.pdf"
     name = (resume_data.get("full_name") or "").strip()

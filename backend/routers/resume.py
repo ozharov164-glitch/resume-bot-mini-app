@@ -83,13 +83,28 @@ async def download_pdf(resume_id: str, current_user: dict = Depends(get_current_
         )
 
     resume_data = parse_resume_data(resume["data"])
-    pdf_bytes = generate_pdf(resume_data)
+    try:
+        pdf_bytes = generate_pdf(resume_data)
+    except Exception as exc:
+        logger.exception("pdf generation failed resume_id=%s", resume_id)
+        raise HTTPException(
+            status_code=500,
+            detail="Не удалось сформировать PDF. Попробуйте ещё раз через минуту.",
+        ) from exc
+
     filename = f"resume_{resume_data.get('full_name', 'resume').replace(' ', '_')}.pdf"
 
-    await send_document_to_user(
-        user_telegram_id=current_user["telegram_id"],
-        document=pdf_bytes,
-        filename=filename,
-        caption=f"Готово! Ваше резюме в PDF уже в чате. Удачи в поиске работы, {resume_data.get('full_name', '')}.",
-    )
+    try:
+        await send_document_to_user(
+            user_telegram_id=current_user["telegram_id"],
+            document=pdf_bytes,
+            filename=filename,
+            caption=f"Готово! Ваше резюме в PDF уже в чате. Удачи в поиске работы, {resume_data.get('full_name', '')}.",
+        )
+    except Exception as exc:
+        logger.exception("telegram send failed resume_id=%s telegram_id=%s", resume_id, current_user.get("telegram_id"))
+        raise HTTPException(
+            status_code=502,
+            detail="PDF готов, но не удалось отправить в Telegram. Напиши боту /start и попробуй снова.",
+        ) from exc
     return {"status": "sent", "filename": filename}

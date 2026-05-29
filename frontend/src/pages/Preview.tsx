@@ -1,6 +1,6 @@
 import { useCallback, useState } from "react";
 
-import { requestPdf } from "../api";
+import { ensureAuthToken, requestPdf } from "../api";
 import { AppHeader } from "../components/ui/AppHeader";
 import { Button } from "../components/ui/Button";
 import { FixedBottomBar } from "../components/ui/FixedBottomBar";
@@ -26,15 +26,22 @@ export function PreviewPage() {
   const handlePdf = async () => {
     getTg()?.HapticFeedback?.impactOccurred("medium");
 
-    if (founderActive && authToken && resumeId) {
+    if (!resumeId) {
+      alert("Резюме не найдено. Сформируй его заново.");
+      return;
+    }
+
+    if (founderActive) {
       setSending(true);
       try {
-        await requestPdf(authToken, resumeId);
+        const token = authToken || (await ensureAuthToken());
+        await requestPdf(token, resumeId);
         setPaid(true);
         getTg()?.HapticFeedback?.notificationOccurred("success");
         setPage("success");
-      } catch {
-        alert("Не удалось отправить PDF. Попробуй ещё раз.");
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "Не удалось отправить PDF. Попробуй ещё раз.";
+        alert(message);
       } finally {
         setSending(false);
       }
