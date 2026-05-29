@@ -13,6 +13,7 @@ permissions:
   pages: write
   id-token: write
 
+# When several pushes land in a row, older runs show "Cancelled" — the latest push wins.
 concurrency:
   group: "pages"
   cancel-in-progress: true

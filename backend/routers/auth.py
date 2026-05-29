@@ -1,11 +1,10 @@
 from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, Depends, HTTPException
-from jose import jwt
+from fastapi import APIRouter, Depends, Header, HTTPException
+from jose import JWTError, jwt
 
 from config import settings
 from database import get_db
-from dependencies import get_current_user
 from models.schemas import TelegramAuthRequest, TokenResponse
 from services.founder import is_founder
 from services.telegram_service import verify_telegram_init_data
@@ -14,13 +13,26 @@ router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 
 @router.get("/me")
-async def auth_me(current_user: dict = Depends(get_current_user)):
-    founder = is_founder(current_user.get("telegram_id"))
-    return {
-        "telegram_id": current_user.get("telegram_id"),
-        "is_founder": founder,
-        "unlimited": founder,
-    }
+async def auth_me(authorization: str = Header(default="")):
+    """Founder status from JWT — no DB round-trip (works even under load)."""
+    if not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Требуется авторизация.")
+    token = authorization.replace("Bearer ", "", 1)
+    try:
+        payload = jwt.decode(token, settings.JWT_SECRET, algorithms=[settings.JWT_ALGORITHM])
+    except JWTError as exc:
+        raise HTTPException(status_code=401, detail="Недействительный токен.") from exc
+
+    if payload.get("exp") and datetime.now(timezone.utc).timestamp() > payload["exp"]:
+        raise HTTPException(status_code=401, detail="Срок действия токена истек.")
+
+    telegram_id = payload.get("sub")
+    if not telegram_id:
+        raise HTTPException(status_code=401, detail="Некорректный токен.")
+
+    tid = int(telegram_id)
+    founder = bool(payload.get("founder")) or is_founder(tid)
+    return {"telegram_id": tid, "is_founder": founder, "unlimited": founder}
 
 
 @router.post("/telegram", response_model=TokenResponse)
