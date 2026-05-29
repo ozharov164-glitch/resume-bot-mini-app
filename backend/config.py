@@ -9,6 +9,11 @@ class Settings(BaseSettings):
 
     OPENROUTER_API_KEY: str
     OPENROUTER_APP_URL: str = "https://yourdomain.ru"
+    OPENROUTER_MODEL: str = "deepseek/deepseek-v4-flash"
+    OPENROUTER_MODEL_FALLBACK: str = "deepseek/deepseek-v3.2"
+    # Fastest providers for v4-flash (OpenRouter latency p50, auto-updated via deploy script).
+    OPENROUTER_PROVIDER_ONLY: str = "parasail,alibaba,deepseek,morph"
+    OPENROUTER_MAX_TOKENS: int = 1200
 
     SUPABASE_URL: str
     SUPABASE_KEY: str
