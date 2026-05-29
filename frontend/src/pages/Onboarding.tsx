@@ -19,7 +19,6 @@ import {
   normalizeSalaryDigits,
   professionOtherSelected,
   salaryFromOption,
-  skillsOptionsForPosition,
 } from "../lib/onboardingSteps";
 import { useAppStore } from "../store";
 import { getTg } from "../telegram";
@@ -41,18 +40,16 @@ export function OnboardingPage() {
     setPaid,
     onboardingMode,
     cancelEditResume,
+    onboardingStep,
+    setOnboardingStep,
   } = useAppStore();
 
-  const [step, setStep] = useState(0);
+  const step = onboardingStep;
   const [value, setValue] = useState(() =>
-    readStringAnswer(answers, ONBOARDING_STEPS[0]?.id ?? "name"),
+    readStringAnswer(answers, ONBOARDING_STEPS[step]?.id ?? "name"),
   );
   const [contactPhone, setContactPhone] = useState(() => readStringAnswer(answers, "phone"));
   const [contactEmail, setContactEmail] = useState(() => readStringAnswer(answers, "email"));
-  const [selectedSkills, setSelectedSkills] = useState<string[]>(() =>
-    Array.isArray(answers.skills) ? [...answers.skills] : [],
-  );
-  const [customSkill, setCustomSkill] = useState("");
   const [salaryCustomDigits, setSalaryCustomDigits] = useState("");
   const [otherProfession, setOtherProfession] = useState(() =>
     professionOtherSelected(String(answers.target_position ?? "")),
@@ -64,7 +61,6 @@ export function OnboardingPage() {
   const isLast = step === ONBOARDING_STEPS.length - 1;
   const isContactsStep = current.type === "contacts_dual";
   const isSalaryStep = current.type === "options_with_input";
-  const isSkillsStep = current.type === "multi_select";
   const salaryCustomMode = isSalaryStep && value === SALARY_CUSTOM_OPTION;
 
   const showTextInput =
@@ -72,21 +68,11 @@ export function OnboardingPage() {
     current.type === "profession" ||
     (current.type === "options" && !OPTIONS_ONLY.has(current.id));
 
-  const skillOptions = useMemo(() => {
-    if (!isSkillsStep) return [];
-    const position = readStringAnswer(answers, "target_position");
-    return skillsOptionsForPosition(current.optionsByPosition, position);
-  }, [isSkillsStep, current.optionsByPosition, answers]);
-
   const persistCurrentStep = useCallback(() => {
     const id = current.id;
     if (current.type === "contacts_dual") {
       setAnswer("phone", contactPhone.trim());
       setAnswer("email", contactEmail.trim());
-      return;
-    }
-    if (current.type === "multi_select") {
-      setAnswer("skills", selectedSkills);
       return;
     }
     if (current.type === "options_with_input" && id === "salary") {
@@ -108,7 +94,6 @@ export function OnboardingPage() {
     current.id,
     current.type,
     salaryCustomDigits,
-    selectedSkills,
     setAnswer,
     value,
   ]);
@@ -116,22 +101,17 @@ export function OnboardingPage() {
   const canContinue = useMemo(() => {
     if (current.optional) return true;
     if (current.type === "contacts_dual") return true;
-    if (current.type === "multi_select") return true;
     if (current.type === "options_with_input") return true;
     return value.trim().length > 0;
   }, [current.optional, current.type, value]);
 
   const goToStep = useCallback(
     (nextStep: number) => {
-      setStep(nextStep);
+      setOnboardingStep(nextStep);
       const next = ONBOARDING_STEPS[nextStep];
       if (next.type === "contacts_dual") {
         setContactPhone(readStringAnswer(answers, "phone"));
         setContactEmail(readStringAnswer(answers, "email"));
-        setValue("");
-      } else if (next.type === "multi_select") {
-        setSelectedSkills(Array.isArray(answers.skills) ? [...answers.skills] : []);
-        setCustomSkill("");
         setValue("");
       } else if (next.type === "options_with_input" && next.id === "salary") {
         const saved = readStringAnswer(answers, "salary");
@@ -156,7 +136,7 @@ export function OnboardingPage() {
         }
       }
     },
-    [answers],
+    [answers, setOnboardingStep],
   );
 
   const handleBack = useCallback(() => {
@@ -180,6 +160,12 @@ export function OnboardingPage() {
     if (!canContinue && !current.optional) return;
     getTg()?.HapticFeedback?.impactOccurred("light");
     persistCurrentStep();
+
+    if (current.id === "target_position") {
+      setOnboardingStep(step + 1);
+      setPage("skill_pick");
+      return;
+    }
 
     if (!isLast) {
       goToStep(step + 1);
@@ -229,28 +215,16 @@ export function OnboardingPage() {
     } else if (current.id === "languages") {
       setAnswer("languages", "");
       setValue("");
+    } else if (current.id === "certificates") {
+      setAnswer("certificates", "");
+      setValue("");
     }
     goToStep(step + 1);
   };
 
-  const toggleSkill = (skill: string) => {
-    setSelectedSkills((prev) =>
-      prev.includes(skill) ? prev.filter((s) => s !== skill) : [...prev, skill],
-    );
-    getTg()?.HapticFeedback?.selectionChanged();
-  };
-
-  const addCustomSkill = () => {
-    const trimmed = customSkill.trim();
-    if (!trimmed || selectedSkills.includes(trimmed)) return;
-    setSelectedSkills((prev) => [...prev, trimmed]);
-    setCustomSkill("");
-    getTg()?.HapticFeedback?.impactOccurred("light");
-  };
-
   const showSkip =
     Boolean(current.skipText) &&
-    (isContactsStep || isSalaryStep || current.id === "languages" || current.optional);
+    (isContactsStep || isSalaryStep || current.id === "languages" || current.id === "certificates" || current.optional);
 
   return (
     <Screen withBottomBar className="px-4">
@@ -364,41 +338,6 @@ export function OnboardingPage() {
                 placeholder={current.placeholder}
                 inputMode="numeric"
               />
-            )}
-
-            {isSkillsStep && (
-              <>
-                <div className="flex flex-wrap gap-2.5" role="group" aria-label={current.question}>
-                  {skillOptions.map((skill) => (
-                    <OptionButton
-                      key={skill}
-                      label={skill}
-                      selected={selectedSkills.includes(skill)}
-                      onSelect={() => toggleSkill(skill)}
-                    />
-                  ))}
-                </div>
-                {current.allowCustomInput && (
-                  <div className="flex gap-2">
-                    <TextInput
-                      value={customSkill}
-                      onChange={(e) => setCustomSkill(e.target.value)}
-                      placeholder={current.customInputPlaceholder}
-                      inputMode="text"
-                      className="flex-1"
-                    />
-                    <Button
-                      variant="secondary"
-                      type="button"
-                      onClick={addCustomSkill}
-                      disabled={!customSkill.trim()}
-                      className="!min-h-[48px] shrink-0 px-4"
-                    >
-                      +
-                    </Button>
-                  </div>
-                )}
-              </>
             )}
 
             {showTextInput && current.type !== "profession" && (

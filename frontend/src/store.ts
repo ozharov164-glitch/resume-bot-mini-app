@@ -2,7 +2,7 @@ import { create } from "zustand";
 
 import type { ResumeData, UserAnswers } from "./types";
 
-type Page = "home" | "onboarding" | "loading" | "preview" | "payment" | "success" | "history";
+type Page = "home" | "onboarding" | "skill_pick" | "loading" | "preview" | "payment" | "success" | "history";
 type OnboardingMode = "create" | "edit";
 
 interface AppState {
@@ -24,6 +24,8 @@ interface AppState {
   setFounder: (value: boolean) => void;
   onboardingMode: OnboardingMode;
   previewReturnPage: Page;
+  onboardingStep: number;
+  setOnboardingStep: (step: number) => void;
   startNewResume: () => void;
   startEditResume: () => void;
   cancelEditResume: () => void;
@@ -55,11 +57,14 @@ export const useAppStore = create<AppState>((set, get) => ({
   setFounder: (value) => set({ isFounder: value }),
   onboardingMode: "create",
   previewReturnPage: "home",
+  onboardingStep: 0,
+  setOnboardingStep: (onboardingStep) => set({ onboardingStep }),
   startNewResume: () =>
     set({
       page: "onboarding",
       onboardingMode: "create",
       previewReturnPage: "home",
+      onboardingStep: 0,
       answers: {},
       resumeId: null,
       resumeData: null,

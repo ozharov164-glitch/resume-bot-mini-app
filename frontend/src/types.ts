@@ -11,6 +11,7 @@ export interface UserAnswers {
   about: string;
   email: string;
   languages: string;
+  certificates: string;
 }
 
 export interface ResumeData {
@@ -34,4 +35,5 @@ export interface ResumeData {
   skills: string[];
   languages: string[];
   salary: string;
+  certificates?: string[];
 }

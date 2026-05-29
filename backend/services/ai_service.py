@@ -11,18 +11,61 @@ logger = logging.getLogger(__name__)
 # Компактный, но полный промпт: качество резюме важнее экономии на system-токенах.
 SYSTEM_PROMPT = """Ты HR-редактор резюме для российского рынка (формат hh.ru).
 
-Задача: по фактам кандидата сделать сильное, читаемое резюме — живое, конкретное, без канцелярита.
+Задача: по фактам кандидата сделать сильное, развёрнутое, читаемое резюме — живое, конкретное, без канцелярита.
 
 Правила качества:
-1. Опыт: глаголы действия, обязанности + результат; в description — 2–4 содержательные фразы.
-2. «О себе» (summary): 3–5 предложений, по делу; не клише без фактов.
+1. Опыт: глаголы действия, обязанности + измеримый результат; в description — 3–5 содержательных фраз через « • »; если есть цифры от кандидата — обязательно включи.
+2. «О себе» (summary): 4–6 предложений, по делу; сильные стороны + мотивация + релевантность должности.
 3. Стиль под профессию (продавец, водитель, склад, офис и т.д.).
 4. Нет опыта — честно: обучаемость, надежность, релевантные навыки; не выдумывай стаж и компании.
 5. Используй только данные из запроса; даты и места работы не выдумывай.
-6. Навыки — только уместные для целевой должности.
+6. Навыки — объедини указанные пользователем с уместными для должности; без дубликатов.
+7. Сертификаты/лицензии — только из запроса; иначе пустой массив.
+8. Языки — всегда включай «Русский — родной»; добавь иностранные из запроса.
 
 Ответ: ТОЛЬКО JSON, без markdown и комментариев:
-{"full_name":"","target_position":"","city":"","phone":"","email":"","summary":"","experience":[{"company":"","position":"","period":"","description":""}],"education":[{"institution":"","degree":"","year":""}],"skills":[],"languages":["Русский — родной"]}"""
+{"full_name":"","target_position":"","city":"","phone":"","email":"","salary":"","summary":"","experience":[{"company":"","position":"","period":"","description":""}],"education":[{"institution":"","degree":"","year":""}],"skills":[],"languages":["Русский — родной"],"certificates":[]}"""
+
+SKILLS_SUGGEST_PROMPT = """Ты эксперт по российскому рынку труда (hh.ru, массовые профессии).
+
+По названию должности подбери навыки для резюме соискателя.
+
+Правила:
+- 14–20 навыков в skills (короткие формулировки, 1–4 слова)
+- Только реалистичные для профессии в РФ
+- groups: hard (проф. навыки), tools (ПО/инструменты), soft (личные качества), documents (права, лицензии, медкнижка)
+- Каждый навык из skills должен попасть ровно в одну группу
+
+Ответ: ТОЛЬКО JSON:
+{"skills":[],"groups":{"hard":[],"tools":[],"soft":[],"documents":[]}}"""
+
+FALLBACK_SKILLS: dict[str, list[str]] = {
+    "водител": [
+        "Категория B", "Категория C", "Знание города", "Путевые листы",
+        "ТТН", "Яндекс.Навигатор", "Бережная перевозка", "Пунктуальность",
+        "Опыт дальних рейсов", "Без аварий", "СДЭК / Boxberry", "Ответственность",
+    ],
+    "курьер": [
+        "Знание города", "Яндекс.Доставка", "Wildberries", "СДЭК",
+        "Пунктуальность", "Физ. выносливость", "Мобильные приложения",
+        "Работа с клиентами", "Бережное обращение с грузом", "Ответственность",
+    ],
+    "охран": [
+        "Лицензия охранника", "CCTV", "Работа с рамкой", "Делопроизводство",
+        "Физ. подготовка", "Работа в ночь", "Контроль доступа", "Ответственность",
+        "Внимательность", "Стрессоустойчивость",
+    ],
+    "маляр": [
+        "Покраска стен/потолков", "Шпаклёвка", "Работа с инструментом",
+        "Поверхности: штукатурка", "Поверхности: гипсокартон", "Чтение чертежей",
+        "Аккуратность", "Соблюдение ТБ", "Физ. выносливость",
+    ],
+    "продав": [
+        "1С Торговля", "Кассовый аппарат", "Выкладка товара",
+        "Работа с покупателями", "Инвентаризация", "Знание товара",
+        "Коммуникабельность", "Стрессоустойчивость",
+    ],
+}
 
 # Обрезаем только явный перебор (защита от спама), не режем нормальные ответы пользователя.
 MAX_FIELD_LEN = {
@@ -69,6 +112,9 @@ def _build_user_payload(user_data: dict) -> str:
     languages = (user_data.get("languages") or "").strip()
     if languages and languages.lower() != "нет":
         blocks.append(f"Языки: {languages}")
+    certificates = (user_data.get("certificates") or "").strip()
+    if certificates:
+        blocks.append(f"Сертификаты и лицензии:\n{_truncate(certificates, 600)}")
     email = (user_data.get("email") or "").strip()
     if email:
         blocks.append(f"Email: {email}")
@@ -96,20 +142,27 @@ def _clean_json_content(content: str) -> str:
     return content.strip()
 
 
-def _build_request_body(messages: list[dict], model: str, temperature: float) -> dict[str, Any]:
+def _build_request_body(
+    messages: list[dict], model: str, temperature: float, max_tokens: int | None = None
+) -> dict[str, Any]:
     return {
         "model": model,
         "messages": messages,
         "temperature": temperature,
-        "max_tokens": settings.OPENROUTER_MAX_TOKENS,
+        "max_tokens": max_tokens or settings.OPENROUTER_MAX_TOKENS,
         "provider": _provider_routing(),
         "response_format": {"type": "json_object"},
     }
 
 
-async def _call_openrouter(messages: list[dict], model: str | None = None, temperature: float = 0.65) -> dict:
+async def _call_openrouter(
+    messages: list[dict],
+    model: str | None = None,
+    temperature: float = 0.65,
+    max_tokens: int | None = None,
+) -> dict:
     model = model or settings.OPENROUTER_MODEL
-    body = _build_request_body(messages, model, temperature)
+    body = _build_request_body(messages, model, temperature, max_tokens)
 
     async with httpx.AsyncClient(timeout=50.0) as client:
         response = await client.post(
@@ -181,6 +234,75 @@ async def generate_resume(user_data: dict) -> dict:
                 messages, model=settings.OPENROUTER_MODEL_FALLBACK, temperature=0.6
             )
         raise
+
+
+def _fallback_skills(position: str) -> dict[str, Any]:
+    lowered = position.lower()
+    for keyword, skills in FALLBACK_SKILLS.items():
+        if keyword in lowered:
+            return {
+                "skills": skills,
+                "groups": {
+                    "hard": skills[:6],
+                    "tools": skills[6:9] if len(skills) > 6 else [],
+                    "soft": skills[9:] if len(skills) > 9 else ["Ответственность", "Пунктуальность"],
+                    "documents": [],
+                },
+            }
+    default = [
+        "MS Office", "Работа в команде", "Обучаемость", "Ответственность",
+        "Пунктуальность", "Коммуникабельность", "Работа с клиентами",
+        "Физ. выносливость", "Стрессоустойчивость", "Внимательность",
+        "Исполнительность", "Аккуратность",
+    ]
+    return {
+        "skills": default,
+        "groups": {
+            "hard": default[:4],
+            "tools": ["Компьютер"],
+            "soft": default[4:],
+            "documents": [],
+        },
+    }
+
+
+def _normalize_skills_response(raw: dict[str, Any]) -> dict[str, Any]:
+    skills = raw.get("skills") or []
+    if not isinstance(skills, list):
+        skills = []
+    skills = [str(s).strip() for s in skills if str(s).strip()][:20]
+    groups = raw.get("groups") or {}
+    if not isinstance(groups, dict):
+        groups = {}
+    normalized_groups: dict[str, list[str]] = {}
+    for key in ("hard", "tools", "soft", "documents"):
+        val = groups.get(key) or []
+        if isinstance(val, list):
+            normalized_groups[key] = [str(v).strip() for v in val if str(v).strip()][:10]
+        else:
+            normalized_groups[key] = []
+    if not skills and any(normalized_groups.values()):
+        skills = []
+        for key in ("hard", "tools", "soft", "documents"):
+            skills.extend(normalized_groups[key])
+        skills = list(dict.fromkeys(skills))[:20]
+    return {"skills": skills, "groups": normalized_groups}
+
+
+async def suggest_skills(position: str) -> dict[str, Any]:
+    position = _truncate(position, MAX_FIELD_LEN["target_position"])
+    messages = [
+        {"role": "system", "content": SKILLS_SUGGEST_PROMPT},
+        {"role": "user", "content": f"Должность: {position}"},
+    ]
+    try:
+        raw = await _call_openrouter(messages, temperature=0.35, max_tokens=500)
+        result = _normalize_skills_response(raw)
+        if result["skills"]:
+            return result
+    except Exception as exc:
+        logger.warning("skills suggest failed (%s), using fallback", exc)
+    return _fallback_skills(position)
 
 
 async def adapt_resume_for_vacancy(resume_data: dict, vacancy_text: str) -> dict:

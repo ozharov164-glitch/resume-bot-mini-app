@@ -9,6 +9,7 @@ import { LoadingPage } from "./pages/Loading";
 import { OnboardingPage } from "./pages/Onboarding";
 import { PaymentPage } from "./pages/Payment";
 import { PreviewPage } from "./pages/Preview";
+import { SkillPickPage } from "./pages/SkillPick";
 import { SuccessPage } from "./pages/Success";
 import { useAppStore } from "./store";
 import { getTelegramUserId, initTelegramTheme, waitForInitData } from "./telegram";
@@ -70,6 +71,7 @@ export default function App() {
     );
   }
   if (page === "history") return <HistoryPage />;
+  if (page === "skill_pick") return <SkillPickPage />;
   if (page === "loading") return <LoadingPage />;
   if (page === "preview") return <PreviewPage />;
   if (page === "payment") return <PaymentPage />;

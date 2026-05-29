@@ -16,6 +16,16 @@ class GenerateResumeRequest(BaseModel):
     phone: str = ""
     email: str = ""
     languages: str = ""
+    certificates: str = ""
+
+
+class SuggestSkillsRequest(BaseModel):
+    position: str = Field(min_length=1, max_length=150)
+
+
+class SuggestSkillsResponse(BaseModel):
+    skills: list[str]
+    groups: dict[str, list[str]] = Field(default_factory=dict)
 
 
 class ResumeGenerationResponse(BaseModel):

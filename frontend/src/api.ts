@@ -55,6 +55,14 @@ export async function fetchMe(token: string) {
   });
 }
 
+export async function suggestSkills(token: string, position: string) {
+  return http<{ skills: string[]; groups: Record<string, string[]> }>("/api/skills/suggest", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ position }),
+  });
+}
+
 export async function generateResume(token: string, data: Partial<UserAnswers>) {
   return http<{ resume_id: string; resume: any; paid: boolean }>("/api/resume/generate", {
     method: "POST",

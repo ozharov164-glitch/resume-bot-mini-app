@@ -28,6 +28,11 @@ async def create_resume(
         salary_user = (user_data.salary or "").strip()
         if salary_user and not (resume_data.get("salary") or "").strip():
             resume_data["salary"] = salary_user
+        certs_user = (user_data.certificates or "").strip()
+        if certs_user and not resume_data.get("certificates"):
+            resume_data["certificates"] = [
+                c.strip() for c in certs_user.replace("\n", ",").split(",") if c.strip()
+            ]
         resume_id = str(uuid.uuid4())
         founder = is_founder(current_user.get("telegram_id"))
         db.create_resume(

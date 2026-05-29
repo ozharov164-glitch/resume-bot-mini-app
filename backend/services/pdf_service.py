@@ -5,203 +5,237 @@ from weasyprint import CSS, HTML
 
 TEMPLATES_DIR = Path(__file__).parent.parent / "templates"
 
+BRAND_PRIMARY = "#006c49"
+BRAND_BRIGHT = "#10b981"
+TEXT_DARK = "#161d19"
+TEXT_MUTED = "#4a5c52"
+
 
 def get_pdf_styles() -> str:
-    return """
-@page {
+    return f"""
+@page {{
     size: A4;
-    margin: 22mm 16mm 20mm 20mm;
-}
+    margin: 18mm 14mm 16mm 14mm;
+}}
 
-body {
-    font-family: 'PT Sans', Arial, sans-serif;
-    font-size: 10.5pt;
+body {{
+    font-family: 'DejaVu Sans', 'Liberation Sans', Arial, sans-serif;
+    font-size: 10pt;
     line-height: 1.55;
-    color: #1a1a1a;
+    color: {TEXT_DARK};
     margin: 0;
-}
+}}
 
-/* ── ШАПКА ── */
-.header {
+.page-layout {{
     display: flex;
-    justify-content: space-between;
     align-items: flex-start;
-    margin-bottom: 0;
-}
+    gap: 14pt;
+}}
 
-.header-left { flex: 1; }
-
-.header-right {
-    text-align: right;
+.sidebar {{
+    width: 30%;
     flex-shrink: 0;
-    margin-left: 16pt;
-}
+    background: #f4faf7;
+    border: 0.5pt solid #d4ebe2;
+    border-radius: 6pt;
+    padding: 10pt 9pt;
+}}
 
-h1 {
-    font-family: 'PT Serif', Georgia, serif;
-    font-size: 24pt;
+.main {{
+    flex: 1;
+    min-width: 0;
+}}
+
+.sidebar-block {{
+    margin-bottom: 10pt;
+    break-inside: avoid;
+}}
+
+.sidebar-title {{
+    font-size: 8.5pt;
     font-weight: 700;
-    color: #0d0d1f;
-    margin: 0 0 3pt 0;
-    letter-spacing: -0.3pt;
-    line-height: 1.05;
-}
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: {BRAND_PRIMARY};
+    border-bottom: 1pt solid {BRAND_BRIGHT};
+    padding-bottom: 3pt;
+    margin-bottom: 5pt;
+}}
 
-.position {
-    font-size: 12pt;
-    color: #4a4a70;
+.sidebar-line {{
+    font-size: 9pt;
+    color: {TEXT_MUTED};
+    line-height: 1.5;
+    margin-bottom: 3pt;
+}}
+
+.sidebar-line .label {{
+    font-weight: 700;
+    color: {TEXT_DARK};
+    display: block;
+    font-size: 8pt;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}}
+
+.hero {{
+    margin-bottom: 10pt;
+}}
+
+h1 {{
+    font-size: 22pt;
+    font-weight: 700;
+    color: {TEXT_DARK};
     margin: 0 0 2pt 0;
-    font-style: italic;
-}
+    letter-spacing: -0.2pt;
+    line-height: 1.05;
+}}
 
-.header-divider {
-    height: 2pt;
-    background: linear-gradient(90deg, #0d0d1f 0%, #E8962A 60%, transparent 100%);
-    border-radius: 1pt;
-    margin: 9pt 0 10pt 0;
-}
+.position {{
+    font-size: 11.5pt;
+    color: {BRAND_PRIMARY};
+    margin: 0;
+    font-weight: 600;
+}}
 
-.contact-row {
-    font-size: 9.5pt;
-    color: #555;
-    line-height: 1.7;
-    text-align: right;
-}
+.hero-divider {{
+    height: 2.5pt;
+    background: linear-gradient(90deg, {BRAND_PRIMARY} 0%, {BRAND_BRIGHT} 70%, transparent 100%);
+    border-radius: 2pt;
+    margin-top: 8pt;
+}}
 
-/* ── СЕКЦИИ ── */
-.section { margin-bottom: 12pt; }
+.section {{
+    margin-bottom: 11pt;
+    break-inside: avoid-page;
+}}
 
-.section-header {
+.section-header {{
     display: flex;
     align-items: center;
-    gap: 7pt;
-    margin-bottom: 6pt;
-}
+    gap: 6pt;
+    margin-bottom: 5pt;
+}}
 
-.section-marker {
-    width: 3.5pt;
-    height: 14pt;
-    background: #E8962A;
+.section-marker {{
+    width: 3pt;
+    height: 13pt;
+    background: {BRAND_BRIGHT};
     border-radius: 2pt;
     flex-shrink: 0;
-}
+}}
 
-.section-title {
-    font-family: 'PT Serif', Georgia, serif;
-    font-size: 11pt;
+.section-title {{
+    font-size: 10pt;
     font-weight: 700;
-    color: #0d0d1f;
+    color: {BRAND_PRIMARY};
     text-transform: uppercase;
     letter-spacing: 0.08em;
-    border-bottom: 0.8pt solid #c8c8d8;
+    border-bottom: 0.6pt solid #c8e6d8;
     padding-bottom: 2pt;
     flex: 1;
     margin: 0;
-}
+}}
 
-/* ── БЛОК SUMMARY ── */
-.summary-text {
-    font-size: 10.5pt;
-    line-height: 1.6;
-    color: #2a2a2a;
-    border-left: 2.5pt solid #E8962A;
-    padding-left: 9pt;
+.summary-text {{
+    font-size: 10pt;
+    line-height: 1.65;
+    color: #2a3530;
+    border-left: 2.5pt solid {BRAND_BRIGHT};
+    padding-left: 8pt;
     margin: 0;
-}
+}}
 
-/* ── ОПЫТ РАБОТЫ ── */
-.job-entry { margin-bottom: 10pt; }
+.job-entry {{
+    margin-bottom: 9pt;
+    break-inside: avoid;
+}}
 
-.job-header {
+.job-header {{
     display: flex;
     justify-content: space-between;
     align-items: baseline;
     margin-bottom: 1pt;
-}
+}}
 
-.job-company {
+.job-company {{
     font-weight: 700;
-    font-size: 11pt;
-    color: #0d0d1f;
-}
-
-.job-period {
-    font-size: 9.5pt;
-    color: #888;
-    flex-shrink: 0;
-    margin-left: 8pt;
-}
-
-.job-position {
     font-size: 10.5pt;
-    color: #555;
-    font-style: italic;
-    margin-bottom: 4pt;
-}
+    color: {TEXT_DARK};
+}}
 
-/* ── КРИТИЧНО: буллеты на отдельных строках ── */
-.job-bullets {
+.job-period {{
+    font-size: 9pt;
+    color: #7a8a82;
+    flex-shrink: 0;
+    margin-left: 6pt;
+}}
+
+.job-position {{
+    font-size: 10pt;
+    color: {BRAND_PRIMARY};
+    font-weight: 600;
+    margin-bottom: 3pt;
+}}
+
+.job-bullets {{
     margin: 0;
     padding: 0;
     list-style: none;
-}
+}}
 
-.job-bullets li {
-    font-size: 10.5pt;
+.job-bullets li {{
+    font-size: 9.5pt;
     line-height: 1.55;
-    color: #2a2a2a;
-    padding-left: 12pt;
+    color: #2a3530;
+    padding-left: 11pt;
     position: relative;
     margin-bottom: 2pt;
-}
+}}
 
-.job-bullets li::before {
+.job-bullets li::before {{
     content: '—';
     position: absolute;
     left: 0;
-    color: #E8962A;
+    color: {BRAND_BRIGHT};
     font-weight: 700;
-}
+}}
 
-/* ── ОБРАЗОВАНИЕ ── */
-.edu-entry {
-    font-size: 10.5pt;
-    color: #2a2a2a;
+.edu-entry {{
+    font-size: 10pt;
+    color: #2a3530;
     line-height: 1.5;
-}
+    margin-bottom: 3pt;
+}}
 
-.edu-institution { font-weight: 700; color: #0d0d1f; }
-.edu-degree { color: #555; }
+.edu-institution {{ font-weight: 700; color: {TEXT_DARK}; }}
+.edu-degree {{ color: {TEXT_MUTED}; }}
 
-/* ── НАВЫКИ ── */
-.skills-grid {
+.skills-grid {{
     display: flex;
     flex-wrap: wrap;
-    gap: 5pt;
-}
+    gap: 4pt;
+}}
 
-.skill-tag {
-    background: #f2f2f6;
-    border: 0.5pt solid #d8d8e8;
+.skill-tag {{
+    background: #ffffff;
+    border: 0.5pt solid #b8ddd0;
     border-radius: 3pt;
-    padding: 2.5pt 8pt;
-    font-size: 9.5pt;
-    color: #333;
+    padding: 2pt 6pt;
+    font-size: 8.5pt;
+    color: {BRAND_PRIMARY};
     white-space: nowrap;
-}
+}}
 
-/* ── ЗАРПЛАТА И ЯЗЫКИ ── */
-.meta-row {
-    font-size: 10pt;
-    color: #555;
-    margin-top: 4pt;
-}
-
-.meta-label {
-    font-weight: 600;
-    color: #0d0d1f;
-    margin-right: 4pt;
-}
+.footer {{
+    margin-top: 10pt;
+    padding-top: 6pt;
+    border-top: 0.5pt solid #d4ebe2;
+    font-size: 7.5pt;
+    color: #9aab9f;
+    text-align: center;
+    letter-spacing: 0.06em;
+}}
 """
 
 
