@@ -40,8 +40,13 @@ SYSTEM_PROMPT = """Ты — старший HR-редактор резюме дл
 • institution — конкретное название; если передана заглушка («ВУЗ», «Колледж») → пустая строка ""
 • degree — «[уровень] образование» если нет специальности
 
-НАВЫКИ: объедини указанные с уместными для профессии, без дублей
-ЯЗЫКИ: всегда «Русский — родной», добавь указанные иностранные
+НАВЫКИ:
+• Основа — «Навыки (указал пользователь)»; добавь не больше 3 уместных для должности
+• ЗАПРЕЩЕНО: медкнижка, медицинская книжка, права, лицензии — если их нет в навыках/сертификатах пользователя
+• НЕ выводи навыки из образования (мед. ВУЗ ≠ медкнижка для официанта/продавца)
+• Названия компаний — ДОСЛОВНО из «Места работы», не исправляй и не придумывай
+
+ЯЗЫКИ: только «Язык — уровень», одна строка = один язык (до 60 символов). Без описания работы.
 СЕРТИФИКАТЫ: только из запроса, иначе []
 ЗАРПЛАТА: только цифры без суффиксов
 ТЕЛЕФОН / EMAIL: точно из запроса, не изменяй
@@ -56,7 +61,8 @@ SKILLS_SUGGEST_PROMPT = """Ты эксперт по российскому ры�
 Правила:
 - 14–20 навыков в skills (короткие формулировки, 1–4 слова)
 - Только реалистичные для профессии в РФ
-- groups: hard (проф. навыки), tools (ПО/инструменты), soft (личные качества), documents (права, лицензии, медкнижка)
+- groups: hard (проф. навыки), tools (ПО/инструменты), soft (личные качества), documents (только обязательные документы для ЭТОЙ профессии)
+- documents: только если реально нужны (права кат. B для водителя, лицензия охранника). Не добавляй медкнижку официанту/офису без запроса
 - Каждый навык из skills должен попасть ровно в одну группу
 
 Ответ: ТОЛЬКО JSON:
@@ -88,6 +94,15 @@ FALLBACK_SKILLS: dict[str, list[str]] = {
         "Работа с покупателями", "Инвентаризация", "Знание товара",
         "Коммуникабельность", "Стрессоустойчивость",
     ],
+    "официант": [
+        "Прием и выдача заказов", "Сервировка стола", "R-Keeper", "iiko",
+        "Работа с кассой", "Знание меню", "Коммуникабельность",
+        "Работа с возражениями", "Работа в команде", "Внимательность",
+    ],
+    "повар": [
+        "Приготовление блюд", "Техкарты", "Санитарные нормы", "iiko",
+        "Работа на линии", "Скорость работы", "Стрессоустойчивость",
+    ],
 }
 
 # Обрезаем только явный перебор (защита от спама), не режем нормальные ответы пользователя.
@@ -114,13 +129,38 @@ def _format_skills(skills: Any) -> str:
     return str(skills or "").strip()
 
 
+def _format_work_history(user_data: dict) -> str:
+    wh = user_data.get("work_history") or []
+    parts: list[str] = []
+    for i, entry in enumerate(wh, 1):
+        if not isinstance(entry, dict):
+            continue
+        company = str(entry.get("company") or "").strip()
+        duties = str(entry.get("duties") or "").strip()
+        if not company and not duties:
+            continue
+        parts.append(
+            f"{i}. Компания: {company}\n"
+            f"   Период: {entry.get('period', '')}\n"
+            f"   Должность: {entry.get('position', '')}\n"
+            f"   Обязанности: {duties}"
+        )
+    return "\n\n".join(parts)
+
+
 def _build_user_payload(user_data: dict) -> str:
     """Структурированные факты — модель лучше понимает, чем сжатые однострочники."""
-    last_job = user_data.get("last_job", "опыта нет")
-    if "должность:" in str(last_job):
-        last_job_block = f"Опыт работы (структурированный):\n{last_job}"
+    work_block = _format_work_history(user_data)
+    if work_block:
+        last_job_block = (
+            "Места работы (названия компаний копируй ДОСЛОВНО, не исправляй):\n" + work_block
+        )
     else:
-        last_job_block = f"Последняя работа / обязанности:\n{_truncate(last_job, MAX_FIELD_LEN['last_job'])}"
+        last_job = user_data.get("last_job", "опыта нет")
+        if "должность:" in str(last_job):
+            last_job_block = f"Опыт работы (структурированный):\n{last_job}"
+        else:
+            last_job_block = f"Последняя работа / обязанности:\n{_truncate(last_job, MAX_FIELD_LEN['last_job'])}"
 
     education_line = f"Образование: {user_data.get('education', 'среднее')}"
     education_place = (user_data.get("education_place") or "").strip()
@@ -249,25 +289,130 @@ async def _call_openrouter(
     return json.loads(_clean_json_content(content))
 
 
+_MEDICAL_SKILL_MARKERS = ("медицин", "медкниж", "санитарн")
+_JOB_TEXT_MARKERS = ("обслуживал", "работал", "взаимодей", "организов", "обеспечив", "•", "·")
+
+
+def _user_context_blob(user_data: dict) -> str:
+    parts = [
+        _format_skills(user_data.get("skills")),
+        str(user_data.get("certificates") or ""),
+        str(user_data.get("target_position") or ""),
+        str(user_data.get("education_place") or ""),
+    ]
+    return " ".join(parts).lower()
+
+
+def _skill_is_allowed(skill: str, user_data: dict) -> bool:
+    lowered = skill.lower()
+    blob = _user_context_blob(user_data)
+    if any(m in lowered for m in _MEDICAL_SKILL_MARKERS):
+        if any(m in blob for m in _MEDICAL_SKILL_MARKERS):
+            return True
+        if any(w in blob for w in ("медиц", "медсест", "врач", "фельдшер", "санитар")):
+            return True
+        return False
+    return True
+
+
+def _sanitize_languages(languages: Any, user_data: dict) -> list[str]:
+    clean: list[str] = []
+    for lang in languages or []:
+        s = str(lang).strip()
+        if not s or len(s) > 80:
+            continue
+        low = s.lower()
+        if any(m in low for m in _JOB_TEXT_MARKERS):
+            continue
+        clean.append(s)
+    user_lang = str(user_data.get("languages") or "").strip()
+    if not clean:
+        if user_lang and user_lang.lower() not in ("нет", "только русский"):
+            clean = [user_lang]
+        else:
+            clean = ["Русский — родной"]
+    if not any("русск" in l.lower() for l in clean):
+        clean.insert(0, "Русский — родной")
+    return clean
+
+
+def _merge_skills(ai_skills: Any, user_data: dict) -> list[str]:
+    user_skills = user_data.get("skills") or []
+    if not isinstance(user_skills, list):
+        user_skills = []
+    merged: list[str] = []
+    seen: set[str] = set()
+    for raw in list(user_skills) + list(ai_skills or []):
+        s = str(raw).strip()
+        if not s:
+            continue
+        key = s.lower()
+        if key in seen:
+            continue
+        if not _skill_is_allowed(s, user_data):
+            continue
+        seen.add(key)
+        merged.append(s)
+        if len(merged) >= 16:
+            break
+    return merged
+
+
+def _apply_work_history_to_experience(resume_data: dict, user_data: dict) -> None:
+    wh = user_data.get("work_history") or []
+    exp = resume_data.get("experience")
+    if not isinstance(exp, list) or not wh:
+        return
+    user_entries = [e for e in wh if isinstance(e, dict)]
+    for i, job in enumerate(exp):
+        if not isinstance(job, dict) or i >= len(user_entries):
+            continue
+        src = user_entries[i]
+        if str(src.get("company") or "").strip():
+            job["company"] = str(src.get("company")).strip()
+        if str(src.get("period") or "").strip():
+            job["period"] = str(src.get("period")).strip()
+        if str(src.get("position") or "").strip():
+            job["position"] = str(src.get("position")).strip()
+
+
+def finalize_resume_data(resume_data: dict, user_data: dict) -> dict:
+    """Post-process AI output: fix hallucinations, preserve user facts."""
+    resume_data["skills"] = _merge_skills(resume_data.get("skills"), user_data)
+    resume_data["languages"] = _sanitize_languages(resume_data.get("languages"), user_data)
+
+    edu_place = str(user_data.get("education_place") or "").strip()
+    education = resume_data.get("education")
+    if edu_place and isinstance(education, list) and education:
+        first = education[0]
+        if isinstance(first, dict):
+            first["institution"] = edu_place
+
+    _apply_work_history_to_experience(resume_data, user_data)
+    return resume_data
+
+
 async def generate_resume(user_data: dict) -> dict:
     messages = [
         {"role": "system", "content": SYSTEM_PROMPT},
         {"role": "user", "content": _build_user_payload(user_data)},
     ]
     try:
-        return await _call_openrouter(messages, temperature=0.68)
+        raw = await _call_openrouter(messages, temperature=0.68)
     except (json.JSONDecodeError, ValueError) as exc:
         logger.warning("primary model output invalid (%s), retrying fallback", exc)
-        return await _call_openrouter(
+        raw = await _call_openrouter(
             messages, model=settings.OPENROUTER_MODEL_FALLBACK, temperature=0.6
         )
     except httpx.HTTPStatusError as exc:
         if exc.response.status_code in {402, 429, 502, 503}:
             logger.warning("openrouter http %s, using fallback model", exc.response.status_code)
-            return await _call_openrouter(
+            raw = await _call_openrouter(
                 messages, model=settings.OPENROUTER_MODEL_FALLBACK, temperature=0.6
             )
-        raise
+        else:
+            raise
+    return finalize_resume_data(raw, user_data)
 
 
 def _fallback_skills(position: str) -> dict[str, Any]:
@@ -332,6 +477,8 @@ async def suggest_skills(position: str) -> dict[str, Any]:
     try:
         raw = await _call_openrouter(messages, temperature=0.35, max_tokens=500)
         result = _normalize_skills_response(raw)
+        fake_user = {"target_position": position, "skills": [], "certificates": "", "education_place": ""}
+        result["skills"] = [s for s in result["skills"] if _skill_is_allowed(s, fake_user)]
         if result["skills"]:
             return result
     except Exception as exc:

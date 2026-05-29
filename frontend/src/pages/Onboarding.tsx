@@ -9,6 +9,7 @@ import { AppHeader } from "../components/ui/AppHeader";
 import { Button } from "../components/ui/Button";
 import { FixedBottomBar } from "../components/ui/FixedBottomBar";
 import { Screen } from "../components/ui/Screen";
+import { CompanyAutocomplete } from "../components/ui/CompanyAutocomplete";
 import { TextInput } from "../components/ui/TextField";
 import { VoiceTextArea } from "../components/ui/VoiceTextArea";
 import { WorkHistoryStep } from "../components/ui/WorkHistoryStep";
@@ -392,7 +393,16 @@ export function OnboardingPage() {
               />
             )}
 
-            {showTextInput && current.type !== "profession" && (
+            {showTextInput && current.type !== "profession" && current.id === "education_place" && (
+              <CompanyAutocomplete
+                kind="institution"
+                value={value}
+                onChange={setValue}
+                placeholder={current.placeholder}
+              />
+            )}
+
+            {showTextInput && current.type !== "profession" && current.id !== "education_place" && (
               <TextInput
                 value={value}
                 onChange={(e) => setValue(e.target.value)}

@@ -1,6 +1,4 @@
-import json
 import logging
-import re
 
 import httpx
 from fastapi import APIRouter, Query
@@ -10,81 +8,82 @@ from config import settings
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/enrich", tags=["enrich"])
 
-
-def _yandex_item_title(item: object) -> str:
-    if not isinstance(item, list) or len(item) < 2:
-        return ""
-    part = item[1]
-    if not isinstance(part, list) or len(part) < 2:
-        return ""
-    hl, suffix = part[0], part[1]
-    if isinstance(hl, list) and len(hl) >= 2 and hl[0] == "hl" and isinstance(hl[1], str):
-        return f"{hl[1]}{suffix if isinstance(suffix, str) else ''}".strip()
-    if isinstance(suffix, str):
-        return suffix.strip()
-    return ""
+DADATA_PARTY_URL = "https://suggestions.dadata.ru/suggestions/api/4_1/rs/suggest/party"
 
 
-def _parse_yandex_suggest(raw: str) -> list[dict[str, str]]:
-    match = re.search(r"suggest\.apply\((.*)\)\s*$", raw.strip(), re.DOTALL)
-    if not match:
+async def _dadata_party(query: str, limit: int) -> list[dict[str, str]]:
+    if not settings.DADATA_API_KEY:
         return []
     try:
-        payload = json.loads(match.group(1))
-    except json.JSONDecodeError:
+        async with httpx.AsyncClient(timeout=2.5) as client:
+            r = await client.post(
+                DADATA_PARTY_URL,
+                headers={"Authorization": f"Token {settings.DADATA_API_KEY}"},
+                json={"query": query, "count": limit},
+            )
+            if r.status_code != 200:
+                return []
+            suggestions = r.json().get("suggestions", [])
+            results: list[dict[str, str]] = []
+            seen: set[str] = set()
+            for s in suggestions:
+                name = (s.get("value") or "").strip()
+                if not name or name.lower() in seen:
+                    continue
+                seen.add(name.lower())
+                data = s.get("data") or {}
+                city = (data.get("address") or {}).get("data", {}).get("city") or ""
+                results.append(
+                    {
+                        "name": name,
+                        "hint": city,
+                        "type": data.get("type") or "",
+                    }
+                )
+            return results
+    except Exception as e:
+        logger.warning("DaData party suggest failed: %s", e)
         return []
-    if not isinstance(payload, list) or len(payload) < 2:
-        return []
-    items = payload[1]
-    if not isinstance(items, list):
-        return []
-    results: list[dict[str, str]] = []
-    seen: set[str] = set()
-    for item in items:
-        name = _yandex_item_title(item)
-        if not name or name.lower() in seen:
-            continue
-        seen.add(name.lower())
-        results.append({"name": name, "hint": "", "type": "place"})
-    return results
+
+
+_EDU_KEYWORDS = (
+    "университет",
+    "институт",
+    "академия",
+    "колледж",
+    "техникум",
+    "училище",
+    "лицей",
+    "гимназия",
+    "школа",
+    "образован",
+)
+
+
+def _looks_like_education(name: str, org_type: str) -> bool:
+    lowered = name.lower()
+    if org_type and org_type.upper() in {"LEGAL", "INDIVIDUAL"}:
+        return any(k in lowered for k in _EDU_KEYWORDS)
+    return any(k in lowered for k in _EDU_KEYWORDS)
 
 
 @router.get("/company")
 async def suggest_company(q: str = Query(..., min_length=2), limit: int = 5):
-    """Автодополнение компаний/организаций. DaData → Yandex Maps suggest (JSONP)."""
-    results: list[dict[str, str]] = []
-
-    if settings.DADATA_API_KEY:
-        try:
-            async with httpx.AsyncClient(timeout=2.5) as client:
-                r = await client.post(
-                    "https://suggestions.dadata.ru/suggestions/api/4_1/rs/suggest/party",
-                    headers={"Authorization": f"Token {settings.DADATA_API_KEY}"},
-                    json={"query": q, "count": limit},
-                )
-                if r.status_code == 200:
-                    suggestions = r.json().get("suggestions", [])
-                    results = [
-                        {
-                            "name": s["value"],
-                            "hint": s["data"].get("address", {}).get("data", {}).get("city") or "",
-                            "type": s["data"].get("type", ""),
-                        }
-                        for s in suggestions
-                    ]
-        except Exception as e:
-            logger.warning("DaData suggest failed: %s", e)
-
-    if not results:
-        try:
-            async with httpx.AsyncClient(timeout=2.5) as client:
-                r = await client.get(
-                    "https://suggest-maps.yandex.ru/suggest-geo",
-                    params={"text": q, "results": limit, "lang": "ru_RU", "types": "biz,geo"},
-                )
-                if r.status_code == 200:
-                    results = _parse_yandex_suggest(r.text)
-        except Exception as e:
-            logger.warning("Yandex suggest failed: %s", e)
-
+    """
+    Автодополнение работодателя — только официальные названия из ЕГРЮЛ (DaData).
+    Без ключа DaData подсказок нет: пользователь вводит текст вручную.
+    """
+    results = await _dadata_party(q, limit)
     return {"suggestions": results[:limit]}
+
+
+@router.get("/institution")
+async def suggest_institution(q: str = Query(..., min_length=2), limit: int = 5):
+    """
+    Автодополнение учебного заведения — DaData party, отфильтровано по типу организации.
+    """
+    raw = await _dadata_party(q, limit * 3)
+    filtered = [item for item in raw if _looks_like_education(item["name"], item.get("type", ""))]
+    if not filtered and raw:
+        filtered = raw[:limit]
+    return {"suggestions": filtered[:limit]}

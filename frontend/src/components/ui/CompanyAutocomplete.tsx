@@ -16,32 +16,45 @@ interface Props {
   onChange: (value: string) => void;
   placeholder?: string;
   id?: string;
+  /** company = работодатель, institution = учебное заведение */
+  kind?: "company" | "institution";
 }
 
-export function CompanyAutocomplete({ value, onChange, placeholder, id }: Props) {
+export function CompanyAutocomplete({
+  value,
+  onChange,
+  placeholder,
+  id,
+  kind = "company",
+}: Props) {
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [open, setOpen] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
 
-  const fetchSuggestions = useCallback(async (q: string) => {
-    if (q.length < 2) {
-      setSuggestions([]);
-      setOpen(false);
-      return;
-    }
-    try {
-      const token = await ensureAuthToken();
-      const r = await fetch(`${API_URL}/api/enrich/company?q=${encodeURIComponent(q)}&limit=5`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!r.ok) return;
-      const data = await r.json();
-      setSuggestions(data.suggestions || []);
-      setOpen((data.suggestions || []).length > 0);
-    } catch {
-      /* silent */
-    }
-  }, []);
+  const endpoint = kind === "institution" ? "/api/enrich/institution" : "/api/enrich/company";
+
+  const fetchSuggestions = useCallback(
+    async (q: string) => {
+      if (q.length < 2) {
+        setSuggestions([]);
+        setOpen(false);
+        return;
+      }
+      try {
+        const token = await ensureAuthToken();
+        const r = await fetch(`${API_URL}${endpoint}?q=${encodeURIComponent(q)}&limit=5`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!r.ok) return;
+        const data = await r.json();
+        setSuggestions(data.suggestions || []);
+        setOpen((data.suggestions || []).length > 0);
+      } catch {
+        /* silent */
+      }
+    },
+    [endpoint],
+  );
 
   useEffect(() => {
     clearTimeout(debounceRef.current);
