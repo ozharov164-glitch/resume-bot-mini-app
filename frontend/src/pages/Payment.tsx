@@ -26,7 +26,7 @@ export function PaymentPage() {
 
   return (
     <div className="min-h-screen px-4 py-6 flex flex-col gap-4" style={{ background: "var(--tg-bg)", color: "var(--tg-text)" }}>
-      <h1 className="text-xl font-semibold">Выберите удобный способ оплаты</h1>
+      <h1 className="text-xl font-semibold">Выбери удобный способ оплаты</h1>
       <p className="text-sm opacity-75">
         После оплаты PDF-резюме автоматически отправится в ваш Telegram-чат с ботом.
       </p>

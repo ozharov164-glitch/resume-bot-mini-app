@@ -1,4 +1,5 @@
 import clsx from "clsx";
+import { motion } from "motion/react";
 
 interface Props {
   label: string;
@@ -8,8 +9,10 @@ interface Props {
 
 export function OptionButton({ label, selected, onSelect }: Props) {
   return (
-    <button
+    <motion.button
       onClick={onSelect}
+      whileTap={{ scale: 0.93 }}
+      transition={{ type: "spring", stiffness: 400, damping: 17 }}
       className={clsx("px-4 py-2 rounded-2xl border text-sm", selected && "font-semibold")}
       style={{
         background: selected ? "var(--tg-button)" : "var(--tg-secondary-bg)",
@@ -19,6 +22,6 @@ export function OptionButton({ label, selected, onSelect }: Props) {
       type="button"
     >
       {label}
-    </button>
+    </motion.button>
   );
 }

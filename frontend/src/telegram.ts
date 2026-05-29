@@ -1,5 +1,12 @@
 export interface TelegramWebApp {
   initData: string;
+  initDataUnsafe?: {
+    user?: {
+      first_name?: string;
+      last_name?: string;
+      username?: string;
+    };
+  };
   themeParams: Record<string, string>;
   MainButton?: {
     text: string;

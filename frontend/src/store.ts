@@ -2,7 +2,7 @@ import { create } from "zustand";
 
 import type { ResumeData, UserAnswers } from "./types";
 
-type Page = "onboarding" | "preview" | "payment" | "success";
+type Page = "home" | "onboarding" | "loading" | "preview" | "payment" | "success";
 
 interface AppState {
   page: Page;
@@ -21,7 +21,7 @@ interface AppState {
 }
 
 export const useAppStore = create<AppState>((set) => ({
-  page: "onboarding",
+  page: "home",
   setPage: (page) => set({ page }),
   answers: {},
   setAnswer: (key, value) => set((state) => ({ answers: { ...state.answers, [key]: value } })),

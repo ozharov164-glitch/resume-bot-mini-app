@@ -47,3 +47,15 @@ export async function requestPdf(token: string, resumeId: string) {
     headers: { Authorization: `Bearer ${token}` },
   });
 }
+
+export async function fetchStatsCount(): Promise<number> {
+  try {
+    const response = await fetch(`${API_URL}/api/stats/count`);
+    if (!response.ok) throw new Error("stats unavailable");
+    const data = (await response.json()) as { count?: number };
+    if (typeof data.count === "number" && data.count > 0) return data.count;
+    return 1200;
+  } catch {
+    return 1200;
+  }
+}
