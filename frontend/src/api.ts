@@ -1,4 +1,4 @@
-import type { UserAnswers } from "./types";
+import type { ResumeData, UserAnswers } from "./types";
 import { useAppStore } from "./store";
 import { waitForInitData } from "./telegram";
 
@@ -73,8 +73,31 @@ export async function createStarsInvoice(token: string, resumeId: string) {
   );
 }
 
+export interface ResumeListItem {
+  id: string;
+  full_name: string;
+  target_position: string;
+  is_paid: boolean;
+  created_at: string;
+}
+
+export interface ResumeRecord {
+  id: string;
+  is_paid: boolean;
+  data: ResumeData;
+  user_answers?: Partial<UserAnswers>;
+  created_at?: string;
+}
+
+export async function fetchResumeList(token: string) {
+  return http<{ items: ResumeListItem[] }>("/api/resume/list", {
+    method: "GET",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
 export async function getResume(token: string, resumeId: string) {
-  return http<{ is_paid: boolean; id: string }>(`/api/resume/${resumeId}`, {
+  return http<ResumeRecord>(`/api/resume/${resumeId}`, {
     method: "GET",
     headers: { Authorization: `Bearer ${token}` },
   });

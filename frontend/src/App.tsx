@@ -3,6 +3,7 @@ import { useEffect } from "react";
 import { authWithTelegram } from "./api";
 import { useFounderStatus } from "./hooks/useFounderStatus";
 import { isFounderTelegramId } from "./lib/founder";
+import { HistoryPage } from "./pages/History";
 import { HomePage } from "./pages/Home";
 import { LoadingPage } from "./pages/Loading";
 import { OnboardingPage } from "./pages/Onboarding";
@@ -13,7 +14,8 @@ import { useAppStore } from "./store";
 import { getTelegramUserId, initTelegramTheme, waitForInitData } from "./telegram";
 
 export default function App() {
-  const { page, setAuthToken, setFounder, isLoading, setLoading, setPage } = useAppStore();
+  const { page, setAuthToken, setFounder, isLoading, setLoading, startNewResume, setPage } =
+    useAppStore();
   useFounderStatus();
 
   useEffect(() => {
@@ -60,8 +62,14 @@ export default function App() {
   }
 
   if (page === "home") {
-    return <HomePage onStart={() => setPage("onboarding")} />;
+    return (
+      <HomePage
+        onStart={startNewResume}
+        onHistory={() => setPage("history")}
+      />
+    );
   }
+  if (page === "history") return <HistoryPage />;
   if (page === "loading") return <LoadingPage />;
   if (page === "preview") return <PreviewPage />;
   if (page === "payment") return <PaymentPage />;

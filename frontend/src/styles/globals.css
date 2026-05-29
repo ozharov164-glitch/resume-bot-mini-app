@@ -51,6 +51,27 @@ body {
   background: #ffffff;
   color: #161d19;
   touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+#root {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.no-copy,
+.preview-protected {
+  user-select: none !important;
+  -webkit-user-select: none !important;
+  -webkit-touch-callout: none !important;
+}
+
+input,
+textarea {
+  user-select: text;
+  -webkit-user-select: text;
 }
 
 .material-symbols-outlined {

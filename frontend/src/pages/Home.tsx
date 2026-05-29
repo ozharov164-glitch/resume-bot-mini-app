@@ -14,6 +14,7 @@ import { getTg } from "../telegram";
 
 interface HomeProps {
   onStart: () => void;
+  onHistory: () => void;
 }
 
 const BENEFITS = [
@@ -49,7 +50,7 @@ function useCountUp(target: number, durationMs = 1400) {
   return value;
 }
 
-export function HomePage({ onStart }: HomeProps) {
+export function HomePage({ onStart, onHistory }: HomeProps) {
   const [statsCount, setStatsCount] = useState(10000);
   const displayCount = useCountUp(statsCount);
   const isFounder = useFounderStatus();
@@ -118,10 +119,23 @@ export function HomePage({ onStart }: HomeProps) {
       </main>
 
       <FixedBottomBar>
-        <Button variant="brand" onClick={start} className="flex items-center justify-center gap-2">
-          Создать резюме
-          <Icon name="arrow_forward" size={20} />
-        </Button>
+        <div className="flex flex-col gap-2">
+          <Button variant="brand" onClick={start} className="flex items-center justify-center gap-2">
+            Создать резюме
+            <Icon name="arrow_forward" size={20} />
+          </Button>
+          <Button
+            variant="secondary"
+            onClick={() => {
+              getTg()?.HapticFeedback?.impactOccurred("light");
+              onHistory();
+            }}
+            className="flex items-center justify-center gap-2"
+          >
+            <Icon name="history" size={20} />
+            Мои резюме
+          </Button>
+        </div>
       </FixedBottomBar>
     </Screen>
   );

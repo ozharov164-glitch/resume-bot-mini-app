@@ -49,6 +49,16 @@ async def create_resume(
         raise HTTPException(status_code=500, detail="Не удалось сгенерировать резюме. Попробуйте еще раз.") from exc
 
 
+@router.get("/list")
+async def list_resumes(
+    current_user: dict = Depends(get_current_user),
+    db=Depends(get_db),
+    limit: int = 30,
+):
+    items = db.list_resumes_for_user(current_user["id"], min(limit, 50))
+    return {"items": items}
+
+
 @router.get("/{resume_id}")
 async def get_resume(resume_id: str, current_user: dict = Depends(get_current_user), db=Depends(get_db)):
     resume = db.find_resume(resume_id, current_user["id"])

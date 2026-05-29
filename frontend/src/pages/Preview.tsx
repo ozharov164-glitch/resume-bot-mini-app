@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 
 import { requestPdf } from "../api";
 import { AppHeader } from "../components/ui/AppHeader";
@@ -8,13 +8,18 @@ import { FounderBadge } from "../components/ui/FounderBadge";
 import { Icon } from "../components/ui/Icon";
 import { Screen } from "../components/ui/Screen";
 import { useFounderStatus } from "../hooks/useFounderStatus";
+import { useTelegramBackButton } from "../hooks/useTelegramBackButton";
 import { useAppStore } from "../store";
 import { getTg } from "../telegram";
 
 export function PreviewPage() {
-  const { resumeData, resumeId, authToken, setPage, setPaid } = useAppStore();
+  const { resumeData, resumeId, authToken, setPage, setPaid, startEditResume, previewReturnPage } =
+    useAppStore();
   const founderActive = useFounderStatus();
   const [sending, setSending] = useState(false);
+
+  const handleBack = useCallback(() => setPage(previewReturnPage), [setPage, previewReturnPage]);
+  useTelegramBackButton(handleBack);
 
   if (!resumeData) return null;
 
@@ -43,7 +48,7 @@ export function PreviewPage() {
 
   return (
     <Screen withBottomBar>
-      <AppHeader onBack={() => setPage("onboarding")} showBack />
+      <AppHeader onBack={handleBack} showBack title="Предпросмотр" />
       <main className="flex flex-1 flex-col gap-4 px-4 py-4">
         <div
           className="rounded-xl px-4 py-3 text-center text-sm leading-relaxed"
@@ -52,12 +57,13 @@ export function PreviewPage() {
             color: "var(--preview-banner-text)",
           }}
         >
-          Так выглядит предпросмотр. Оцени качество текста твоего будущего резюме.
+          Бесплатный предпросмотр. Чтобы изменить данные — нажми «Изменить ответы».
         </div>
 
         <section
-          className="relative overflow-hidden rounded-xl border p-4"
+          className="no-copy preview-protected relative overflow-hidden rounded-xl border p-4"
           style={{ background: "#ffffff", borderColor: "var(--border-subtle)", boxShadow: "var(--card-shadow)" }}
+          onCopy={(e) => e.preventDefault()}
         >
           <div className="mb-4 border-b pb-4" style={{ borderColor: "var(--border-subtle)" }}>
             <h3 className="text-xl font-bold">{resumeData.full_name}</h3>
@@ -121,26 +127,31 @@ export function PreviewPage() {
         </section>
 
         {founderActive && <FounderBadge />}
-
-        <Button
-          variant="secondary"
-          onClick={() => setPage("onboarding")}
-          className="!min-h-[44px] flex items-center justify-center gap-2"
-        >
-          <Icon name="edit" size={18} />
-          Редактировать данные
-        </Button>
-
-        <p className="text-center text-xs" style={{ color: "var(--text-muted)" }}>
-          Документ будет отправлен в чат
-        </p>
       </main>
 
       <FixedBottomBar>
-        <Button variant="brand" onClick={handlePdf} disabled={sending} className="flex items-center justify-center gap-2">
-          <Icon name="picture_as_pdf" size={20} />
-          {sending ? "Отправляем PDF…" : "Получить PDF в Telegram"}
-        </Button>
+        <div className="flex flex-col gap-2">
+          <Button
+            variant="secondary"
+            onClick={() => {
+              getTg()?.HapticFeedback?.impactOccurred("light");
+              startEditResume();
+            }}
+            className="!min-h-[44px] flex items-center justify-center gap-2"
+          >
+            <Icon name="edit" size={18} />
+            Изменить ответы
+          </Button>
+          <Button
+            variant="brand"
+            onClick={handlePdf}
+            disabled={sending}
+            className="flex items-center justify-center gap-2"
+          >
+            <Icon name="picture_as_pdf" size={20} />
+            {sending ? "Отправляем PDF…" : "Получить PDF в Telegram"}
+          </Button>
+        </div>
       </FixedBottomBar>
     </Screen>
   );

@@ -1,7 +1,7 @@
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 
-import { generateResume, ensureAuthToken } from "../api";
+import { ensureAuthToken, generateResume } from "../api";
 import { OptionButton } from "../components/OptionButton";
 import { ProfessionChip } from "../components/ProfessionChip";
 import { ProgressBar } from "../components/ProgressBar";
@@ -10,107 +10,82 @@ import { Button } from "../components/ui/Button";
 import { FixedBottomBar } from "../components/ui/FixedBottomBar";
 import { Screen } from "../components/ui/Screen";
 import { TextArea, TextInput } from "../components/ui/TextField";
+import { useTelegramBackButton } from "../hooks/useTelegramBackButton";
+import {
+  ONBOARDING_STEPS,
+  OPTIONS_ONLY,
+  PROFESSION_PRESETS,
+  professionOtherSelected,
+} from "../lib/onboardingSteps";
 import { useAppStore } from "../store";
 import { getTg } from "../telegram";
 import type { UserAnswers } from "../types";
 
-type StepType = "text" | "textarea" | "options" | "profession";
-
-interface Step {
-  id: keyof UserAnswers | string;
-  question: string;
-  type: StepType;
-  placeholder?: string;
-  options?: readonly string[];
-  hint?: string;
-  skipText?: string;
-  optional?: boolean;
-}
-
-const PROFESSION_PRESETS = [
-  { label: "Водитель", icon: "local_shipping", value: "Водитель" },
-  { label: "Охранник", icon: "security", value: "Охранник" },
-  { label: "Курьер", icon: "directions_run", value: "Курьер" },
-  { label: "Маляр", icon: "format_paint", value: "Маляр" },
-  { label: "Другое", icon: "more_horiz", value: "" },
-] as const;
-
-const STEPS: Step[] = [
-  { id: "name", question: "Как тебя зовут?", type: "text", placeholder: "Иван Петров" },
-  {
-    id: "phone",
-    question: "Твой номер телефона для резюме",
-    hint: "Необязательно — можешь вписать вручную в готовый PDF",
-    type: "text",
-    placeholder: "+7 999 123-45-67",
-    skipText: "Пропустить этот шаг",
-    optional: true,
-  },
-  {
-    id: "target_position",
-    question: "На какую должность ты ищешь работу?",
-    hint: "Выбери профессию из списка или напиши свой вариант.",
-    type: "profession",
-    placeholder: "Например: водитель-экспедитор",
-  },
-  {
-    id: "experience_level",
-    question: "Твой уровень опыта",
-    type: "options",
-    options: ["Нет опыта", "До года", "1-3 года", "3-5 лет", "5+ лет"],
-  },
-  {
-    id: "last_job",
-    question: "Где работал и что делал?",
-    type: "textarea",
-    placeholder: "Кратко опиши обязанности и достижения.",
-  },
-  {
-    id: "education",
-    question: "Образование",
-    type: "options",
-    options: ["Среднее", "Колледж", "Незаконченное высшее", "Высшее", "Курсы"],
-  },
-  { id: "city", question: "Город поиска работы", type: "text", placeholder: "Казань" },
-  {
-    id: "about",
-    question: "Коротко о себе",
-    type: "textarea",
-    placeholder: "Например: ответственный, доброжелательный, быстро обучаюсь.",
-  },
-];
-
-const OPTIONS_ONLY = new Set(["experience_level", "education"]);
-
 export function OnboardingPage() {
-  const { answers, setAnswer, setResumeResult, setPage, setFounder, setPaid } = useAppStore();
+  const {
+    answers,
+    setAnswer,
+    setResumeResult,
+    setPage,
+    setFounder,
+    setPaid,
+    onboardingMode,
+    cancelEditResume,
+  } = useAppStore();
+
   const [step, setStep] = useState(0);
-  const [value, setValue] = useState("");
-  const [otherProfession, setOtherProfession] = useState(false);
+  const [value, setValue] = useState(() =>
+    String(answers[ONBOARDING_STEPS[0]?.id as keyof UserAnswers] ?? ""),
+  );
+  const [otherProfession, setOtherProfession] = useState(() =>
+    professionOtherSelected(String(answers.target_position ?? "")),
+  );
   const [submitting, setSubmitting] = useState(false);
-  const current = STEPS[step];
-  const isLast = step === STEPS.length - 1;
+
+  const isEdit = onboardingMode === "edit";
+  const current = ONBOARDING_STEPS[step];
+  const isLast = step === ONBOARDING_STEPS.length - 1;
   const isPhoneStep = current.id === "phone";
   const showTextInput =
-    current.type === "text" || current.type === "profession" || (current.type === "options" && !OPTIONS_ONLY.has(current.id));
+    current.type === "text" ||
+    current.type === "profession" ||
+    (current.type === "options" && !OPTIONS_ONLY.has(current.id));
 
   const canContinue = useMemo(() => {
     if (current.optional) return true;
     return value.trim().length > 0;
   }, [current.optional, value]);
 
-  const goToStep = (nextStep: number) => {
-    setStep(nextStep);
-    const next = STEPS[nextStep];
-    const saved = String(answers[next.id as keyof UserAnswers] ?? "");
-    setValue(saved);
-    if (next.type === "profession") {
-      const presetValues = PROFESSION_PRESETS.map((p) => p.value).filter(Boolean);
-      setOtherProfession(Boolean(saved) && !presetValues.includes(saved));
-    } else {
-      setOtherProfession(false);
+  const goToStep = useCallback(
+    (nextStep: number) => {
+      setStep(nextStep);
+      const next = ONBOARDING_STEPS[nextStep];
+      const saved = String(answers[next.id as keyof UserAnswers] ?? "");
+      setValue(saved);
+      if (next.type === "profession") {
+        setOtherProfession(professionOtherSelected(saved));
+      } else {
+        setOtherProfession(false);
+      }
+    },
+    [answers],
+  );
+
+  const handleBack = useCallback(() => {
+    getTg()?.HapticFeedback?.impactOccurred("light");
+    if (step > 0) {
+      setAnswer(current.id as keyof UserAnswers, value);
+      goToStep(step - 1);
+      return;
     }
-  };
+    if (isEdit) {
+      cancelEditResume();
+    } else {
+      setPage("home");
+    }
+  }, [step, value, current.id, setAnswer, goToStep, isEdit, cancelEditResume, setPage]);
+
+  useTelegramBackButton(handleBack);
 
   const next = async () => {
     if (submitting) return;
@@ -129,11 +104,12 @@ export function OnboardingPage() {
       const token = await ensureAuthToken();
       const payload = { ...useAppStore.getState().answers };
       const response = await generateResume(token, payload);
-      setResumeResult(response.resume_id, response.resume);
+      setResumeResult(response.resume_id, response.resume, response.paid);
       if (response.paid) {
         setFounder(true);
         setPaid(true);
       }
+      useAppStore.setState({ previewReturnPage: "home" });
       setPage("preview");
     } catch (error) {
       setPage("onboarding");
@@ -159,9 +135,18 @@ export function OnboardingPage() {
 
   return (
     <Screen withBottomBar className="px-4">
-      <AppHeader onBack={step > 0 ? () => goToStep(step - 1) : undefined} showBack={step > 0} />
+      <AppHeader onBack={handleBack} showBack />
       <main className="flex flex-1 flex-col gap-6 py-4">
-        <ProgressBar current={step + 1} total={STEPS.length} />
+        {isEdit && (
+          <div
+            className="rounded-xl px-4 py-3 text-center text-sm"
+            style={{ background: "var(--brand-muted)", color: "var(--brand)" }}
+          >
+            Редактирование — измени нужные ответы и нажми «Пересобрать резюме»
+          </div>
+        )}
+
+        <ProgressBar current={step + 1} total={ONBOARDING_STEPS.length} />
 
         <AnimatePresence mode="wait">
           <motion.div
@@ -263,7 +248,13 @@ export function OnboardingPage() {
             </Button>
           )}
           <Button variant="brand" onClick={next} disabled={!canContinue || submitting}>
-            {submitting ? "Формируем…" : isLast ? "Сформировать резюме" : "Далее"}
+            {submitting
+              ? "Формируем…"
+              : isLast
+                ? isEdit
+                  ? "Пересобрать резюме"
+                  : "Сформировать резюме"
+                : "Далее"}
           </Button>
         </div>
       </FixedBottomBar>

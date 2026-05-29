@@ -151,6 +151,40 @@ class SQLiteBackend:
             row = conn.execute("SELECT COUNT(*) AS c FROM resumes").fetchone()
         return int(row["c"]) if row else 0
 
+    def list_resumes_for_user(self, user_id: str, limit: int = 30) -> list[dict[str, Any]]:
+        with self._connect() as conn:
+            rows = conn.execute(
+                """
+                SELECT id, data, user_answers, is_paid, created_at
+                FROM resumes
+                WHERE user_id = ?
+                ORDER BY created_at DESC
+                LIMIT ?
+                """,
+                (user_id, limit),
+            ).fetchall()
+        items: list[dict[str, Any]] = []
+        for row in rows:
+            record = self._row_to_dict(row)
+            if not record:
+                continue
+            data = record.get("data") or {}
+            if isinstance(data, str):
+                try:
+                    data = json.loads(data)
+                except json.JSONDecodeError:
+                    data = {}
+            items.append(
+                {
+                    "id": record["id"],
+                    "full_name": data.get("full_name", ""),
+                    "target_position": data.get("target_position", ""),
+                    "is_paid": bool(record.get("is_paid")),
+                    "created_at": record.get("created_at"),
+                }
+            )
+        return items
+
 
 class SupabaseBackend:
     def __init__(self, client: Any) -> None:
@@ -202,3 +236,31 @@ class SupabaseBackend:
         if result.count is not None:
             return int(result.count)
         return len(result.data or [])
+
+    def list_resumes_for_user(self, user_id: str, limit: int = 30) -> list[dict[str, Any]]:
+        result = (
+            self.client.table("resumes")
+            .select("id, data, is_paid, created_at")
+            .eq("user_id", user_id)
+            .order("created_at", desc=True)
+            .limit(limit)
+            .execute()
+        )
+        items: list[dict[str, Any]] = []
+        for record in result.data or []:
+            data = record.get("data") or {}
+            if isinstance(data, str):
+                try:
+                    data = json.loads(data)
+                except json.JSONDecodeError:
+                    data = {}
+            items.append(
+                {
+                    "id": record["id"],
+                    "full_name": data.get("full_name", ""),
+                    "target_position": data.get("target_position", ""),
+                    "is_paid": bool(record.get("is_paid")),
+                    "created_at": record.get("created_at"),
+                }
+            )
+        return items

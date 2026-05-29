@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 
 import { createStarsInvoice, createYookassaInvoice, waitUntilPaid } from "../api";
 import { AppHeader } from "../components/ui/AppHeader";
 import { Button } from "../components/ui/Button";
 import { Icon } from "../components/ui/Icon";
 import { Screen } from "../components/ui/Screen";
+import { useTelegramBackButton } from "../hooks/useTelegramBackButton";
 import { RUB_PRICE, STARS_PRICE } from "../lib/pricing";
 import { useAppStore } from "../store";
 import { getTg } from "../telegram";
@@ -14,6 +15,9 @@ type InvoiceStatus = "paid" | "cancelled" | "failed" | "pending";
 export function PaymentPage() {
   const { authToken, resumeId, resumeData, answers, setPage, setPaid } = useAppStore();
   const [paying, setPaying] = useState(false);
+
+  const handleBack = useCallback(() => setPage("preview"), [setPage]);
+  useTelegramBackButton(handleBack);
 
   if (!authToken || !resumeId) return null;
 
@@ -96,7 +100,7 @@ export function PaymentPage() {
 
   return (
     <Screen className="px-4">
-      <AppHeader onBack={() => setPage("preview")} showBack />
+      <AppHeader onBack={handleBack} showBack />
       <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-5 py-4">
         <section className="flex flex-col items-center gap-2 pt-2 text-center">
           <div

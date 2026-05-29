@@ -27,7 +27,9 @@ export interface TelegramWebApp {
     show: () => void;
     hide: () => void;
     onClick: (callback: () => void) => void;
+    offClick: (callback: () => void) => void;
   };
+  disableVerticalSwipes?: () => void;
   ready: () => void;
   expand: () => void;
   close?: () => void;
@@ -88,6 +90,7 @@ export function initTelegramTheme() {
 
   webApp.ready();
   webApp.expand();
+  webApp.disableVerticalSwipes?.();
   syncTelegramChrome();
 
   webApp.offEvent?.("themeChanged", onThemeChanged);
