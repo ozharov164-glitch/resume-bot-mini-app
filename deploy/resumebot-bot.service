@@ -1,0 +1,15 @@
+[Unit]
+Description=ResumeBot Telegram Bot
+After=network.target resumebot-api.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/resumebot
+EnvironmentFile=/opt/resumebot/backend/.env
+ExecStart=/opt/resumebot/backend/venv/bin/python /opt/resumebot/bot/bot.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

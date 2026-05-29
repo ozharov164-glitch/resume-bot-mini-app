@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <title>Резюме — {{ resume.full_name }}</title>
+</head>
+<body>
+  <div class="header">
+    <h1>{{ resume.full_name }}</h1>
+    <div class="position">{{ resume.target_position }}</div>
+
+    <div class="contacts">
+      {% if resume.phone %}<div class="contact-row">{{ resume.phone }}</div>{% endif %}
+      {% if resume.email %}<div class="contact-row">{{ resume.email }}</div>{% endif %}
+      {% if resume.city %}<div class="contact-row">{{ resume.city }}</div>{% endif %}
+    </div>
+  </div>
+
+  {% if resume.summary %}
+  <div class="section">
+    <div class="section-title">О себе</div>
+    <p>{{ resume.summary }}</p>
+  </div>
+  {% endif %}
+
+  {% if resume.experience %}
+  <div class="section">
+    <div class="section-title">Опыт работы</div>
+    {% for job in resume.experience %}
+    <div class="job-entry">
+      <div class="job-header">
+        <span class="job-company">{{ job.company }}</span>
+        <span class="job-period">{{ job.period }}</span>
+      </div>
+      <div class="job-position">{{ job.position }}</div>
+      <p class="job-description">{{ job.description }}</p>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% if resume.education %}
+  <div class="section">
+    <div class="section-title">Образование</div>
+    {% for edu in resume.education %}
+    <div>
+      <strong>{{ edu.institution }}</strong>
+      {% if edu.degree %} — {{ edu.degree }}{% endif %}
+      {% if edu.year %} ({{ edu.year }}){% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% if resume.skills %}
+  <div class="section">
+    <div class="section-title">Навыки</div>
+    <div class="skills-grid">
+      {% for skill in resume.skills %}
+      <span class="skill-tag">{{ skill }}</span>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+</body>
+</html>
