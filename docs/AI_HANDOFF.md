@@ -76,6 +76,8 @@ Telegram Mini App: пользователь за ~5 минут через диа
 3. Payment — два канала: Stars (primary), YooKassa (fallback).
 4. Success — подтверждение отправки PDF в чат.
 
+**Оплата Stars (in-app):** `POST /api/payment/create-invoice` → `invoice_link` → `WebApp.openInvoice` → бот (`successful_payment`) → PDF в чат.
+
 ---
 
 ## 4. ИИ-слой (текущая конфигурация)

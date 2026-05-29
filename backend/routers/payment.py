@@ -1,5 +1,5 @@
 import json
-from datetime import datetime
+import logging
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from telegram import Bot, Update
@@ -7,10 +7,10 @@ from telegram import Bot, Update
 from config import settings
 from database import get_db
 from dependencies import get_current_user
-from services.payment_service import create_yookassa_payment, send_stars_invoice
-from services.pdf_service import generate_pdf
-from services.telegram_service import send_document_to_user
+from services.payment_fulfillment import fulfill_paid_resume
+from services.payment_service import create_stars_invoice_link, create_yookassa_payment
 
+logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/payment", tags=["payment"])
 
 
@@ -18,7 +18,7 @@ router = APIRouter(prefix="/api/payment", tags=["payment"])
 async def create_invoice(resume_id: str, current_user: dict = Depends(get_current_user), db=Depends(get_db)):
     resume = (
         db.table("resumes")
-        .select("*")
+        .select("id")
         .eq("id", resume_id)
         .eq("user_id", current_user["id"])
         .limit(1)
@@ -27,8 +27,20 @@ async def create_invoice(resume_id: str, current_user: dict = Depends(get_curren
     if not resume.data:
         raise HTTPException(status_code=404, detail="Резюме не найдено.")
 
-    await send_stars_invoice(current_user["telegram_id"], resume_id, current_user["id"])
-    return {"status": "invoice_sent", "provider": "telegram_stars"}
+    try:
+        invoice_link = await create_stars_invoice_link(resume_id, current_user["id"])
+    except Exception as exc:
+        logger.exception("create_stars_invoice_link failed resume_id=%s", resume_id)
+        raise HTTPException(
+            status_code=502,
+            detail="Не удалось создать счёт Stars. Попробуйте ещё раз.",
+        ) from exc
+
+    return {
+        "status": "ready",
+        "provider": "telegram_stars",
+        "invoice_link": invoice_link,
+    }
 
 
 @router.post("/create-yookassa/{resume_id}")
@@ -42,27 +54,18 @@ async def create_yookassa_invoice(resume_id: str, current_user: dict = Depends(g
 
 @router.post("/telegram-webhook")
 async def telegram_payment_webhook(request: Request, db=Depends(get_db)):
+    """Optional HTTP webhook; primary path is bot polling + successful_payment handler."""
     data = await request.json()
     update = Update.de_json(data, Bot(token=settings.BOT_TOKEN))
 
     if update.message and update.message.successful_payment:
         payment = update.message.successful_payment
-        payload = json.loads(payment.invoice_payload)
-        resume_id = payload["resume_id"]
-
-        db.table("resumes").update({"is_paid": True, "paid_at": datetime.utcnow().isoformat()}).eq("id", resume_id).execute()
-        resume_result = db.table("resumes").select("data").eq("id", resume_id).limit(1).execute()
-        if not resume_result.data:
-            return {"ok": True}
-
-        resume_data = resume_result.data[0]["data"]
-        pdf_bytes = generate_pdf(resume_data)
-        filename = f"resume_{resume_data.get('full_name', 'resume').replace(' ', '_')}.pdf"
-        await send_document_to_user(
-            user_telegram_id=update.message.from_user.id,
-            document=pdf_bytes,
-            filename=filename,
-            caption="Оплата прошла успешно. Ваше резюме уже готово и отправлено в чат.",
-        )
+        try:
+            payload = json.loads(payment.invoice_payload)
+            resume_id = payload["resume_id"]
+            telegram_id = update.message.from_user.id
+            await fulfill_paid_resume(db, resume_id, telegram_id)
+        except Exception:
+            logger.exception("telegram-webhook fulfill failed")
 
     return {"ok": True}

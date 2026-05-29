@@ -129,6 +129,13 @@ async def _call_openrouter(messages: list[dict], model: str | None = None, tempe
                 json=body,
             )
 
+        if response.status_code >= 400:
+            logger.error(
+                "openrouter error model=%s status=%s body=%s",
+                model,
+                response.status_code,
+                response.text[:500],
+            )
         response.raise_for_status()
         data = response.json()
 
@@ -141,7 +148,10 @@ async def _call_openrouter(messages: list[dict], model: str | None = None, tempe
         usage.get("total_tokens"),
     )
 
-    content = data["choices"][0]["message"]["content"]
+    choices = data.get("choices") or []
+    if not choices or not choices[0].get("message", {}).get("content"):
+        raise ValueError("OpenRouter returned empty completion")
+    content = choices[0]["message"]["content"]
     return json.loads(_clean_json_content(content))
 
 
@@ -152,13 +162,14 @@ async def generate_resume(user_data: dict) -> dict:
     ]
     try:
         return await _call_openrouter(messages, temperature=0.68)
-    except json.JSONDecodeError:
-        logger.warning("JSON parse failed, retrying with fallback model")
+    except (json.JSONDecodeError, ValueError) as exc:
+        logger.warning("primary model output invalid (%s), retrying fallback", exc)
         return await _call_openrouter(
             messages, model=settings.OPENROUTER_MODEL_FALLBACK, temperature=0.6
         )
     except httpx.HTTPStatusError as exc:
-        if exc.response.status_code in {402, 429, 503}:
+        if exc.response.status_code in {402, 429, 502, 503}:
+            logger.warning("openrouter http %s, using fallback model", exc.response.status_code)
             return await _call_openrouter(
                 messages, model=settings.OPENROUTER_MODEL_FALLBACK, temperature=0.6
             )

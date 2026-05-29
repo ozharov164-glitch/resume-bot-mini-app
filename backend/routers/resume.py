@@ -1,4 +1,5 @@
 import json
+import logging
 import uuid
 from datetime import datetime
 
@@ -8,9 +9,11 @@ from database import get_db
 from dependencies import get_current_user
 from models.schemas import GenerateResumeRequest, ResumeGenerationResponse
 from services.ai_service import generate_resume
+from services.payment_fulfillment import parse_resume_data
 from services.pdf_service import generate_pdf
 from services.telegram_service import send_document_to_user
 
+logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/resume", tags=["resume"])
 
 
@@ -31,6 +34,7 @@ async def create_resume(user_data: GenerateResumeRequest, current_user: dict = D
         ).execute()
         return ResumeGenerationResponse(resume_id=resume_id, resume=resume_data, paid=False)
     except Exception as exc:
+        logger.exception("resume generate failed user_id=%s", current_user.get("id"))
         raise HTTPException(status_code=500, detail="Не удалось сгенерировать резюме. Попробуйте еще раз.") from exc
 
 
@@ -66,7 +70,7 @@ async def download_pdf(resume_id: str, current_user: dict = Depends(get_current_
     if not resume.get("is_paid"):
         raise HTTPException(status_code=403, detail="Для скачивания PDF требуется оплата.")
 
-    resume_data = resume["data"] if isinstance(resume["data"], dict) else json.loads(resume["data"])
+    resume_data = parse_resume_data(resume["data"])
     pdf_bytes = generate_pdf(resume_data)
     filename = f"resume_{resume_data.get('full_name', 'resume').replace(' ', '_')}.pdf"
 

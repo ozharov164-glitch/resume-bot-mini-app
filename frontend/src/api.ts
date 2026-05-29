@@ -28,10 +28,35 @@ export async function generateResume(token: string, data: Partial<UserAnswers>) 
 }
 
 export async function createStarsInvoice(token: string, resumeId: string) {
-  return http<{ status: string }>("/api/payment/create-invoice/" + resumeId, {
-    method: "POST",
+  return http<{ status: string; invoice_link: string; provider: string }>(
+    "/api/payment/create-invoice/" + resumeId,
+    {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+    },
+  );
+}
+
+export async function getResume(token: string, resumeId: string) {
+  return http<{ is_paid: boolean; id: string }>(`/api/resume/${resumeId}`, {
+    method: "GET",
     headers: { Authorization: `Bearer ${token}` },
   });
+}
+
+/** Poll until backend marks resume paid (bot successful_payment handler). */
+export async function waitUntilPaid(
+  token: string,
+  resumeId: string,
+  maxAttempts = 20,
+  delayMs = 800,
+): Promise<boolean> {
+  for (let i = 0; i < maxAttempts; i++) {
+    const resume = await getResume(token, resumeId);
+    if (resume.is_paid) return true;
+    await new Promise((r) => setTimeout(r, delayMs));
+  }
+  return false;
 }
 
 export async function createYookassaInvoice(token: string, resumeId: string) {

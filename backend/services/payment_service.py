@@ -2,10 +2,21 @@ import json
 import uuid
 from datetime import datetime
 
-from telegram import Bot
+from telegram import Bot, LabeledPrice
 from yookassa import Configuration, Payment
 
 from config import settings
+
+_STARS_TITLE = "Резюме в PDF"
+_STARS_DESCRIPTION = "Профессионально оформленное резюме в формате PDF для отклика на вакансии."
+
+
+def _invoice_payload(resume_id: str, user_id: str) -> str:
+    return json.dumps({"resume_id": resume_id, "user_id": user_id, "type": "single_pdf"})
+
+
+def _stars_prices() -> list[LabeledPrice]:
+    return [LabeledPrice(label="PDF-резюме", amount=settings.STARS_PRICE_SINGLE_PDF)]
 
 
 def create_yookassa_payment(resume_id: str, user_id: str, amount_rub: str = "149.00") -> dict:
@@ -30,16 +41,18 @@ def create_yookassa_payment(resume_id: str, user_id: str, amount_rub: str = "149
     return {"payment_id": payment.id, "confirmation_url": payment.confirmation.confirmation_url}
 
 
-async def send_stars_invoice(telegram_id: int, resume_id: str, user_id: str) -> None:
+async def create_stars_invoice_link(resume_id: str, user_id: str) -> str:
+    """Invoice link for Telegram Mini App WebApp.openInvoice (in-app Stars payment)."""
     bot = Bot(token=settings.BOT_TOKEN)
-    await bot.send_invoice(
-        chat_id=telegram_id,
-        title="Резюме в PDF",
-        description="Профессионально оформленное резюме в формате PDF для отклика на вакансии.",
-        payload=json.dumps({"resume_id": resume_id, "user_id": user_id, "type": "single_pdf"}),
+    link = await bot.create_invoice_link(
+        title=_STARS_TITLE,
+        description=_STARS_DESCRIPTION,
+        payload=_invoice_payload(resume_id, user_id),
         currency="XTR",
-        prices=[{"label": "PDF-резюме", "amount": settings.STARS_PRICE_SINGLE_PDF}],
+        prices=_stars_prices(),
+        provider_token="",
     )
+    return link
 
 
 def paid_timestamp() -> str:
