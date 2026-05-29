@@ -54,7 +54,7 @@ export function PreviewPage() {
   const contactLine = [resumeData.city, resumeData.phone].filter(Boolean).join(" · ");
 
   return (
-    <Screen withBottomBar>
+    <Screen withBottomBar bottomBarButtons={2}>
       <AppHeader onBack={handleBack} showBack title="Предпросмотр" />
       <main className="flex flex-1 flex-col gap-4 px-4 py-4">
         <div

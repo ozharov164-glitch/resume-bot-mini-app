@@ -66,9 +66,9 @@ export function HomePage({ onStart, onHistory }: HomeProps) {
   };
 
   return (
-    <Screen withBottomBar>
+    <Screen withBottomBar bottomBarButtons={2}>
       <AppHeader />
-      <main className="flex flex-1 flex-col items-center gap-5 px-4 pt-3">
+      <main className="flex flex-1 flex-col items-center gap-4 px-4 pt-2 pb-2">
         {isFounder && <FounderBadge />}
 
         <HeroIllustration />
@@ -102,7 +102,7 @@ export function HomePage({ onStart, onHistory }: HomeProps) {
           </div>
         </div>
 
-        <div className="flex w-full flex-col gap-3">
+        <div className="flex w-full flex-col gap-3 pb-1">
           {BENEFITS.map((item, i) => (
             <motion.div
               key={item.title}
