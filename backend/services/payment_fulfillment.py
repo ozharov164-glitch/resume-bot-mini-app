@@ -3,8 +3,6 @@ import logging
 from datetime import datetime
 from typing import Any
 
-from supabase import Client
-
 from services.pdf_service import generate_pdf
 from services.telegram_service import send_document_to_user
 
@@ -19,20 +17,20 @@ def parse_resume_data(raw: Any) -> dict:
     raise ValueError("resume data must be dict or json string")
 
 
-async def fulfill_paid_resume(db: Client, resume_id: str, telegram_id: int) -> bool:
+async def fulfill_paid_resume(db: Any, resume_id: str, telegram_id: int) -> bool:
     """Mark resume paid and send PDF to user's Telegram chat. Idempotent."""
-    result = db.table("resumes").select("*").eq("id", resume_id).limit(1).execute()
-    if not result.data:
+    resume = db.find_resume(resume_id)
+    if not resume:
         logger.warning("fulfill: resume %s not found", resume_id)
         return False
 
-    resume = result.data[0]
     if resume.get("is_paid"):
         logger.info("fulfill: resume %s already paid, resending PDF", resume_id)
     else:
-        db.table("resumes").update(
-            {"is_paid": True, "paid_at": datetime.utcnow().isoformat()}
-        ).eq("id", resume_id).execute()
+        db.update_resume(
+            resume_id,
+            {"is_paid": True, "paid_at": datetime.utcnow().isoformat()},
+        )
 
     try:
         resume_data = parse_resume_data(resume["data"])

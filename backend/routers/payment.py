@@ -17,15 +17,8 @@ router = APIRouter(prefix="/api/payment", tags=["payment"])
 
 @router.post("/create-invoice/{resume_id}")
 async def create_invoice(resume_id: str, current_user: dict = Depends(get_current_user), db=Depends(get_db)):
-    resume = (
-        db.table("resumes")
-        .select("id")
-        .eq("id", resume_id)
-        .eq("user_id", current_user["id"])
-        .limit(1)
-        .execute()
-    )
-    if not resume.data:
+    resume = db.find_resume(resume_id, current_user["id"])
+    if not resume:
         raise HTTPException(status_code=404, detail="Резюме не найдено.")
 
     if is_founder(current_user.get("telegram_id")):

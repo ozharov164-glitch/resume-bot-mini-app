@@ -23,7 +23,7 @@ def get_current_user(authorization: str = Header(default=""), db=Depends(get_db)
     if not telegram_id:
         raise HTTPException(status_code=401, detail="Некорректный токен.")
 
-    result = db.table("users").select("*").eq("telegram_id", int(telegram_id)).limit(1).execute()
-    if not result.data:
+    user = db.find_user_by_telegram_id(int(telegram_id))
+    if not user:
         raise HTTPException(status_code=401, detail="Пользователь не найден.")
-    return result.data[0]
+    return user

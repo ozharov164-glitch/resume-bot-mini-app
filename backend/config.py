@@ -37,6 +37,9 @@ class Settings(BaseSettings):
     # Telegram user IDs with free unlimited generate + PDF (comma-separated).
     FOUNDER_TELEGRAM_IDS: str = "7595981350"
 
+    # Local SQLite when Supabase key is invalid or missing.
+    SQLITE_PATH: str = "data/resumebot.db"
+
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
 

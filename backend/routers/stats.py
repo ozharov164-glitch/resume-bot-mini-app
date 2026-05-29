@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter
 
 from database import get_db
 
@@ -8,10 +8,10 @@ _FALLBACK_COUNT = 1200
 
 
 @router.get("/count")
-async def stats_count(db=Depends(get_db)):
+async def stats_count():
     try:
-        result = db.table("resumes").select("id", count="exact").execute()
-        count = result.count if result.count is not None else len(result.data or [])
+        db = get_db()
+        count = db.count_resumes()
         if count < 1:
             return {"count": _FALLBACK_COUNT}
         return {"count": count + _FALLBACK_COUNT}

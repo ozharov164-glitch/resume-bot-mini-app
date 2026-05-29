@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 
-import { generateResume } from "../api";
+import { generateResume, ensureAuthToken } from "../api";
 import { OptionButton } from "../components/OptionButton";
 import { ProfessionChip } from "../components/ProfessionChip";
 import { ProgressBar } from "../components/ProgressBar";
@@ -83,10 +83,11 @@ const STEPS: Step[] = [
 const OPTIONS_ONLY = new Set(["experience_level", "education"]);
 
 export function OnboardingPage() {
-  const { authToken, answers, setAnswer, setResumeResult, setPage, setFounder, setPaid } = useAppStore();
+  const { answers, setAnswer, setResumeResult, setPage, setFounder, setPaid } = useAppStore();
   const [step, setStep] = useState(0);
   const [value, setValue] = useState("");
   const [otherProfession, setOtherProfession] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const current = STEPS[step];
   const isLast = step === STEPS.length - 1;
   const isPhoneStep = current.id === "phone";
@@ -112,6 +113,7 @@ export function OnboardingPage() {
   };
 
   const next = async () => {
+    if (submitting) return;
     if (!canContinue && !current.optional) return;
     getTg()?.HapticFeedback?.impactOccurred("light");
     setAnswer(current.id as keyof UserAnswers, value);
@@ -121,11 +123,12 @@ export function OnboardingPage() {
       return;
     }
 
-    if (!authToken) return;
-    const payload = { ...answers, [current.id]: value };
+    setSubmitting(true);
     setPage("loading");
     try {
-      const response = await generateResume(authToken, payload);
+      const token = await ensureAuthToken();
+      const payload = { ...useAppStore.getState().answers };
+      const response = await generateResume(token, payload);
       setResumeResult(response.resume_id, response.resume);
       if (response.paid) {
         setFounder(true);
@@ -134,8 +137,17 @@ export function OnboardingPage() {
       setPage("preview");
     } catch (error) {
       setPage("onboarding");
-      alert("Не удалось составить резюме. Проверь соединение и попробуй ещё раз.");
+      const message = error instanceof Error ? error.message : "";
+      if (message === "OPEN_VIA_BOT") {
+        alert("Открой приложение через бота @resumeez_bot — без этого авторизация не работает.");
+      } else if (/401|авториза|токен|пользователь/i.test(message)) {
+        alert("Сессия истекла. Закрой Mini App и открой снова через бота.");
+      } else {
+        alert(message || "Не удалось составить резюме. Проверь соединение и попробуй ещё раз.");
+      }
       console.error(error);
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -250,8 +262,8 @@ export function OnboardingPage() {
               {current.skipText}
             </Button>
           )}
-          <Button variant="brand" onClick={next} disabled={!canContinue}>
-            {isLast ? "Сформировать резюме" : "Далее"}
+          <Button variant="brand" onClick={next} disabled={!canContinue || submitting}>
+            {submitting ? "Формируем…" : isLast ? "Сформировать резюме" : "Далее"}
           </Button>
         </div>
       </FixedBottomBar>

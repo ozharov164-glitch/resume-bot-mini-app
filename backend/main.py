@@ -4,6 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from config import settings
+from database import get_db, storage_mode
 from routers import auth, payment, resume, stats
 
 logging.basicConfig(
@@ -39,4 +40,8 @@ app.include_router(stats.router)
 
 @app.get("/health")
 async def health():
-    return {"status": "ok"}
+    try:
+        get_db()
+        return {"status": "ok", "storage": storage_mode()}
+    except Exception as exc:
+        return {"status": "degraded", "storage": "error", "detail": str(exc)[:120]}

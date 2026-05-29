@@ -1,4 +1,3 @@
-import json
 import logging
 import uuid
 from datetime import datetime
@@ -19,12 +18,16 @@ router = APIRouter(prefix="/api/resume", tags=["resume"])
 
 
 @router.post("/generate", response_model=ResumeGenerationResponse)
-async def create_resume(user_data: GenerateResumeRequest, current_user: dict = Depends(get_current_user), db=Depends(get_db)):
+async def create_resume(
+    user_data: GenerateResumeRequest,
+    current_user: dict = Depends(get_current_user),
+    db=Depends(get_db),
+):
     try:
         resume_data = await generate_resume(user_data.model_dump())
         resume_id = str(uuid.uuid4())
         founder = is_founder(current_user.get("telegram_id"))
-        db.table("resumes").insert(
+        db.create_resume(
             {
                 "id": resume_id,
                 "user_id": current_user["id"],
@@ -33,9 +36,13 @@ async def create_resume(user_data: GenerateResumeRequest, current_user: dict = D
                 "is_paid": founder,
                 "created_at": datetime.utcnow().isoformat(),
             }
-        ).execute()
+        )
         if founder:
-            logger.info("founder resume generated telegram_id=%s resume_id=%s", current_user.get("telegram_id"), resume_id)
+            logger.info(
+                "founder resume generated telegram_id=%s resume_id=%s",
+                current_user.get("telegram_id"),
+                resume_id,
+            )
         return ResumeGenerationResponse(resume_id=resume_id, resume=resume_data, paid=founder)
     except Exception as exc:
         logger.exception("resume generate failed user_id=%s", current_user.get("id"))
@@ -44,40 +51,26 @@ async def create_resume(user_data: GenerateResumeRequest, current_user: dict = D
 
 @router.get("/{resume_id}")
 async def get_resume(resume_id: str, current_user: dict = Depends(get_current_user), db=Depends(get_db)):
-    result = (
-        db.table("resumes")
-        .select("*")
-        .eq("id", resume_id)
-        .eq("user_id", current_user["id"])
-        .limit(1)
-        .execute()
-    )
-    if not result.data:
+    resume = db.find_resume(resume_id, current_user["id"])
+    if not resume:
         raise HTTPException(status_code=404, detail="Резюме не найдено.")
-    return result.data[0]
+    return resume
 
 
 @router.get("/{resume_id}/download")
 async def download_pdf(resume_id: str, current_user: dict = Depends(get_current_user), db=Depends(get_db)):
-    result = (
-        db.table("resumes")
-        .select("*")
-        .eq("id", resume_id)
-        .eq("user_id", current_user["id"])
-        .limit(1)
-        .execute()
-    )
-    if not result.data:
+    resume = db.find_resume(resume_id, current_user["id"])
+    if not resume:
         raise HTTPException(status_code=404, detail="Резюме не найдено.")
 
-    resume = result.data[0]
     founder = is_founder(current_user.get("telegram_id"))
     if not resume.get("is_paid") and not founder:
         raise HTTPException(status_code=403, detail="Для скачивания PDF требуется оплата.")
     if founder and not resume.get("is_paid"):
-        db.table("resumes").update({"is_paid": True, "paid_at": datetime.utcnow().isoformat()}).eq(
-            "id", resume_id
-        ).execute()
+        db.update_resume(
+            resume_id,
+            {"is_paid": True, "paid_at": datetime.utcnow().isoformat()},
+        )
 
     resume_data = parse_resume_data(resume["data"])
     pdf_bytes = generate_pdf(resume_data)

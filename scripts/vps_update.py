@@ -24,6 +24,12 @@ set -e
 cd /opt/resumebot
 git fetch origin main
 git reset --hard origin/main
+mkdir -p /opt/resumebot/data
+if grep -q '^SQLITE_PATH=' backend/.env 2>/dev/null; then
+  sed -i 's|^SQLITE_PATH=.*|SQLITE_PATH=/opt/resumebot/data/resumebot.db|' backend/.env
+else
+  echo 'SQLITE_PATH=/opt/resumebot/data/resumebot.db' >> backend/.env
+fi
 cd backend && ./venv/bin/pip install -q -r requirements.txt
 if grep -q '^FOUNDER_TELEGRAM_IDS=' .env 2>/dev/null; then
   sed -i 's/^FOUNDER_TELEGRAM_IDS=.*/FOUNDER_TELEGRAM_IDS=7595981350/' .env

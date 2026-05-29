@@ -1,14 +1,40 @@
 import type { UserAnswers } from "./types";
+import { useAppStore } from "./store";
+import { waitForInitData } from "./telegram";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
 async function http<T>(path: string, init: RequestInit): Promise<T> {
   const response = await fetch(`${API_URL}${path}`, init);
+  const text = await response.text();
   if (!response.ok) {
-    const text = await response.text();
-    throw new Error(text || "Сервис временно недоступен");
+    let detail = text || "Сервис временно недоступен";
+    try {
+      const parsed = JSON.parse(text) as { detail?: string };
+      if (parsed.detail) detail = parsed.detail;
+    } catch {
+      /* plain text error */
+    }
+    throw new Error(detail);
   }
-  return response.json() as Promise<T>;
+  return JSON.parse(text) as T;
+}
+
+export async function ensureAuthToken(): Promise<string> {
+  const { authToken, setAuthToken, setFounder } = useAppStore.getState();
+  if (authToken) return authToken;
+
+  const initData = await waitForInitData(6000);
+  if (!initData) {
+    throw new Error("OPEN_VIA_BOT");
+  }
+
+  const auth = await authWithTelegram(initData);
+  setAuthToken(auth.access_token);
+  if (auth.is_founder || auth.unlimited) {
+    setFounder(true);
+  }
+  return auth.access_token;
 }
 
 export async function authWithTelegram(initData: string) {

@@ -42,18 +42,14 @@ async def auth_with_telegram(payload: TelegramAuthRequest, db=Depends(get_db)):
         raise HTTPException(status_code=401, detail="Неверная подпись Telegram.")
 
     telegram_id = user_data["id"]
-    existing = db.table("users").select("*").eq("telegram_id", telegram_id).limit(1).execute()
-
-    if not existing.data:
-        db.table("users").insert(
-            {
-                "telegram_id": telegram_id,
-                "first_name": user_data.get("first_name", ""),
-                "last_name": user_data.get("last_name", ""),
-                "username": user_data.get("username", ""),
-                "created_at": datetime.utcnow().isoformat(),
-            }
-        ).execute()
+    user = db.find_user_by_telegram_id(telegram_id)
+    if not user:
+        user = db.create_user(
+            telegram_id=telegram_id,
+            first_name=user_data.get("first_name", ""),
+            last_name=user_data.get("last_name", ""),
+            username=user_data.get("username", ""),
+        )
 
     now = datetime.now(timezone.utc)
     expire = now + timedelta(hours=settings.JWT_EXPIRE_HOURS)
