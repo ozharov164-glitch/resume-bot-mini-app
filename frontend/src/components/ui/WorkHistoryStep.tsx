@@ -100,6 +100,7 @@ export function WorkHistoryStep({
           />
           <VoiceTextArea
             fieldId={`work-duties-${index}`}
+            fieldType="duties"
             value={entry.duties}
             onChange={(duties) => updateEntry(index, { duties })}
             placeholder="Обязанности и достижения"

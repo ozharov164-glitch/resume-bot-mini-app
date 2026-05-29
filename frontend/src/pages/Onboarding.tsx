@@ -424,6 +424,13 @@ export function OnboardingPage() {
             {current.type === "textarea" && (
               <VoiceTextArea
                 fieldId={`onboarding-${current.id}`}
+                fieldType={
+                  current.id === "about"
+                    ? "about"
+                    : current.id === "certificates"
+                      ? "certificates"
+                      : "experience"
+                }
                 value={value}
                 onChange={setValue}
                 placeholder={current.placeholder}

@@ -11,17 +11,42 @@ logger = logging.getLogger(__name__)
 GROQ_CHAT_URL = "https://api.groq.com/openai/v1/chat/completions"
 GROQ_TRANSCRIBE_URL = "https://api.groq.com/openai/v1/audio/transcriptions"
 
-POLISH_PROMPT = """Перефразируй текст пользователя как профессиональное описание
-опыта работы для резюме hh.ru. Используй глаголы действия (организовывал, выполнял,
-обеспечивал).
+POLISH_EXPERIENCE_PROMPT = """Перефразируй описание опыта работы как профессиональную запись для резюме hh.ru.
+Используй глаголы действия (организовывал, выполнял, обеспечивал, координировал, внедрял).
 
 СТРОГО:
-- НЕ добавляй факты, цифры, сроки, годы/месяцы стажа, количество клиентов — если их НЕТ в тексте пользователя
+- НЕ добавляй факты, цифры, сроки, годы/месяцы стажа — если их НЕТ в тексте пользователя
 - Если указан период работы — описание НЕ должно противоречить его длительности
 - ЗАПРЕЩЕНО: «N лет опыта», «в течение N лет», «за N лет» без явного основания в исходнике
 - Сохрани цифры и названия только из исходного текста
+- Верни 3–5 фраз через « • »
+- Верни ТОЛЬКО готовый текст, без JSON, без пояснений."""
 
-Верни ТОЛЬКО готовый текст, без JSON, без пояснений."""
+POLISH_ABOUT_PROMPT = """Улучши раздел «О себе» для резюме hh.ru.
+Стиль: профессиональный но живой, 3–5 предложений. Не клише.
+Структура: [кто я + опыт] → [сильные стороны] → [мотивация].
+
+СТРОГО:
+- НЕ добавляй факты и цифры, которых нет в тексте пользователя
+- НЕ превращай личные качества в описание "опыта работы"
+- Сохрани конкретные детали из исходника
+- Верни ТОЛЬКО улучшенный текст, без JSON, без пояснений."""
+
+POLISH_CERTIFICATES_PROMPT = """Отредактируй список сертификатов и лицензий для резюме hh.ru.
+Стандартизируй написание, исправь опечатки, сделай список чистым.
+
+СТРОГО:
+- НЕ добавляй сертификаты, которых нет в тексте пользователя
+- Сохрани все документы из исходника
+- Верни ТОЛЬКО готовый текст, без JSON, без пояснений."""
+
+POLISH_PROMPTS = {
+    "experience": POLISH_EXPERIENCE_PROMPT,
+    "about": POLISH_ABOUT_PROMPT,
+    "certificates": POLISH_CERTIFICATES_PROMPT,
+    "last_job": POLISH_EXPERIENCE_PROMPT,
+    "duties": POLISH_EXPERIENCE_PROMPT,
+}
 
 PUNCTUATE_PROMPT = """Ты редактор русского текста из распознавания речи.
 Расставь знаки препинания (точки, запятые, тире, вопросительные и восклицательные).
@@ -185,9 +210,12 @@ async def polish_experience_text(
     period: str = "",
     company: str = "",
     job_position: str = "",
+    field_type: str = "experience",
 ) -> str:
     if not text.strip():
         return text
+
+    system_prompt = POLISH_PROMPTS.get(field_type, POLISH_EXPERIENCE_PROMPT)
 
     user_content = build_polish_user_message(
         text=text,
@@ -198,13 +226,13 @@ async def polish_experience_text(
     )
 
     body = {
-        "model": settings.GROQ_PUNCTUATE_MODEL,
+        "model": settings.GROQ_POLISH_MODEL,
         "messages": [
-            {"role": "system", "content": POLISH_PROMPT},
+            {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_content},
         ],
-        "temperature": 0.2,
-        "max_tokens": 512,
+        "temperature": 0.45,
+        "max_tokens": 600,
     }
 
     def build_request(key: str) -> httpx.Request:
@@ -227,15 +255,14 @@ async def polish_experience_text(
     except Exception as exc:
         logger.warning("groq polish failed, trying openrouter: %s", exc)
 
-    messages = [
-        {"role": "system", "content": POLISH_PROMPT},
-        {"role": "user", "content": user_content},
-    ]
     or_body = {
         "model": settings.OPENROUTER_MODEL,
-        "messages": messages,
-        "temperature": 0.4,
-        "max_tokens": 400,
+        "messages": [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_content},
+        ],
+        "temperature": 0.45,
+        "max_tokens": 500,
     }
 
     async with httpx.AsyncClient(timeout=30.0) as client:

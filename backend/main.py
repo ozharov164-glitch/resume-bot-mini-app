@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from config import settings
 from database import get_db, storage_mode
 from routers import auth, enrich, payment, resume, skills, stats, voice
+from services.pdf_service import ensure_fonts
 
 logging.basicConfig(
     level=logging.INFO if not settings.DEBUG else logging.DEBUG,
@@ -39,6 +40,11 @@ app.include_router(payment.router)
 app.include_router(stats.router)
 app.include_router(voice.router)
 app.include_router(enrich.router)
+
+
+@app.on_event("startup")
+async def startup_event():
+    ensure_fonts()
 
 
 @app.get("/health")

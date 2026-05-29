@@ -1,11 +1,74 @@
 import io
+import logging
 import re
+import urllib.request
 from pathlib import Path
 
 from jinja2 import Environment, FileSystemLoader
 from weasyprint import CSS, HTML
+from weasyprint.text.fonts import FontConfiguration
+
+logger = logging.getLogger(__name__)
 
 TEMPLATES_DIR = Path(__file__).parent.parent / "templates"
+FONTS_DIR = Path(__file__).parent.parent / "fonts"
+
+FONT_FILES = {
+    "NunitoSans-Regular.ttf": "https://github.com/googlefonts/NunitoSans/raw/main/fonts/ttf/NunitoSans-Regular.ttf",
+    "NunitoSans-Bold.ttf": "https://github.com/googlefonts/NunitoSans/raw/main/fonts/ttf/NunitoSans-Bold.ttf",
+    "NunitoSans-SemiBold.ttf": "https://github.com/googlefonts/NunitoSans/raw/main/fonts/ttf/NunitoSans-SemiBold.ttf",
+    "NunitoSans-Italic.ttf": "https://github.com/googlefonts/NunitoSans/raw/main/fonts/ttf/NunitoSans-Italic.ttf",
+}
+
+
+def ensure_fonts() -> bool:
+    """Download Nunito Sans fonts if not present. Returns True if fonts available."""
+    FONTS_DIR.mkdir(parents=True, exist_ok=True)
+    try:
+        for filename, url in FONT_FILES.items():
+            dest = FONTS_DIR / filename
+            if not dest.exists():
+                urllib.request.urlretrieve(url, dest)
+        return True
+    except Exception as exc:
+        logger.warning("Font download failed, using system fonts: %s", exc)
+        return False
+
+
+def _font_face_css() -> str:
+    """Return @font-face CSS if Nunito Sans fonts are available."""
+    if not (FONTS_DIR / "NunitoSans-Regular.ttf").exists():
+        return ""
+
+    def font_url(name: str) -> str:
+        return f"file://{FONTS_DIR / name}"
+
+    return f"""
+@font-face {{
+    font-family: 'NunitoSans';
+    font-style: normal;
+    font-weight: 400;
+    src: url("{font_url('NunitoSans-Regular.ttf')}") format("truetype");
+}}
+@font-face {{
+    font-family: 'NunitoSans';
+    font-style: normal;
+    font-weight: 600;
+    src: url("{font_url('NunitoSans-SemiBold.ttf')}") format("truetype");
+}}
+@font-face {{
+    font-family: 'NunitoSans';
+    font-style: normal;
+    font-weight: 700;
+    src: url("{font_url('NunitoSans-Bold.ttf')}") format("truetype");
+}}
+@font-face {{
+    font-family: 'NunitoSans';
+    font-style: italic;
+    font-weight: 400;
+    src: url("{font_url('NunitoSans-Italic.ttf')}") format("truetype");
+}}
+"""
 
 
 def _split_bullets(text: str) -> list[str]:
@@ -16,19 +79,22 @@ def _split_bullets(text: str) -> list[str]:
 
 
 def get_pdf_styles() -> str:
-    return """
-    @page { size: A4; margin: 0; }
+    font_face = _font_face_css()
+    font_stack = "'NunitoSans', 'DejaVu Sans', 'Liberation Sans', Arial, sans-serif"
 
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+    return font_face + f"""
+    @page {{ size: A4; margin: 0; }}
 
-    body {
-        font-family: 'DejaVu Sans', 'Liberation Sans', Arial, sans-serif;
+    * {{ box-sizing: border-box; margin: 0; padding: 0; }}
+
+    body {{
+        font-family: {font_stack};
         font-size: 9.5pt;
         line-height: 1.45;
         color: #2c2c2c;
         background: #ffffff;
-    }
-
+    }}
+    """ + """
     /* Layout */
     .page-layout { display: flex; width: 100%; min-height: 297mm; }
 
@@ -287,7 +353,14 @@ def _render_document(resume_data: dict, template_name: str = "classic", *, previ
     styles = get_pdf_styles()
     if preview:
         styles += get_preview_watermark_styles()
-    return HTML(string=html_content).render(stylesheets=[CSS(string=styles)])
+
+    font_config = FontConfiguration()
+    css = CSS(string=styles, font_config=font_config)
+
+    return HTML(string=html_content).render(
+        stylesheets=[css],
+        font_config=font_config,
+    )
 
 
 def generate_pdf(resume_data: dict, template_name: str = "classic") -> bytes:

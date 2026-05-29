@@ -20,6 +20,7 @@ interface VoiceTextAreaProps {
   hint?: string;
   rows?: number;
   fieldId: string;
+  fieldType?: "experience" | "about" | "certificates" | "last_job" | "duties";
   /** Контекст места работы — передаётся в polish, чтобы ИИ не выдумывал стаж */
   workPeriod?: string;
   workCompany?: string;
@@ -33,6 +34,7 @@ export function VoiceTextArea({
   hint,
   rows = 5,
   fieldId,
+  fieldType = "experience",
   workPeriod = "",
   workCompany = "",
   workPosition = "",
@@ -155,6 +157,7 @@ export function VoiceTextArea({
           period: workPeriod,
           company: workCompany,
           job_position: workPosition,
+          field_type: fieldType,
         }),
       });
       if (!res.ok) throw new Error("polish failed");
@@ -171,7 +174,7 @@ export function VoiceTextArea({
     } finally {
       setPolishing(false);
     }
-  }, [onChange, polishing, targetPosition, value, workCompany, workPeriod, workPosition]);
+  }, [fieldType, onChange, polishing, targetPosition, value, workCompany, workPeriod, workPosition]);
 
   useEffect(() => () => stopWaveform(), [stopWaveform]);
 

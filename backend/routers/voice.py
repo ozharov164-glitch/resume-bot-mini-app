@@ -38,11 +38,18 @@ async def polish_text(body: dict, current_user: dict = Depends(get_current_user)
     period = str(body.get("period", ""))[:80]
     company = str(body.get("company", ""))[:120]
     job_position = str(body.get("job_position", ""))[:100]
+    field_type = str(body.get("field_type", "experience"))[:30]
+
+    allowed_types = {"experience", "about", "certificates", "last_job", "duties"}
+    if field_type not in allowed_types:
+        field_type = "experience"
+
     result = await polish_experience_text(
         text,
         position,
         period=period,
         company=company,
         job_position=job_position,
+        field_type=field_type,
     )
     return {"polished": result}
