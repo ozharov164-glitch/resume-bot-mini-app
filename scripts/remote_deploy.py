@@ -61,14 +61,10 @@ def main() -> None:
     run(client, "mkdir -p /opt/resumebot")
     run(client, f"if [ ! -d /opt/resumebot/.git ]; then git clone {REPO} /opt/resumebot; else cd /opt/resumebot && git pull; fi")
 
-    # get bot username
-    import json
-    import urllib.request
-
-    me = json.loads(
-        urllib.request.urlopen(f"https://api.telegram.org/bot{BOT_TOKEN}/getMe", timeout=15).read()
+    _, stdout, _ = client.exec_command(
+        f"curl -s https://api.telegram.org/bot{BOT_TOKEN}/getMe | python3 -c \"import sys,json; print(json.load(sys.stdin)['result']['username'])\""
     )
-    bot_username = me["result"]["username"]
+    bot_username = stdout.read().decode().strip() or "resumebot"
 
     env_content = textwrap.dedent(
         f"""
