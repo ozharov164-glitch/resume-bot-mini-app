@@ -2,12 +2,13 @@ import { useEffect, useRef, useState } from "react";
 import { motion } from "motion/react";
 
 import { fetchStatsCount } from "../api";
-import { Card } from "../components/ui/Card";
-import { PageHeader } from "../components/ui/PageHeader";
+import { AppHeader } from "../components/ui/AppHeader";
+import { Button } from "../components/ui/Button";
+import { FixedBottomBar } from "../components/ui/FixedBottomBar";
+import { FounderBadge } from "../components/ui/FounderBadge";
+import { Icon } from "../components/ui/Icon";
 import { Screen } from "../components/ui/Screen";
-import { useFirstName } from "../hooks/useFirstName";
 import { useFounderStatus } from "../hooks/useFounderStatus";
-import { useMainButton } from "../hooks/useMainButton";
 import { getTg } from "../telegram";
 
 interface HomeProps {
@@ -15,10 +16,19 @@ interface HomeProps {
 }
 
 const BENEFITS = [
-  { icon: "⚡", label: "5 минут", short: "Быстро" },
-  { icon: "🆓", label: "Бесплатно попробовать", short: "Пробный" },
-  { icon: "📥", label: "PDF в Telegram", short: "В чат" },
+  {
+    icon: "edit_document" as const,
+    title: "ИИ напишет текст за тебя",
+    subtitle: "Просто ответь на пару вопросов.",
+  },
+  {
+    icon: "picture_as_pdf" as const,
+    title: "Готовый PDF в чат сразу",
+    subtitle: "Скачай и отправляй работодателю.",
+  },
 ] as const;
+
+const HERO_SRC = `${import.meta.env.BASE_URL}hero.jpg`;
 
 function useCountUp(target: number, durationMs = 1400) {
   const [value, setValue] = useState(0);
@@ -41,90 +51,92 @@ function useCountUp(target: number, durationMs = 1400) {
 }
 
 export function HomePage({ onStart }: HomeProps) {
-  const [statsCount, setStatsCount] = useState(1200);
+  const [statsCount, setStatsCount] = useState(12450);
   const displayCount = useCountUp(statsCount);
-  const firstName = useFirstName();
   const isFounder = useFounderStatus();
-  const hasMainButton = Boolean(getTg()?.MainButton);
 
   useEffect(() => {
     void fetchStatsCount().then(setStatsCount);
+    getTg()?.MainButton?.hide();
   }, []);
 
-  useMainButton("Начать бесплатно →", () => {
+  const start = () => {
     getTg()?.HapticFeedback?.impactOccurred("light");
     onStart();
-  });
-
-  const greeting = firstName ? `Привет, ${firstName}! 👋` : "Привет! 👋";
+  };
 
   return (
-    <Screen withMainButton className="gap-7 pt-8">
-      <p className="text-sm font-semibold" style={{ color: "var(--text-muted)" }}>
-        {greeting}
-      </p>
+    <Screen withBottomBar>
+      <AppHeader />
+      <main className="flex flex-1 flex-col gap-6 px-4 pt-2">
+        {isFounder && <FounderBadge />}
 
-      {isFounder && (
-        <p
-          className="text-xs font-bold uppercase tracking-wide px-3 py-1.5 rounded-full w-fit"
-          style={{ background: "var(--accent)", color: "var(--tg-button-text, #fff)" }}
+        <div className="flex flex-col gap-3 text-center">
+          <h2 className="text-2xl font-bold leading-tight tracking-tight">
+            Ваше профессиональное резюме за 5 минут.
+          </h2>
+          <p className="text-base" style={{ color: "var(--text-muted)" }}>
+            Помогаем водителям, строителям и мастерам получить работу мечты.
+          </p>
+        </div>
+
+        <motion.div
+          className="overflow-hidden rounded-xl border shadow-sm"
+          style={{ borderColor: "var(--border-subtle)" }}
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4 }}
         >
-          Режим основателя · безлимит
-        </p>
-      )}
-
-      <PageHeader
-        title={
-          <>
-            Резюме за <span className="accent-highlight">5 минут</span>
-          </>
-        }
-        subtitle="Для продавцов, водителей, менеджеров и всех, кто ищет работу"
-      />
-
-      <motion.div
-        className="grid grid-cols-3 gap-2.5"
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.45, delay: 0.15 }}
-      >
-        {BENEFITS.map((item) => (
-          <Card key={item.label} variant="benefit" className="!p-3 flex flex-col items-center gap-2 text-center min-h-[108px]">
-            <span className="text-2xl leading-none" aria-hidden>
-              {item.icon}
-            </span>
-            <span className="text-[11px] font-bold uppercase tracking-wide opacity-70">{item.short}</span>
-            <span className="text-xs font-bold leading-snug">{item.label}</span>
-          </Card>
-        ))}
-      </motion.div>
-
-      <motion.p
-        className="stat-line text-center text-sm -mt-1"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.3 }}
-      >
-        Уже помогли{" "}
-        <span className="stat-number tabular-nums text-base">{displayCount.toLocaleString("ru-RU")}</span> людям
-        найти работу
-      </motion.p>
-
-      {!hasMainButton && (
-        <motion.div className="mt-auto" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.35 }}>
-          <button
-            type="button"
-            onClick={() => {
-              tg?.HapticFeedback?.impactOccurred("light");
-              onStart();
-            }}
-            className="w-full rounded-2xl py-4 text-base font-bold min-h-[52px] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
-            style={{ background: "var(--accent)", color: "var(--on-accent)", outlineColor: "var(--accent)" }}
-          >
-            Начать бесплатно →
-          </button>
+          <img src={HERO_SRC} alt="" className="block h-auto w-full object-cover" />
         </motion.div>
-      )}
+
+        <div className="flex flex-col items-center gap-1 text-center">
+          <div className="flex items-center gap-2 text-sm font-semibold" style={{ color: "var(--brand)" }}>
+            <Icon name="verified" filled size={20} />
+            <span>Соответствует стандартам hh.ru</span>
+          </div>
+          <p className="text-xs font-medium" style={{ color: "var(--text-muted)" }}>
+            Уже помогли{" "}
+            <span className="stat-number tabular-nums">{displayCount.toLocaleString("ru-RU")}</span> людям
+          </p>
+        </div>
+
+        <div className="flex flex-col gap-4">
+          {BENEFITS.map((item, i) => (
+            <motion.div
+              key={item.title}
+              className="flex items-start gap-4 rounded-xl border p-4"
+              style={{
+                background: "var(--surface-elevated)",
+                borderColor: "var(--border-subtle)",
+              }}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 + i * 0.08 }}
+            >
+              <div
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
+                style={{ background: "var(--brand-muted)" }}
+              >
+                <Icon name={item.icon} filled className="text-primary" size={22} />
+              </div>
+              <div className="flex flex-col gap-1 pt-0.5">
+                <span className="text-sm font-semibold">{item.title}</span>
+                <span className="text-xs" style={{ color: "var(--text-muted)" }}>
+                  {item.subtitle}
+                </span>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      </main>
+
+      <FixedBottomBar>
+        <Button variant="brand" onClick={start} className="flex items-center justify-center gap-2">
+          Создать резюме
+          <Icon name="arrow_forward" size={20} />
+        </Button>
+      </FixedBottomBar>
     </Screen>
   );
 }

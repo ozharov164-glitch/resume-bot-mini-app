@@ -67,17 +67,41 @@ export async function waitForInitData(timeoutMs = 4000): Promise<string> {
   return getTg()?.initData || "";
 }
 
+const BRAND = {
+  bg: "#f4fbf4",
+  text: "#161d19",
+  button: "#10b981",
+  buttonText: "#ffffff",
+  secondaryBg: "#eef6ee",
+  accent: "#10b981",
+  accentDark: "#006c49",
+} as const;
+
 export function initTelegramTheme() {
   const webApp = getTg();
-  if (!webApp) return;
+  if (!webApp) {
+    document.documentElement.style.setProperty("--tg-bg", BRAND.bg);
+    document.documentElement.style.setProperty("--tg-text", BRAND.text);
+    document.documentElement.style.setProperty("--tg-button", BRAND.button);
+    document.documentElement.style.setProperty("--tg-button-text", BRAND.buttonText);
+    document.documentElement.style.setProperty("--tg-secondary-bg", BRAND.secondaryBg);
+    document.documentElement.style.setProperty("--accent", BRAND.accent);
+    document.documentElement.style.setProperty("--brand", BRAND.accentDark);
+    document.documentElement.style.setProperty("--brand-bright", BRAND.accent);
+    applySemanticTheme(BRAND.bg);
+    return;
+  }
   webApp.ready();
   webApp.expand();
   const p = webApp.themeParams || {};
-  const bg = p.bg_color || "#ffffff";
+  const bg = p.bg_color || BRAND.bg;
   document.documentElement.style.setProperty("--tg-bg", bg);
-  document.documentElement.style.setProperty("--tg-text", p.text_color || "#0f172a");
-  document.documentElement.style.setProperty("--tg-button", p.button_color || "#3390ec");
-  document.documentElement.style.setProperty("--tg-button-text", p.button_text_color || "#ffffff");
-  document.documentElement.style.setProperty("--tg-secondary-bg", p.secondary_bg_color || "#f4f4f5");
+  document.documentElement.style.setProperty("--tg-text", p.text_color || BRAND.text);
+  document.documentElement.style.setProperty("--tg-button", BRAND.button);
+  document.documentElement.style.setProperty("--tg-button-text", p.button_text_color || BRAND.buttonText);
+  document.documentElement.style.setProperty("--tg-secondary-bg", p.secondary_bg_color || BRAND.secondaryBg);
+  document.documentElement.style.setProperty("--accent", BRAND.accent);
+  document.documentElement.style.setProperty("--brand", BRAND.accentDark);
+  document.documentElement.style.setProperty("--brand-bright", BRAND.accent);
   applySemanticTheme(bg);
 }

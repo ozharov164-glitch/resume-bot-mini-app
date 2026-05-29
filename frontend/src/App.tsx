@@ -49,7 +49,7 @@ export default function App() {
       >
         <div
           className="w-10 h-10 rounded-full border-2 border-t-transparent animate-spin"
-          style={{ borderColor: "var(--accent)", borderTopColor: "transparent" }}
+          style={{ borderColor: "var(--brand-bright)", borderTopColor: "transparent" }}
           aria-hidden
         />
         <p className="text-base font-semibold" style={{ color: "var(--text-muted)" }}>

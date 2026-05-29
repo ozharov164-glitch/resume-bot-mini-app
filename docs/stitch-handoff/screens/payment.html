@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+
+<html lang="ru"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>РезюмеБот - Оплата</title>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Tailwind Config injected from Brand Anchors -->
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "error": "#ba1a1a",
+                    "outline": "#6c7a71",
+                    "tertiary-fixed": "#ffdad7",
+                    "on-tertiary-fixed-variant": "#842225",
+                    "on-surface-variant": "#3c4a42",
+                    "inverse-primary": "#4edea3",
+                    "surface-container-high": "#e3eae3",
+                    "surface-dim": "#d4dcd5",
+                    "tg-bg-light": "#ffffff",
+                    "on-primary": "#ffffff",
+                    "on-surface": "#161d19",
+                    "surface-container-low": "#eef6ee",
+                    "secondary-fixed": "#d9e3f1",
+                    "on-secondary-fixed": "#121c26",
+                    "on-primary-container": "#00422b",
+                    "secondary-container": "#d6e1ef",
+                    "error-container": "#ffdad6",
+                    "on-secondary": "#ffffff",
+                    "primary-fixed": "#6ffbbe",
+                    "primary-fixed-dim": "#4edea3",
+                    "tertiary-container": "#fc7c78",
+                    "tertiary": "#a43a3a",
+                    "text-muted-dark": "#aaaaaa",
+                    "tg-secondary-bg-dark": "#242f3d",
+                    "primary-container": "#10b981",
+                    "surface-container-lowest": "#ffffff",
+                    "surface-tint": "#006c49",
+                    "secondary-fixed-dim": "#bdc7d5",
+                    "background": "#f4fbf4",
+                    "surface-variant": "#dde4dd",
+                    "text-muted-light": "#707579",
+                    "on-error": "#ffffff",
+                    "on-primary-fixed": "#002113",
+                    "on-secondary-fixed-variant": "#3e4853",
+                    "on-error-container": "#93000a",
+                    "surface": "#f4fbf4",
+                    "on-tertiary": "#ffffff",
+                    "tertiary-fixed-dim": "#ffb3af",
+                    "on-tertiary-fixed": "#410005",
+                    "primary": "#006c49",
+                    "outline-variant": "#bbcabf",
+                    "surface-bright": "#f4fbf4",
+                    "inverse-surface": "#2b322d",
+                    "tg-bg-dark": "#17212b",
+                    "inverse-on-surface": "#ebf3eb",
+                    "surface-container-highest": "#dde4dd",
+                    "on-primary-fixed-variant": "#005236",
+                    "surface-container": "#e8f0e9",
+                    "on-background": "#161d19",
+                    "brand-muted": "rgba(16, 185, 129, 0.1)",
+                    "secondary": "#555f6b",
+                    "on-tertiary-container": "#711419",
+                    "on-secondary-container": "#59646f",
+                    "tg-secondary-bg-light": "#f4f4f5"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "comfortable": "16px",
+                    "base": "8px",
+                    "container-padding": "16px",
+                    "tight": "4px",
+                    "stack": "24px"
+            },
+            "fontFamily": {
+                    "heading": ["Nunito Sans"],
+                    "label-sm": ["Nunito Sans"],
+                    "label-lg": ["Nunito Sans"],
+                    "display": ["Nunito Sans"],
+                    "body": ["Nunito Sans"]
+            },
+            "fontSize": {
+                    "heading": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                    "label-sm": ["12px", {"lineHeight": "16px", "fontWeight": "500"}],
+                    "label-lg": ["14px", {"lineHeight": "20px", "fontWeight": "600"}],
+                    "display": ["24px", {"lineHeight": "32px", "fontWeight": "700"}],
+                    "body": ["16px", {"lineHeight": "24px", "fontWeight": "400"}]
+            }
+          }
+        }
+      }
+    </script>
+<style>
+        /* Base styles to ensure content is breathable and responsive */
+        body {
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        /* Interactive elements feedback */
+        .btn-press {
+            transition: transform 0.1s ease-in-out;
+        }
+        .btn-press:active {
+            transform: scale(0.96);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface text-on-surface min-h-screen flex flex-col font-body">
+<!-- TopAppBar Component (Rendered from JSON) -->
+<header class="docked full-width top-0 bg-surface flex items-center justify-between px-container-padding h-14 w-full z-50 sticky shadow-[0_4px_20px_rgba(0,0,0,0.04)]">
+<button aria-label="Назад" class="w-10 h-10 flex items-center justify-start text-on-surface-variant hover:opacity-80 transition-opacity Active: scale-95 transition-transform duration-150 rounded-full">
+<span class="material-symbols-outlined text-[24px]">arrow_back</span>
+</button>
+<h1 class="font-heading text-heading font-bold text-on-surface flex-1 text-center truncate px-2 tracking-tight">РезюмеБот</h1>
+<button aria-label="Закрыть" class="w-10 h-10 flex items-center justify-end text-on-surface-variant hover:opacity-80 transition-opacity Active: scale-95 transition-transform duration-150 rounded-full">
+<span class="material-symbols-outlined text-[24px]">close</span>
+</button>
+</header>
+<!-- Main Content Canvas -->
+<main class="flex-1 px-container-padding py-stack flex flex-col gap-stack w-full max-w-md mx-auto mb-20">
+<!-- Status Header -->
+<div class="flex flex-col items-center justify-center text-center gap-tight pt-4 pb-2">
+<div class="w-16 h-16 bg-surface-container rounded-full flex items-center justify-center mb-2 shadow-[0_4px_20px_rgba(0,0,0,0.08)]">
+<span class="material-symbols-outlined text-[32px] text-primary" style="font-variation-settings: 'FILL' 1;">payments</span>
+</div>
+<h2 class="font-display text-display text-on-surface">Выбери способ оплаты</h2>
+<p class="font-body text-body text-on-surface-variant max-w-[280px]">Твое резюме почти готово. Оплати, чтобы получить PDF-файл.</p>
+</div>
+<!-- Recap Card (Bento/Glass style) -->
+<div class="bg-surface-container-lowest rounded-xl p-comfortable shadow-[0_4px_20px_rgba(0,0,0,0.08)] border border-surface-variant flex flex-col gap-comfortable relative overflow-hidden">
+<!-- Decorative accent -->
+<div class="absolute top-0 left-0 w-full h-1 bg-primary"></div>
+<div class="flex items-start gap-comfortable">
+<div class="w-12 h-12 bg-surface-container rounded-lg flex items-center justify-center flex-shrink-0">
+<span class="material-symbols-outlined text-[24px] text-primary">description</span>
+</div>
+<div class="flex flex-col gap-tight w-full">
+<span class="font-label-sm text-label-sm text-text-muted-light uppercase tracking-wide">Оплата за</span>
+<h3 class="font-heading text-heading text-on-surface leading-tight">Резюме для: Иван Иванов</h3>
+<div class="inline-flex items-center gap-1 mt-1">
+<span class="material-symbols-outlined text-[16px] text-secondary">work</span>
+<span class="font-body text-body text-secondary text-sm">Водитель</span>
+</div>
+</div>
+</div>
+<div class="h-px w-full bg-surface-variant"></div>
+<div class="flex justify-between items-center">
+<span class="font-body text-body text-on-surface-variant">К оплате:</span>
+<span class="font-heading text-heading text-on-surface font-bold">99 ⭐️</span>
+</div>
+</div>
+<!-- FAQ Section -->
+<div class="bg-surface-container-low rounded-xl p-comfortable border border-surface-variant">
+<div class="flex gap-3">
+<span class="material-symbols-outlined text-[20px] text-primary shrink-0 mt-0.5">help</span>
+<div class="flex flex-col gap-1">
+<h4 class="font-label-lg text-label-lg text-on-surface">Что будет после оплаты?</h4>
+<p class="font-body text-body text-on-surface-variant text-sm">PDF придет в чат бота через несколько секунд.</p>
+</div>
+</div>
+</div>
+<!-- Payment Actions -->
+<div class="flex flex-col gap-comfortable mt-auto pt-4">
+<!-- Primary Button (Telegram Stars) -->
+<button class="btn-press w-full bg-primary-container text-on-primary rounded-xl h-[56px] flex items-center justify-center gap-2 px-comfortable shadow-[0_4px_20px_rgba(16,185,129,0.2)]" onclick="handleStarsPayment()">
+<span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="font-label-lg text-label-lg font-bold">Оплатить Telegram Stars (99 Stars)</span>
+</button>
+<!-- Secondary Button (Card) -->
+<button class="btn-press w-full bg-transparent border-2 border-outline-variant text-on-surface rounded-xl h-[56px] flex items-center justify-center gap-2 px-comfortable hover:bg-surface-container transition-colors" onclick="handleCardPayment()">
+<span class="material-symbols-outlined text-[20px]">credit_card</span>
+<span class="font-label-lg text-label-lg">Оплатить картой</span>
+</button>
+</div>
+</main>
+<!-- Simulated MainButton fixed to bottom for WebApp context (optional visual representation if needed, though buttons above act as primary actions in this layout) -->
+<!-- In a real Telegram Mini App, WebApp.MainButton would be used natively. 
+         We leave it out of the HTML flow to adhere to "Strictly utilizes the native Telegram WebApp.MainButton" guideline,
+         but provide prominent on-screen buttons as requested. -->
+<script>
+        // Micro-interactions and haptic feedback simulation
+        function simulateHaptic() {
+            if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.HapticFeedback) {
+                window.Telegram.WebApp.HapticFeedback.impactOccurred('medium');
+            } else {
+                console.log('Haptic feedback simulated (medium)');
+            }
+        }
+
+        function handleStarsPayment() {
+            simulateHaptic();
+            // Note for Dev: Stars button opens WebApp.openInvoice
+            console.log('Action: openInvoice for Telegram Stars');
+            
+            // Visual feedback
+            const btn = document.querySelector('.bg-primary-container');
+            const originalContent = btn.innerHTML;
+            btn.innerHTML = `<span class="material-symbols-outlined animate-spin">refresh</span><span class="font-label-lg text-label-lg font-bold">Обработка...</span>`;
+            
+            setTimeout(() => {
+                btn.innerHTML = originalContent;
+            }, 1500);
+        }
+
+        function handleCardPayment() {
+            simulateHaptic();
+            console.log('Action: Initialize card payment flow');
+        }
+    </script>
+</body></html>

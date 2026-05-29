@@ -3,24 +3,27 @@
 @tailwind utilities;
 
 :root {
-  --tg-bg: #ffffff;
-  --tg-text: #0f172a;
-  --tg-button: #3390ec;
+  --tg-bg: #f4fbf4;
+  --tg-text: #161d19;
+  --tg-button: #10b981;
   --tg-button-text: #ffffff;
-  --tg-secondary-bg: #f4f4f5;
+  --tg-secondary-bg: #eef6ee;
   --tg-safe-bottom: env(safe-area-inset-bottom, 0px);
-  --accent: #e8962a;
-  --accent-light: #fdf3e3;
-  --accent-dark: #b36b0e;
-  --surface-elevated: #f4f4f5;
-  --border-subtle: color-mix(in srgb, var(--tg-text) 10%, transparent);
-  --text-muted: color-mix(in srgb, var(--tg-text) 55%, transparent);
-  --benefit-bg: color-mix(in srgb, var(--accent) 12%, var(--tg-secondary-bg));
-  --benefit-border: color-mix(in srgb, var(--accent) 38%, transparent);
+  --brand: #006c49;
+  --brand-bright: #10b981;
+  --accent: #10b981;
+  --accent-light: rgba(16, 185, 129, 0.12);
+  --accent-dark: #006c49;
+  --surface-elevated: #eef6ee;
+  --border-subtle: rgba(60, 74, 66, 0.14);
+  --text-muted: #707579;
+  --benefit-bg: rgba(16, 185, 129, 0.1);
+  --benefit-border: rgba(16, 185, 129, 0.28);
   --benefit-text: var(--tg-text);
-  --hint-bg: var(--accent-light);
-  --hint-text: var(--accent-dark);
+  --hint-bg: rgba(16, 185, 129, 0.1);
+  --hint-text: #006c49;
   --on-accent: #ffffff;
+  --card-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
 }
 
 * {
@@ -33,12 +36,21 @@ html {
 
 body {
   margin: 0;
-  font-family: "Nunito", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family: "Nunito Sans", "Nunito", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-size: 16px;
   line-height: 1.5;
   background: var(--tg-bg);
   color: var(--tg-text);
   touch-action: manipulation;
+}
+
+.material-symbols-outlined {
+  font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24;
+  user-select: none;
+}
+
+.material-symbols-outlined.filled {
+  font-variation-settings: "FILL" 1, "wght" 400, "GRAD" 0, "opsz" 24;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -52,11 +64,11 @@ body {
 }
 
 .accent-highlight {
-  color: var(--accent);
+  color: var(--brand-bright);
 }
 
 .stat-line {
-  color: var(--accent);
+  color: var(--brand);
   font-weight: 600;
 }
 
@@ -66,7 +78,7 @@ body {
 }
 
 [data-theme-mode="dark"] .stat-number {
-  color: var(--accent);
+  color: var(--brand-bright);
 }
 
 .hint-pill {
@@ -80,45 +92,61 @@ body {
 
 .skill-chip {
   display: inline-block;
-  padding: 0.35rem 0.65rem;
-  border-radius: 9999px;
+  padding: 0.35rem 0.75rem;
+  border-radius: 0.5rem;
   font-size: 0.8125rem;
   font-weight: 600;
-  background: color-mix(in srgb, var(--accent) 18%, var(--tg-secondary-bg));
+  background: var(--tg-secondary-bg);
   color: var(--tg-text);
-  border: 1px solid var(--benefit-border);
+  border: 1px solid var(--border-subtle);
 }
 
-.success-icon {
-  width: 4.5rem;
-  height: 4.5rem;
-  border-radius: 9999px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 2rem;
-  margin: 0 auto;
-  background: color-mix(in srgb, var(--accent) 22%, var(--tg-secondary-bg));
-  border: 2px solid var(--benefit-border);
+.stitch-card {
+  background: var(--surface-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: 0.75rem;
+  box-shadow: var(--card-shadow);
 }
 
-@keyframes shimmer {
+.fixed-bottom-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 40;
+  padding: 1rem 1rem calc(1rem + var(--tg-safe-bottom));
+  background: color-mix(in srgb, var(--tg-bg) 92%, transparent);
+  backdrop-filter: blur(8px);
+  border-top: 1px solid var(--border-subtle);
+}
+
+@keyframes scan-line {
   0% {
-    background-position: -200% 0;
+    transform: translateY(-100%);
   }
   100% {
-    background-position: 200% 0;
+    transform: translateY(100%);
   }
 }
 
-.skeleton-line {
-  border-radius: 0.5rem;
-  background: linear-gradient(
-    90deg,
-    var(--tg-secondary-bg) 0%,
-    color-mix(in srgb, var(--tg-text) 8%, var(--tg-secondary-bg)) 50%,
-    var(--tg-secondary-bg) 100%
-  );
-  background-size: 200% 100%;
-  animation: shimmer 1.4s ease-in-out infinite;
+@keyframes pop-in {
+  0% {
+    transform: scale(0.85);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.05);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.animate-pop-in {
+  animation: pop-in 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+.animate-scan {
+  animation: scan-line 2s linear infinite;
 }

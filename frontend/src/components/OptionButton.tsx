@@ -15,15 +15,15 @@ export function OptionButton({ label, selected, onSelect }: Props) {
       transition={{ type: "spring", stiffness: 400, damping: 17 }}
       aria-pressed={selected}
       className={clsx(
-        "px-4 py-3 rounded-2xl border text-sm font-semibold min-h-[44px]",
+        "min-h-[44px] rounded-xl border px-4 py-3 text-sm font-semibold",
         "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2",
         selected && "shadow-sm",
       )}
       style={{
-        background: selected ? "var(--tg-button)" : "var(--surface-elevated)",
-        color: selected ? "var(--tg-button-text)" : "var(--tg-text)",
-        borderColor: selected ? "transparent" : "var(--border-subtle)",
-        outlineColor: "var(--accent)",
+        background: selected ? "var(--brand-muted)" : "var(--surface-elevated)",
+        color: selected ? "var(--brand)" : "var(--tg-text)",
+        borderColor: selected ? "var(--brand)" : "var(--border-subtle)",
+        outlineColor: "var(--brand-bright)",
       }}
       type="button"
     >

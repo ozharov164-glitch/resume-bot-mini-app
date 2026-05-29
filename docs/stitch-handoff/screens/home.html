@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+
+<html class="light" lang="ru"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
+<title>РезюмеБот</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "error": "#ba1a1a",
+                    "outline": "#6c7a71",
+                    "tertiary-fixed": "#ffdad7",
+                    "on-tertiary-fixed-variant": "#842225",
+                    "on-surface-variant": "#3c4a42",
+                    "inverse-primary": "#4edea3",
+                    "surface-container-high": "#e3eae3",
+                    "surface-dim": "#d4dcd5",
+                    "tg-bg-light": "#ffffff",
+                    "on-primary": "#ffffff",
+                    "on-surface": "#161d19",
+                    "surface-container-low": "#eef6ee",
+                    "secondary-fixed": "#d9e3f1",
+                    "on-secondary-fixed": "#121c26",
+                    "on-primary-container": "#00422b",
+                    "secondary-container": "#d6e1ef",
+                    "error-container": "#ffdad6",
+                    "on-secondary": "#ffffff",
+                    "primary-fixed": "#6ffbbe",
+                    "primary-fixed-dim": "#4edea3",
+                    "tertiary-container": "#fc7c78",
+                    "tertiary": "#a43a3a",
+                    "text-muted-dark": "#aaaaaa",
+                    "tg-secondary-bg-dark": "#242f3d",
+                    "primary-container": "#10b981",
+                    "surface-container-lowest": "#ffffff",
+                    "surface-tint": "#006c49",
+                    "secondary-fixed-dim": "#bdc7d5",
+                    "background": "#f4fbf4",
+                    "surface-variant": "#dde4dd",
+                    "text-muted-light": "#707579",
+                    "on-error": "#ffffff",
+                    "on-primary-fixed": "#002113",
+                    "on-secondary-fixed-variant": "#3e4853",
+                    "on-error-container": "#93000a",
+                    "surface": "#f4fbf4",
+                    "on-tertiary": "#ffffff",
+                    "tertiary-fixed-dim": "#ffb3af",
+                    "on-tertiary-fixed": "#410005",
+                    "primary": "#006c49",
+                    "outline-variant": "#bbcabf",
+                    "surface-bright": "#f4fbf4",
+                    "inverse-surface": "#2b322d",
+                    "tg-bg-dark": "#17212b",
+                    "inverse-on-surface": "#ebf3eb",
+                    "surface-container-highest": "#dde4dd",
+                    "on-primary-fixed-variant": "#005236",
+                    "surface-container": "#e8f0e9",
+                    "on-background": "#161d19",
+                    "brand-muted": "rgba(16, 185, 129, 0.1)",
+                    "secondary": "#555f6b",
+                    "on-tertiary-container": "#711419",
+                    "on-secondary-container": "#59646f",
+                    "tg-secondary-bg-light": "#f4f4f5"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "comfortable": "16px",
+                    "base": "8px",
+                    "container-padding": "16px",
+                    "tight": "4px",
+                    "stack": "24px"
+            },
+            "fontFamily": {
+                    "heading": ["Nunito Sans"],
+                    "label-sm": ["Nunito Sans"],
+                    "label-lg": ["Nunito Sans"],
+                    "display": ["Nunito Sans"],
+                    "body": ["Nunito Sans"]
+            },
+            "fontSize": {
+                    "heading": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                    "label-sm": ["12px", {"lineHeight": "16px", "fontWeight": "500"}],
+                    "label-lg": ["14px", {"lineHeight": "20px", "fontWeight": "600"}],
+                    "display": ["24px", {"lineHeight": "32px", "fontWeight": "700"}],
+                    "body": ["16px", {"lineHeight": "24px", "fontWeight": "400"}]
+            }
+          }
+        }
+      }
+    </script>
+<style>
+        body { -webkit-tap-highlight-color: transparent; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+    </style>
+</head>
+<body class="bg-surface text-on-surface font-body antialiased min-h-screen flex flex-col relative pb-32">
+<!-- TopAppBar -->
+<header class="bg-surface docked full-width top-0 flat no shadows flex items-center justify-between px-container-padding h-14 w-full z-50 sticky">
+<button aria-label="Назад" class="text-primary hover:opacity-80 transition-opacity Active: scale-95 transition-transform duration-150 flex items-center justify-center p-2 -ml-2">
+<span class="material-symbols-outlined">arrow_back</span>
+</button>
+<h1 class="font-heading text-heading font-bold text-on-surface flex-1 text-center">
+            РезюмеБот
+        </h1>
+<button aria-label="Закрыть" class="text-primary hover:opacity-80 transition-opacity Active: scale-95 transition-transform duration-150 flex items-center justify-center p-2 -mr-2">
+<span class="material-symbols-outlined">close</span>
+</button>
+</header>
+<main class="flex-1 px-container-padding pt-base flex flex-col gap-stack">
+<!-- Founder Badge -->
+<div class="flex justify-center">
+<div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-surface-container-high border border-outline-variant/30">
+<span class="material-symbols-outlined text-primary text-[16px]" style="font-variation-settings: 'FILL' 1;">workspace_premium</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Режим основателя · безлимит</span>
+</div>
+</div>
+<!-- Hero Section -->
+<div class="flex flex-col gap-comfortable text-center">
+<h2 class="font-display text-display text-on-surface leading-tight">
+                Ваше профессиональное резюме за 5 минут.
+            </h2>
+<p class="font-body text-body text-on-surface-variant">
+                Помогаем водителям, строителям и мастерам получить работу мечты.
+            </p>
+</div>
+<!-- Illustration -->
+<div class="w-full rounded-xl overflow-hidden shadow-sm border border-outline-variant/20 bg-surface-container-lowest">
+<img alt="" class="w-full h-auto object-cover block" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBfWs_krYpCzoOd84aJ0YTY3X_-A6bCwkKg0uP2V4i7ct0odx4LNDdMGQRfvTJ88ZXv-smfGAWLQDILm5y7K1_Q5jnvpqbR3v5ja3Hkl0gq4V02koXW6rnS5VwGxbD3f5ywsfey6t42P0sT9S1vAfAjnyunFJYZpBMHkCJDww4p8cobBC6NbP2QH921rvFHVlppWMAxgrI4ZKlO0dfP1GKKJllA2G_cwv61R7Jnl7utwabqUG0yGK4I2ziC1NthVmGvjIBp6KwhHseW"/>
+</div>
+<!-- Trust & Social Proof -->
+<div class="flex flex-col gap-tight items-center text-center">
+<div class="flex items-center justify-center gap-2 text-primary font-label-lg text-label-lg">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">verified</span>
+<span>Соответствует стандартам hh.ru</span>
+</div>
+<p class="font-label-sm text-label-sm text-outline">
+                Уже помогли 12,450 людям
+            </p>
+</div>
+<!-- Benefit Cards (Bento style) -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-comfortable">
+<div class="bg-surface-container-low rounded-xl p-comfortable flex items-start gap-comfortable border border-outline-variant/30 shadow-[0_4px_20px_rgba(0,0,0,0.02)]">
+<div class="w-10 h-10 rounded-full bg-brand-muted flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">edit_document</span>
+</div>
+<div class="flex flex-col gap-1 mt-1">
+<span class="font-label-lg text-label-lg text-on-surface">ИИ напишет текст за тебя</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Просто ответь на пару вопросов.</span>
+</div>
+</div>
+<div class="bg-surface-container-low rounded-xl p-comfortable flex items-start gap-comfortable border border-outline-variant/30 shadow-[0_4px_20px_rgba(0,0,0,0.02)]">
+<div class="w-10 h-10 rounded-full bg-brand-muted flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">picture_as_pdf</span>
+</div>
+<div class="flex flex-col gap-1 mt-1">
+<span class="font-label-lg text-label-lg text-on-surface">Готовый PDF в чат сразу</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Скачай и отправляй работодателю.</span>
+</div>
+</div>
+</div>
+</main>
+<!-- Fixed Bottom CTA Container (Telegram Native Feel) -->
+<div class="fixed bottom-0 left-0 w-full px-container-padding py-comfortable bg-surface/90 backdrop-blur-sm border-t border-outline-variant/20 z-50">
+<button class="w-full bg-primary-container text-on-primary font-label-lg text-label-lg rounded-xl h-[52px] flex items-center justify-center gap-2 hover:opacity-90 active:scale-[0.98] transition-all duration-200 shadow-sm">
+            Создать резюме
+            <span class="material-symbols-outlined text-[20px]">arrow_forward</span>
+</button>
+</div>
+</body></html>

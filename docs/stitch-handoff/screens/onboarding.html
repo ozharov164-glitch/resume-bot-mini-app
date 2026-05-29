@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+
+<html lang="ru"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>РезюмеБот - Onboarding Step 3</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                            "error": "#ba1a1a",
+                            "outline": "#6c7a71",
+                            "tertiary-fixed": "#ffdad7",
+                            "on-tertiary-fixed-variant": "#842225",
+                            "on-surface-variant": "#3c4a42",
+                            "inverse-primary": "#4edea3",
+                            "surface-container-high": "#e3eae3",
+                            "surface-dim": "#d4dcd5",
+                            "tg-bg-light": "#ffffff",
+                            "on-primary": "#ffffff",
+                            "on-surface": "#161d19",
+                            "surface-container-low": "#eef6ee",
+                            "secondary-fixed": "#d9e3f1",
+                            "on-secondary-fixed": "#121c26",
+                            "on-primary-container": "#00422b",
+                            "secondary-container": "#d6e1ef",
+                            "error-container": "#ffdad6",
+                            "on-secondary": "#ffffff",
+                            "primary-fixed": "#6ffbbe",
+                            "primary-fixed-dim": "#4edea3",
+                            "tertiary-container": "#fc7c78",
+                            "tertiary": "#a43a3a",
+                            "text-muted-dark": "#aaaaaa",
+                            "tg-secondary-bg-dark": "#242f3d",
+                            "primary-container": "#10b981",
+                            "surface-container-lowest": "#ffffff",
+                            "surface-tint": "#006c49",
+                            "secondary-fixed-dim": "#bdc7d5",
+                            "background": "#f4fbf4",
+                            "surface-variant": "#dde4dd",
+                            "text-muted-light": "#707579",
+                            "on-error": "#ffffff",
+                            "on-primary-fixed": "#002113",
+                            "on-secondary-fixed-variant": "#3e4853",
+                            "on-error-container": "#93000a",
+                            "surface": "#f4fbf4",
+                            "on-tertiary": "#ffffff",
+                            "tertiary-fixed-dim": "#ffb3af",
+                            "on-tertiary-fixed": "#410005",
+                            "primary": "#006c49",
+                            "outline-variant": "#bbcabf",
+                            "surface-bright": "#f4fbf4",
+                            "inverse-surface": "#2b322d",
+                            "tg-bg-dark": "#17212b",
+                            "inverse-on-surface": "#ebf3eb",
+                            "surface-container-highest": "#dde4dd",
+                            "on-primary-fixed-variant": "#005236",
+                            "surface-container": "#e8f0e9",
+                            "on-background": "#161d19",
+                            "brand-muted": "rgba(16, 185, 129, 0.1)",
+                            "secondary": "#555f6b",
+                            "on-tertiary-container": "#711419",
+                            "on-secondary-container": "#59646f",
+                            "tg-secondary-bg-light": "#f4f4f5"
+                    },
+                    "borderRadius": {
+                            "DEFAULT": "0.25rem",
+                            "lg": "0.5rem",
+                            "xl": "0.75rem",
+                            "full": "9999px"
+                    },
+                    "spacing": {
+                            "comfortable": "16px",
+                            "base": "8px",
+                            "container-padding": "16px",
+                            "tight": "4px",
+                            "stack": "24px"
+                    },
+                    "fontFamily": {
+                            "heading": ["Nunito Sans"],
+                            "label-sm": ["Nunito Sans"],
+                            "label-lg": ["Nunito Sans"],
+                            "display": ["Nunito Sans"],
+                            "body": ["Nunito Sans"]
+                    },
+                    "fontSize": {
+                            "heading": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                            "label-sm": ["12px", {"lineHeight": "16px", "fontWeight": "500"}],
+                            "label-lg": ["14px", {"lineHeight": "20px", "fontWeight": "600"}],
+                            "display": ["24px", {"lineHeight": "32px", "fontWeight": "700"}],
+                            "body": ["16px", {"lineHeight": "24px", "fontWeight": "400"}]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface text-on-surface min-h-screen flex flex-col font-body text-body selection:bg-brand-muted selection:text-primary">
+<!-- TopAppBar -->
+<header class="bg-surface dark:bg-tg-bg-dark flex items-center justify-between px-container-padding h-14 w-full docked full-width top-0 sticky z-50 transition-all duration-300">
+<button aria-label="Назад" class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-surface-variant transition-colors text-primary dark:text-primary-fixed hover:opacity-80 transition-opacity active:scale-95 duration-150">
+<span class="material-symbols-outlined" data-icon="arrow_back">arrow_back</span>
+</button>
+<h1 class="font-heading text-heading font-bold text-on-surface dark:text-on-surface-variant text-center flex-1">РезюмеБот</h1>
+<button aria-label="Закрыть" class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-surface-variant transition-colors text-primary dark:text-primary-fixed hover:opacity-80 transition-opacity active:scale-95 duration-150">
+<span class="material-symbols-outlined" data-icon="close">close</span>
+</button>
+</header>
+<!-- Main Content Canvas -->
+<main class="flex-1 flex flex-col px-container-padding pt-stack pb-32 max-w-md mx-auto w-full">
+<!-- Progress Indicator -->
+<div class="mb-stack w-full flex flex-col gap-tight">
+<div class="flex justify-between items-center px-1">
+<span class="font-label-sm text-label-sm text-text-muted-light uppercase tracking-wider">Шаг 3 из 8</span>
+<span class="font-label-sm text-label-sm text-primary font-bold">38%</span>
+</div>
+<div class="h-2 bg-surface-variant rounded-full overflow-hidden flex w-full">
+<div class="h-full bg-primary transition-all duration-500 ease-out" style="width: 37.5%;"></div>
+</div>
+</div>
+<!-- Headline & Context -->
+<div class="mb-stack text-center">
+<h2 class="font-display text-display text-on-surface mb-tight">Какую работу ты ищешь?</h2>
+<p class="font-body text-body text-text-muted-light">Выбери профессию из списка или напиши свой вариант.</p>
+</div>
+<!-- Option Chips Grid (Bento Style) -->
+<div class="grid grid-cols-2 gap-comfortable mb-stack">
+<!-- Chip 1 -->
+<label class="cursor-pointer group relative">
+<input class="peer sr-only" name="role" type="radio" value="driver"/>
+<div class="flex flex-col items-center justify-center p-comfortable rounded-xl bg-tg-secondary-bg-light border border-transparent transition-all duration-200 ease-in-out peer-checked:bg-brand-muted peer-checked:border-primary peer-checked:shadow-sm hover:bg-surface-variant h-32 active:scale-95">
+<span class="material-symbols-outlined text-4xl mb-tight text-secondary peer-checked:text-primary transition-colors" data-icon="local_shipping">local_shipping</span>
+<span class="font-label-lg text-label-lg text-on-surface text-center peer-checked:text-primary transition-colors">Водитель</span>
+</div>
+<!-- Selection indicator dot -->
+<div class="absolute top-3 right-3 w-4 h-4 rounded-full border-2 border-outline-variant peer-checked:border-primary flex items-center justify-center bg-surface transition-colors">
+<div class="w-2 h-2 rounded-full bg-primary scale-0 peer-checked:scale-100 transition-transform duration-200"></div>
+</div>
+</label>
+<!-- Chip 2 -->
+<label class="cursor-pointer group relative">
+<input class="peer sr-only" name="role" type="radio" value="builder"/>
+<div class="flex flex-col items-center justify-center p-comfortable rounded-xl bg-tg-secondary-bg-light border border-transparent transition-all duration-200 ease-in-out peer-checked:bg-brand-muted peer-checked:border-primary peer-checked:shadow-sm hover:bg-surface-variant h-32 active:scale-95">
+<span class="material-symbols-outlined text-4xl mb-tight text-secondary peer-checked:text-primary transition-colors" data-icon="construction">construction</span>
+<span class="font-label-lg text-label-lg text-on-surface text-center peer-checked:text-primary transition-colors">Строитель</span>
+</div>
+<div class="absolute top-3 right-3 w-4 h-4 rounded-full border-2 border-outline-variant peer-checked:border-primary flex items-center justify-center bg-surface transition-colors">
+<div class="w-2 h-2 rounded-full bg-primary scale-0 peer-checked:scale-100 transition-transform duration-200"></div>
+</div>
+</label>
+<!-- Chip 3 -->
+<label class="cursor-pointer group relative">
+<input class="peer sr-only" name="role" type="radio" value="courier"/>
+<div class="flex flex-col items-center justify-center p-comfortable rounded-xl bg-tg-secondary-bg-light border border-transparent transition-all duration-200 ease-in-out peer-checked:bg-brand-muted peer-checked:border-primary peer-checked:shadow-sm hover:bg-surface-variant h-32 active:scale-95">
+<span class="material-symbols-outlined text-4xl mb-tight text-secondary peer-checked:text-primary transition-colors" data-icon="directions_run">directions_run</span>
+<span class="font-label-lg text-label-lg text-on-surface text-center peer-checked:text-primary transition-colors">Курьер</span>
+</div>
+<div class="absolute top-3 right-3 w-4 h-4 rounded-full border-2 border-outline-variant peer-checked:border-primary flex items-center justify-center bg-surface transition-colors">
+<div class="w-2 h-2 rounded-full bg-primary scale-0 peer-checked:scale-100 transition-transform duration-200"></div>
+</div>
+</label>
+<!-- Chip 4 -->
+<label class="cursor-pointer group relative">
+<input class="peer sr-only" name="role" type="radio" value="master"/>
+<div class="flex flex-col items-center justify-center p-comfortable rounded-xl bg-tg-secondary-bg-light border border-transparent transition-all duration-200 ease-in-out peer-checked:bg-brand-muted peer-checked:border-primary peer-checked:shadow-sm hover:bg-surface-variant h-32 active:scale-95">
+<span class="material-symbols-outlined text-4xl mb-tight text-secondary peer-checked:text-primary transition-colors" data-icon="handyman">handyman</span>
+<span class="font-label-lg text-label-lg text-on-surface text-center peer-checked:text-primary transition-colors">Мастер</span>
+</div>
+<div class="absolute top-3 right-3 w-4 h-4 rounded-full border-2 border-outline-variant peer-checked:border-primary flex items-center justify-center bg-surface transition-colors">
+<div class="w-2 h-2 rounded-full bg-primary scale-0 peer-checked:scale-100 transition-transform duration-200"></div>
+</div>
+</label>
+<!-- Chip 5 -->
+<label class="cursor-pointer group relative">
+<input class="peer sr-only" name="role" type="radio" value="welder"/>
+<div class="flex flex-col items-center justify-center p-comfortable rounded-xl bg-tg-secondary-bg-light border border-transparent transition-all duration-200 ease-in-out peer-checked:bg-brand-muted peer-checked:border-primary peer-checked:shadow-sm hover:bg-surface-variant h-32 active:scale-95">
+<span class="material-symbols-outlined text-4xl mb-tight text-secondary peer-checked:text-primary transition-colors" data-icon="welder">home_repair_service</span>
+<span class="font-label-lg text-label-lg text-on-surface text-center peer-checked:text-primary transition-colors">Сварщик</span>
+</div>
+<div class="absolute top-3 right-3 w-4 h-4 rounded-full border-2 border-outline-variant peer-checked:border-primary flex items-center justify-center bg-surface transition-colors">
+<div class="w-2 h-2 rounded-full bg-primary scale-0 peer-checked:scale-100 transition-transform duration-200"></div>
+</div>
+</label>
+<!-- Chip 6 (Other) -->
+<label class="cursor-pointer group relative" id="otherOptionLabel">
+<input class="peer sr-only" id="otherRadio" name="role" type="radio" value="other"/>
+<div class="flex flex-col items-center justify-center p-comfortable rounded-xl bg-tg-secondary-bg-light border border-transparent transition-all duration-200 ease-in-out peer-checked:bg-brand-muted peer-checked:border-primary peer-checked:shadow-sm hover:bg-surface-variant h-32 active:scale-95">
+<span class="material-symbols-outlined text-4xl mb-tight text-secondary peer-checked:text-primary transition-colors" data-icon="more_horiz">more_horiz</span>
+<span class="font-label-lg text-label-lg text-on-surface text-center peer-checked:text-primary transition-colors">Другое</span>
+</div>
+<div class="absolute top-3 right-3 w-4 h-4 rounded-full border-2 border-outline-variant peer-checked:border-primary flex items-center justify-center bg-surface transition-colors">
+<div class="w-2 h-2 rounded-full bg-primary scale-0 peer-checked:scale-100 transition-transform duration-200"></div>
+</div>
+</label>
+</div>
+<!-- Hidden input for "Other" -->
+<div class="hidden opacity-0 transform translate-y-2 transition-all duration-300 mb-stack" id="otherInputContainer">
+<label class="block font-label-lg text-label-lg text-on-surface mb-tight ml-1" for="customRole">Укажите свою профессию</label>
+<div class="relative">
+<input class="w-full bg-tg-secondary-bg-light border-none rounded-xl px-comfortable py-3 font-body text-body text-on-surface placeholder-text-muted-light focus:ring-2 focus:ring-primary focus:bg-surface transition-colors outline-none h-[48px]" id="customRole" placeholder="Например, Электрик" type="text"/>
+</div>
+</div>
+</main>
+<!-- Fixed Bottom CTA (MainButton Area) -->
+<div class="fixed bottom-0 left-0 right-0 bg-surface/80 backdrop-blur-md px-container-padding py-comfortable z-50 flex justify-center border-t border-surface-variant shadow-[0_-4px_20px_rgba(0,0,0,0.03)]">
+<button class="w-full max-w-md bg-primary-container text-on-primary rounded-xl font-label-lg text-label-lg py-3 px-comfortable min-h-[48px] flex items-center justify-center hover:opacity-90 transition-opacity active:scale-[0.98] duration-150 shadow-sm" id="mainCTA">
+            Далее
+        </button>
+</div>
+<!-- Micro-interactions Script -->
+<script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const radioButtons = document.querySelectorAll('input[name="role"]');
+            const otherInputContainer = document.getElementById('otherInputContainer');
+            const customRoleInput = document.getElementById('customRole');
+            const mainCTA = document.getElementById('mainCTA');
+
+            // Handle "Other" selection logic
+            radioButtons.forEach(radio => {
+                radio.addEventListener('change', (e) => {
+                    // Visual haptic feedback simulation
+                    if(navigator.vibrate) navigator.vibrate(50);
+                    
+                    if (e.target.value === 'other') {
+                        otherInputContainer.classList.remove('hidden');
+                        // Small delay to allow display:block to apply before animating opacity
+                        setTimeout(() => {
+                            otherInputContainer.classList.remove('opacity-0', 'translate-y-2');
+                            otherInputContainer.classList.add('opacity-100', 'translate-y-0');
+                            customRoleInput.focus();
+                        }, 10);
+                    } else {
+                        otherInputContainer.classList.remove('opacity-100', 'translate-y-0');
+                        otherInputContainer.classList.add('opacity-0', 'translate-y-2');
+                        setTimeout(() => {
+                            otherInputContainer.classList.add('hidden');
+                        }, 300);
+                        customRoleInput.value = ''; // Clear input if not selected
+                    }
+                });
+            });
+
+            // CTA Click Interaction
+            mainCTA.addEventListener('click', () => {
+                const selectedRole = document.querySelector('input[name="role"]:checked');
+                if (!selectedRole) {
+                    // Simple shake animation if nothing is selected
+                    mainCTA.classList.add('animate-pulse', 'bg-error');
+                    setTimeout(() => mainCTA.classList.remove('animate-pulse', 'bg-error'), 500);
+                    return;
+                }
+                
+                // Add loading state to button
+                const originalText = mainCTA.innerHTML;
+                mainCTA.innerHTML = '<span class="material-symbols-outlined animate-spin" data-icon="progress_activity">progress_activity</span>';
+                
+                // Simulate transition
+                setTimeout(() => {
+                    mainCTA.innerHTML = originalText;
+                }, 800);
+            });
+        });
+    </script>
+</body></html>
