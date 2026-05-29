@@ -408,7 +408,9 @@ def generate_preview_png(
 ) -> bytes:
     """First-page PNG for unpaid preview — not a downloadable PDF."""
     document = _render_document(resume_data, template_name, preview=watermark)
-    page = document.copy(document.pages[0]) if document.pages else document
     buffer = io.BytesIO()
-    page.write_png(buffer, resolution=resolution)
+    if document.pages:
+        document.pages[0].write_png(buffer, resolution=resolution)
+    else:
+        document.write_png(buffer, resolution=resolution)
     return buffer.getvalue()
