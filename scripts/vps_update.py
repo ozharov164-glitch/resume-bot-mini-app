@@ -26,9 +26,9 @@ git fetch origin main
 git reset --hard origin/main
 cd backend && ./venv/bin/pip install -q -r requirements.txt
 if grep -q '^FOUNDER_TELEGRAM_IDS=' .env 2>/dev/null; then
-  sed -i 's/^FOUNDER_TELEGRAM_IDS=.*/FOUNDER_TELEGRAM_IDS=1003598434943/' .env
+  sed -i 's/^FOUNDER_TELEGRAM_IDS=.*/FOUNDER_TELEGRAM_IDS=7595981350/' .env
 else
-  echo 'FOUNDER_TELEGRAM_IDS=1003598434943' >> .env
+  echo 'FOUNDER_TELEGRAM_IDS=7595981350' >> .env
 fi
 systemctl restart resumebot-api resumebot-bot
 sleep 2

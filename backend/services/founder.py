@@ -1,6 +1,6 @@
 from config import settings
 
-_DEFAULT_FOUNDER_IDS = {1003598434943}
+_DEFAULT_FOUNDER_IDS = {7595981350}
 
 
 def founder_telegram_ids() -> set[int]:

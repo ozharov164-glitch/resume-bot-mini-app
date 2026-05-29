@@ -1,5 +1,5 @@
 /** Must match backend FOUNDER_TELEGRAM_IDS (UI hint; enforcement is server-side). */
-export const FOUNDER_TELEGRAM_IDS: readonly number[] = [1003598434943];
+export const FOUNDER_TELEGRAM_IDS: readonly number[] = [7595981350];
 
 export function isFounderTelegramId(id: number | string | undefined | null): boolean {
   if (id === undefined || id === null || id === "") return false;
