@@ -1,9 +1,8 @@
 import { AnimatePresence, motion } from "motion/react";
-import { useEffect, useRef, type RefObject } from "react";
+import { useCallback, useEffect, useRef, useState, type RefObject } from "react";
 
 interface VoiceRecordingBarProps {
   visible: boolean;
-  recordSeconds: number;
   canvasRef: RefObject<HTMLCanvasElement | null>;
   onStop: () => void;
 }
@@ -14,7 +13,20 @@ function formatTime(seconds: number) {
   return `${m}:${String(s).padStart(2, "0")}`;
 }
 
-export function VoiceRecordingBar({ visible, recordSeconds, canvasRef, onStop }: VoiceRecordingBarProps) {
+export function VoiceRecordingBar({ visible, canvasRef, onStop }: VoiceRecordingBarProps) {
+  const [elapsed, setElapsed] = useState(0);
+
+  useEffect(() => {
+    if (!visible) {
+      setElapsed(0);
+      return;
+    }
+
+    setElapsed(0);
+    const id = window.setInterval(() => setElapsed((s) => s + 1), 1000);
+    return () => window.clearInterval(id);
+  }, [visible]);
+
   return (
     <AnimatePresence>
       {visible && (
@@ -38,7 +50,7 @@ export function VoiceRecordingBar({ visible, recordSeconds, canvasRef, onStop }:
             />
           </div>
 
-          <span className="vr-timer">{formatTime(recordSeconds)}</span>
+          <span className="vr-timer">{formatTime(elapsed)}</span>
 
           <button
             type="button"
@@ -89,7 +101,7 @@ export function useVoiceWaveform(canvasRef: RefObject<HTMLCanvasElement | null>)
   const audioCtxRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
 
-  const stop = () => {
+  const stop = useCallback(() => {
     if (animRef.current) cancelAnimationFrame(animRef.current);
     if (audioCtxRef.current) {
       audioCtxRef.current.close();
@@ -99,9 +111,9 @@ export function useVoiceWaveform(canvasRef: RefObject<HTMLCanvasElement | null>)
     heightsRef.current = [];
     const canvas = canvasRef.current;
     canvas?.getContext("2d")?.clearRect(0, 0, canvas.width, canvas.height);
-  };
+  }, [canvasRef]);
 
-  const start = (stream: MediaStream) => {
+  const start = useCallback((stream: MediaStream) => {
     stop();
     const ctx = new AudioContext();
     const analyser = ctx.createAnalyser();
@@ -156,9 +168,9 @@ export function useVoiceWaveform(canvasRef: RefObject<HTMLCanvasElement | null>)
     };
 
     draw();
-  };
+  }, [canvasRef, stop]);
 
-  useEffect(() => () => stop(), []);
+  useEffect(() => () => stop(), [stop]);
 
   return { start, stop };
 }

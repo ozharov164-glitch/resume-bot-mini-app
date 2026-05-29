@@ -44,8 +44,6 @@ export function VoiceTextArea({
   const chunksRef = useRef<Blob[]>([]);
   const streamRef = useRef<MediaStream | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const timerRef = useRef<ReturnType<typeof setInterval>>();
-  const [recordSeconds, setRecordSeconds] = useState(0);
   const targetPosition = useAppStore((s) => s.answers.target_position ?? "");
 
   const { start: startWaveform, stop: stopWaveform } = useVoiceWaveform(canvasRef);
@@ -91,7 +89,6 @@ export function VoiceTextArea({
     mediaRecorderRef.current = null;
     setListening(false);
     stopWaveform();
-    clearInterval(timerRef.current);
     getTg()?.HapticFeedback?.impactOccurred("light");
   }, [stopWaveform]);
 
@@ -122,8 +119,6 @@ export function VoiceTextArea({
         streamRef.current?.getTracks().forEach((track) => track.stop());
         streamRef.current = null;
         stopWaveform();
-        clearInterval(timerRef.current);
-        setRecordSeconds(0);
         const blob = new Blob(chunksRef.current, {
           type: recorder.mimeType || mimeType || "audio/webm",
         });
@@ -137,8 +132,6 @@ export function VoiceTextArea({
       setListening(true);
       getTg()?.HapticFeedback?.impactOccurred("medium");
       startWaveform(stream);
-      setRecordSeconds(0);
-      timerRef.current = setInterval(() => setRecordSeconds((s) => s + 1), 1000);
     } catch {
       getTg()?.HapticFeedback?.notificationOccurred("error");
       alert("Нет доступа к микрофону. Разреши запись в настройках Telegram/браузера.");
@@ -180,12 +173,7 @@ export function VoiceTextArea({
     }
   }, [onChange, polishing, targetPosition, value, workCompany, workPeriod, workPosition]);
 
-  useEffect(() => {
-    return () => {
-      stopWaveform();
-      clearInterval(timerRef.current);
-    };
-  }, [stopWaveform]);
+  useEffect(() => () => stopWaveform(), [stopWaveform]);
 
   const showMicButton = micAvailable && !listening && !transcribing;
 
@@ -204,12 +192,7 @@ export function VoiceTextArea({
         </p>
       )}
 
-      <VoiceRecordingBar
-        visible={listening}
-        recordSeconds={recordSeconds}
-        canvasRef={canvasRef}
-        onStop={stopRecording}
-      />
+      <VoiceRecordingBar visible={listening} canvasRef={canvasRef} onStop={stopRecording} />
 
       <VoiceTranscribingBar visible={transcribing} />
 
