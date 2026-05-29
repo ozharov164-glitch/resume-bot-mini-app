@@ -22,6 +22,11 @@ async def _dadata_party(query: str, limit: int) -> list[dict[str, str]]:
                 json={"query": query, "count": limit},
             )
             if r.status_code != 200:
+                logger.warning(
+                    "DaData suggest/party HTTP %s: %s",
+                    r.status_code,
+                    r.text[:200],
+                )
                 return []
             suggestions = r.json().get("suggestions", [])
             results: list[dict[str, str]] = []
