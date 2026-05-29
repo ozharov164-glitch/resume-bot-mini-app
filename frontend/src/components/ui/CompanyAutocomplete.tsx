@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { ensureAuthToken } from "../../api";
+import { TextInput } from "./TextField";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
@@ -50,17 +51,22 @@ export function CompanyAutocomplete({ value, onChange, placeholder, id }: Props)
 
   return (
     <div className="relative">
-      <input
+      <TextInput
         id={id}
-        type="text"
         value={value}
         onChange={(e) => onChange(e.target.value)}
         onBlur={() => setTimeout(() => setOpen(false), 150)}
         placeholder={placeholder}
-        className="w-full rounded-xl border border-zinc-700 bg-zinc-900 px-4 py-3 text-sm text-white placeholder-zinc-500 focus:border-[#2de08a] focus:outline-none"
+        autoComplete="organization"
       />
       {open && suggestions.length > 0 && (
-        <div className="absolute left-0 right-0 top-full z-50 mt-1 rounded-xl border border-zinc-700 bg-zinc-900 shadow-xl overflow-hidden">
+        <div
+          className="absolute left-0 right-0 top-full z-50 mt-1 overflow-hidden rounded-xl border shadow-xl"
+          style={{
+            borderColor: "var(--border-subtle)",
+            background: "var(--surface-elevated)",
+          }}
+        >
           {suggestions.map((s, i) => (
             <button
               key={i}
@@ -70,10 +76,15 @@ export function CompanyAutocomplete({ value, onChange, placeholder, id }: Props)
                 setOpen(false);
                 setSuggestions([]);
               }}
-              className="flex w-full flex-col px-4 py-2.5 text-left hover:bg-zinc-800 transition-colors"
+              className="flex w-full flex-col px-4 py-2.5 text-left transition-colors hover:opacity-90"
+              style={{ color: "var(--tg-text)" }}
             >
-              <span className="text-sm font-medium text-white">{s.name}</span>
-              {s.hint && <span className="text-xs text-zinc-500 mt-0.5">{s.hint}</span>}
+              <span className="text-sm font-medium">{s.name}</span>
+              {s.hint && (
+                <span className="mt-0.5 text-xs" style={{ color: "var(--text-muted)" }}>
+                  {s.hint}
+                </span>
+              )}
             </button>
           ))}
         </div>

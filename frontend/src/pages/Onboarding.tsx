@@ -8,7 +8,6 @@ import { ProgressBar } from "../components/ProgressBar";
 import { AppHeader } from "../components/ui/AppHeader";
 import { Button } from "../components/ui/Button";
 import { FixedBottomBar } from "../components/ui/FixedBottomBar";
-import { CompanyAutocomplete } from "../components/ui/CompanyAutocomplete";
 import { Screen } from "../components/ui/Screen";
 import { TextInput } from "../components/ui/TextField";
 import { VoiceTextArea } from "../components/ui/VoiceTextArea";
@@ -19,6 +18,7 @@ import {
   PROFESSION_PRESETS,
   SALARY_CUSTOM_OPTION,
   buildLastJobFromWorkHistory,
+  deriveExperienceLevel,
   getVisibleSteps,
   normalizeSalaryDigits,
   professionOtherSelected,
@@ -209,6 +209,8 @@ export function OnboardingPage() {
       const state = useAppStore.getState();
       const payload = { ...state.answers };
       const last_job = buildLastJobFromWorkHistory(state.answers.work_history);
+      payload.experience_level = deriveExperienceLevel(state.answers.work_history);
+      setAnswer("experience_level", payload.experience_level);
       if (last_job) {
         payload.last_job = last_job;
       }
@@ -390,15 +392,7 @@ export function OnboardingPage() {
               />
             )}
 
-            {showTextInput && current.type !== "profession" && current.id === "education_place" && (
-              <CompanyAutocomplete
-                value={value}
-                onChange={setValue}
-                placeholder={current.placeholder}
-              />
-            )}
-
-            {showTextInput && current.type !== "profession" && current.id !== "education_place" && (
+            {showTextInput && current.type !== "profession" && (
               <TextInput
                 value={value}
                 onChange={(e) => setValue(e.target.value)}

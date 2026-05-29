@@ -60,12 +60,6 @@ export const ONBOARDING_STEPS: OnboardingStep[] = [
     placeholder: "Например: водитель-экспедитор",
   },
   {
-    id: "experience_level",
-    question: "Твой уровень опыта",
-    type: "options",
-    options: ["Нет опыта", "До года", "1-3 года", "3-5 лет", "5+ лет"],
-  },
-  {
     id: "salary",
     question: "Желаемая зарплата?",
     type: "options_with_input",
@@ -131,10 +125,18 @@ export const ONBOARDING_STEPS: OnboardingStep[] = [
   },
 ];
 
-export const OPTIONS_ONLY = new Set(["experience_level", "education", "languages"]);
+export const OPTIONS_ONLY = new Set(["education", "languages"]);
 
 export function getVisibleSteps(answers: Partial<UserAnswers>): OnboardingStep[] {
   return ONBOARDING_STEPS.filter((s) => !s.showIf || s.showIf(answers));
+}
+
+export function deriveExperienceLevel(workHistory: WorkEntry[] | undefined): string {
+  const entries = workHistory || [];
+  const hasExp = entries.some(
+    (j) => j.company.trim() || j.duties.trim() || j.period.trim() || j.position.trim(),
+  );
+  return hasExp ? "Есть опыт" : "Нет опыта";
 }
 
 export function buildLastJobFromWorkHistory(workHistory: WorkEntry[] | undefined): string {

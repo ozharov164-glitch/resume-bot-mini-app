@@ -171,11 +171,44 @@ async def transcribe_audio(audio_bytes: bytes, filename: str, content_type: str)
 
 
 async def polish_experience_text(text: str, position: str) -> str:
+    if not text.strip():
+        return text
+
+    body = {
+        "model": settings.GROQ_PUNCTUATE_MODEL,
+        "messages": [
+            {"role": "system", "content": POLISH_PROMPT},
+            {"role": "user", "content": f"Должность: {position}\nТекст: {text}"},
+        ],
+        "temperature": 0.35,
+        "max_tokens": 512,
+    }
+
+    def build_request(key: str) -> httpx.Request:
+        return httpx.Request(
+            "POST",
+            GROQ_CHAT_URL,
+            headers={
+                "Authorization": f"Bearer {key}",
+                "Content-Type": "application/json",
+            },
+            json=body,
+        )
+
+    try:
+        response = await _groq_request(build_request, operation="polish")
+        data = response.json()
+        content = ((data.get("choices") or [{}])[0].get("message") or {}).get("content") or ""
+        polished = content.strip()
+        return polished or text
+    except Exception as exc:
+        logger.warning("groq polish failed, trying openrouter: %s", exc)
+
     messages = [
         {"role": "system", "content": POLISH_PROMPT},
         {"role": "user", "content": f"Должность: {position}\nТекст: {text}"},
     ]
-    body = {
+    or_body = {
         "model": settings.OPENROUTER_MODEL,
         "messages": messages,
         "temperature": 0.4,
@@ -191,16 +224,14 @@ async def polish_experience_text(text: str, position: str) -> str:
                 "HTTP-Referer": settings.OPENROUTER_APP_URL,
                 "X-Title": "ResumeBot",
             },
-            json=body,
+            json=or_body,
         )
         response.raise_for_status()
         data = response.json()
 
     choices = data.get("choices") or []
     if not choices:
-        logger.warning("voice polish: empty choices")
         return text
 
     content = (choices[0].get("message") or {}).get("content") or ""
-    polished = content.strip()
-    return polished or text
+    return content.strip() or text

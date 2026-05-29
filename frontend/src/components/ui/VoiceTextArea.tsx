@@ -200,10 +200,15 @@ export function VoiceTextArea({
       });
       if (!res.ok) throw new Error("polish failed");
       const data = (await res.json()) as { polished?: string };
-      if (data.polished) onChange(data.polished);
-      getTg()?.HapticFeedback?.notificationOccurred("success");
+      if (data.polished) {
+        onChange(data.polished);
+        getTg()?.HapticFeedback?.notificationOccurred("success");
+      } else {
+        getTg()?.HapticFeedback?.notificationOccurred("warning");
+      }
     } catch {
       getTg()?.HapticFeedback?.notificationOccurred("error");
+      alert("Не удалось улучшить текст. Попробуй ещё раз через пару секунд.");
     } finally {
       setPolishing(false);
     }

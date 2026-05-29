@@ -18,6 +18,22 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/resume", tags=["resume"])
 
 
+def _as_str(value: object) -> str:
+    if value is None:
+        return ""
+    return str(value).strip()
+
+
+def _normalize_resume_fields(resume_data: dict) -> dict:
+    """AI JSON may return salary/year as numbers — normalize for PDF and storage."""
+    if "salary" in resume_data:
+        resume_data["salary"] = _as_str(resume_data.get("salary"))
+    for edu in resume_data.get("education") or []:
+        if isinstance(edu, dict) and "year" in edu:
+            edu["year"] = _as_str(edu.get("year"))
+    return resume_data
+
+
 @router.post("/generate", response_model=ResumeGenerationResponse)
 async def create_resume(
     user_data: GenerateResumeRequest,
@@ -26,10 +42,11 @@ async def create_resume(
 ):
     try:
         resume_data = await generate_resume(user_data.model_dump())
-        salary_user = (user_data.salary or "").strip()
-        if salary_user and not (resume_data.get("salary") or "").strip():
+        resume_data = _normalize_resume_fields(resume_data)
+        salary_user = _as_str(user_data.salary)
+        if salary_user and not _as_str(resume_data.get("salary")):
             resume_data["salary"] = salary_user
-        certs_user = (user_data.certificates or "").strip()
+        certs_user = _as_str(user_data.certificates)
         if certs_user and not resume_data.get("certificates"):
             resume_data["certificates"] = [
                 c.strip() for c in certs_user.replace("\n", ",").split(",") if c.strip()

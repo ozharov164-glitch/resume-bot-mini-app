@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 
+import { PreviewResumeCard } from "../components/preview/PreviewResumeCard";
 import { PreviewStatusHero } from "../components/preview/PreviewStatusHero";
 import { ensureAuthToken, requestPdf } from "../api";
 import { AppHeader } from "../components/ui/AppHeader";
@@ -16,11 +17,12 @@ import { getTg } from "../telegram";
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
 export function PreviewPage() {
-  const { resumeId, authToken, setPage, setPaid, startEditResume, previewReturnPage } =
+  const { resumeData, resumeId, authToken, setPage, setPaid, startEditResume, previewReturnPage } =
     useAppStore();
   const founderActive = useFounderStatus();
   const [sending, setSending] = useState(false);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [pdfError, setPdfError] = useState(false);
 
   const handleBack = useCallback(() => setPage(previewReturnPage), [setPage, previewReturnPage]);
   useTelegramBackButton(handleBack);
@@ -37,12 +39,21 @@ export function PreviewPage() {
         const res = await fetch(`${API_URL}/api/resume/${resumeId}/preview-pdf`, {
           headers: { Authorization: `Bearer ${token}` },
         });
-        if (!res.ok || cancelled) return;
+        if (cancelled) return;
+        if (!res.ok) {
+          setPdfError(true);
+          return;
+        }
         const blob = await res.blob();
+        if (blob.size < 100) {
+          setPdfError(true);
+          return;
+        }
         objectUrl = URL.createObjectURL(blob);
-        if (!cancelled) setPdfUrl(objectUrl);
+        setPdfUrl(objectUrl);
+        setPdfError(false);
       } catch {
-        /* preview optional — buttons still work */
+        if (!cancelled) setPdfError(true);
       }
     })();
 
@@ -51,6 +62,8 @@ export function PreviewPage() {
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
   }, [authToken, resumeId]);
+
+  if (!resumeData) return null;
 
   const handlePdf = async () => {
     getTg()?.HapticFeedback?.impactOccurred("medium");
@@ -85,13 +98,15 @@ export function PreviewPage() {
       <AppHeader onBack={handleBack} showBack title="Предпросмотр" />
       <main className="flex flex-1 flex-col gap-4 px-4 py-3 pb-2">
         <PreviewStatusHero />
-        {pdfUrl ? (
+        {pdfUrl && !pdfError ? (
           <iframe
             src={pdfUrl}
             className="w-full rounded-xl border border-zinc-800"
             style={{ height: "520px" }}
             title="Предпросмотр резюме"
           />
+        ) : pdfError ? (
+          <PreviewResumeCard resume={resumeData} />
         ) : (
           <div
             className="flex items-center justify-center rounded-xl border border-zinc-800 py-16 text-sm"
