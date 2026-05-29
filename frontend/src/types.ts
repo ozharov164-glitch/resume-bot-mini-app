@@ -10,6 +10,7 @@ export interface UserAnswers {
   salary: string;
   about: string;
   email: string;
+  languages: string;
 }
 
 export interface ResumeData {
@@ -32,4 +33,5 @@ export interface ResumeData {
   }>;
   skills: string[];
   languages: string[];
+  salary: string;
 }

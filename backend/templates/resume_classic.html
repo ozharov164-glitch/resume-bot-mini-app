@@ -1,66 +1,112 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8" />
-  <title>Резюме — {{ resume.full_name }}</title>
+<meta charset="UTF-8">
+<title>Резюме — {{ resume.full_name }}</title>
 </head>
 <body>
-  <div class="header">
+
+<!-- ШАПКА: имя слева, контакты справа -->
+<div class="header">
+  <div class="header-left">
     <h1>{{ resume.full_name }}</h1>
-    <div class="position">{{ resume.target_position }}</div>
-
-    <div class="contacts">
-      {% if resume.phone %}<div class="contact-row">{{ resume.phone }}</div>{% endif %}
-      {% if resume.email %}<div class="contact-row">{{ resume.email }}</div>{% endif %}
-      {% if resume.city %}<div class="contact-row">{{ resume.city }}</div>{% endif %}
+    <div class="position">
+      {{ resume.target_position }}
+      {%- if resume.city %} · {{ resume.city }}{% endif %}
     </div>
+    {% if resume.salary %}
+    <div class="meta-row"><span class="meta-label">Желаемая зарплата:</span>{{ resume.salary }} руб./мес.</div>
+    {% endif %}
   </div>
 
-  {% if resume.summary %}
-  <div class="section">
+  <div class="header-right">
+    {% if resume.phone %}<div class="contact-row">📞 {{ resume.phone }}</div>{% endif %}
+    {% if resume.email %}<div class="contact-row">✉️ {{ resume.email }}</div>{% endif %}
+    {% if resume.city and not resume.target_position %}<div class="contact-row">📍 {{ resume.city }}</div>{% endif %}
+  </div>
+</div>
+
+<!-- Градиентная разделительная линия -->
+<div class="header-divider"></div>
+
+{% if resume.summary %}
+<div class="section">
+  <div class="section-header">
+    <div class="section-marker"></div>
     <div class="section-title">О себе</div>
-    <p>{{ resume.summary }}</p>
   </div>
-  {% endif %}
+  <p class="summary-text">{{ resume.summary }}</p>
+</div>
+{% endif %}
 
-  {% if resume.experience %}
-  <div class="section">
+{% if resume.experience %}
+<div class="section">
+  <div class="section-header">
+    <div class="section-marker"></div>
     <div class="section-title">Опыт работы</div>
-    {% for job in resume.experience %}
-    <div class="job-entry">
-      <div class="job-header">
-        <span class="job-company">{{ job.company }}</span>
-        <span class="job-period">{{ job.period }}</span>
-      </div>
-      <div class="job-position">{{ job.position }}</div>
-      <p class="job-description">{{ job.description }}</p>
-    </div>
-    {% endfor %}
   </div>
-  {% endif %}
-
-  {% if resume.education %}
-  <div class="section">
-    <div class="section-title">Образование</div>
-    {% for edu in resume.education %}
-    <div>
-      <strong>{{ edu.institution }}</strong>
-      {% if edu.degree %} — {{ edu.degree }}{% endif %}
-      {% if edu.year %} ({{ edu.year }}){% endif %}
+  {% for job in resume.experience %}
+  <div class="job-entry">
+    <div class="job-header">
+      <span class="job-company">{{ job.company }}</span>
+      <span class="job-period">{{ job.period }}</span>
     </div>
-    {% endfor %}
-  </div>
-  {% endif %}
-
-  {% if resume.skills %}
-  <div class="section">
-    <div class="section-title">Навыки</div>
-    <div class="skills-grid">
-      {% for skill in resume.skills %}
-      <span class="skill-tag">{{ skill }}</span>
+    <div class="job-position">{{ job.position }}</div>
+    <ul class="job-bullets">
+      {% set bullets = job.description | replace('• ', '\n') | replace('. • ', '\n') | replace(' •', '\n') %}
+      {% for line in bullets.split('\n') %}
+        {% set clean = line.strip().lstrip('•—-').strip() %}
+        {% if clean %}
+        <li>{{ clean }}</li>
+        {% endif %}
       {% endfor %}
-    </div>
+    </ul>
   </div>
-  {% endif %}
+  {% endfor %}
+</div>
+{% endif %}
+
+{% if resume.education %}
+<div class="section">
+  <div class="section-header">
+    <div class="section-marker"></div>
+    <div class="section-title">Образование</div>
+  </div>
+  {% for edu in resume.education %}
+  <div class="edu-entry">
+    <span class="edu-institution">{{ edu.institution }}</span>
+    {% if edu.degree %}<span class="edu-degree"> — {{ edu.degree }}</span>{% endif %}
+    {% if edu.year %}<span class="edu-degree"> ({{ edu.year }})</span>{% endif %}
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+{% if resume.skills %}
+<div class="section">
+  <div class="section-header">
+    <div class="section-marker"></div>
+    <div class="section-title">Навыки</div>
+  </div>
+  <div class="skills-grid">
+    {% for skill in resume.skills %}
+    <span class="skill-tag">{{ skill }}</span>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+{% if resume.languages and resume.languages | length > 0 and resume.languages[0] != 'Русский — родной' and resume.languages[0] != 'Нет' %}
+<div class="section">
+  <div class="section-header">
+    <div class="section-marker"></div>
+    <div class="section-title">Языки</div>
+  </div>
+  {% for lang in resume.languages %}
+  <div class="edu-entry">{{ lang }}</div>
+  {% endfor %}
+</div>
+{% endif %}
+
 </body>
 </html>

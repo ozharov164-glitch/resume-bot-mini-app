@@ -15,6 +15,7 @@ class GenerateResumeRequest(BaseModel):
     name: str = ""
     phone: str = ""
     email: str = ""
+    languages: str = ""
 
 
 class ResumeGenerationResponse(BaseModel):

@@ -25,6 +25,9 @@ async def create_resume(
 ):
     try:
         resume_data = await generate_resume(user_data.model_dump())
+        salary_user = (user_data.salary or "").strip()
+        if salary_user and not (resume_data.get("salary") or "").strip():
+            resume_data["salary"] = salary_user
         resume_id = str(uuid.uuid4())
         founder = is_founder(current_user.get("telegram_id"))
         db.create_resume(

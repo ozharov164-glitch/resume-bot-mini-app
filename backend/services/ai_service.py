@@ -55,13 +55,20 @@ def _build_user_payload(user_data: dict) -> str:
         f"Уровень опыта: {user_data.get('experience_level', 'нет опыта')}",
         f"Последняя работа / обязанности:\n{_truncate(user_data.get('last_job', 'опыта нет'), MAX_FIELD_LEN['last_job'])}",
         f"Образование: {user_data.get('education', 'среднее')}",
-        f"Навыки: {_format_skills(user_data.get('skills'))}",
         f"Город: {_truncate(user_data.get('city', ''), MAX_FIELD_LEN['city'])}",
-        f"Желаемая зарплата: {user_data.get('salary', '')} руб./мес",
         f"О себе (исходник от кандидата):\n{_truncate(user_data.get('about', ''), MAX_FIELD_LEN['about'])}",
         f"Имя: {_truncate(user_data.get('name', ''), MAX_FIELD_LEN['name'])}",
         f"Телефон: {user_data.get('phone', '')}",
     ]
+    salary = (user_data.get("salary") or "").strip()
+    if salary:
+        blocks.append(f"Желаемая зарплата: {salary} руб./мес")
+    skills_str = _format_skills(user_data.get("skills"))
+    if skills_str:
+        blocks.append(f"Навыки (указал пользователь): {skills_str}")
+    languages = (user_data.get("languages") or "").strip()
+    if languages and languages.lower() != "нет":
+        blocks.append(f"Языки: {languages}")
     email = (user_data.get("email") or "").strip()
     if email:
         blocks.append(f"Email: {email}")
