@@ -5,6 +5,11 @@ import { useAppStore } from "../../store";
 import { getTg } from "../../telegram";
 import { Button } from "./Button";
 import { TextArea } from "./TextField";
+import {
+  VoiceRecordingBar,
+  VoiceTranscribingBar,
+  useVoiceWaveform,
+} from "./VoiceRecordingBar";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
@@ -32,12 +37,11 @@ export function VoiceTextArea({
   const chunksRef = useRef<Blob[]>([]);
   const streamRef = useRef<MediaStream | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const animFrameRef = useRef<number>();
-  const audioCtxRef = useRef<AudioContext | null>(null);
-  const analyserRef = useRef<AnalyserNode | null>(null);
-  const [recordSeconds, setRecordSeconds] = useState(0);
   const timerRef = useRef<ReturnType<typeof setInterval>>();
+  const [recordSeconds, setRecordSeconds] = useState(0);
   const targetPosition = useAppStore((s) => s.answers.target_position ?? "");
+
+  const { start: startWaveform, stop: stopWaveform } = useVoiceWaveform(canvasRef);
 
   const micAvailable = useMemo(() => {
     if (typeof navigator === "undefined") return false;
@@ -75,64 +79,13 @@ export function VoiceTextArea({
     [onChange, value],
   );
 
-  const startWaveform = useCallback((stream: MediaStream) => {
-    const ctx = new AudioContext();
-    const analyser = ctx.createAnalyser();
-    analyser.fftSize = 128;
-    const source = ctx.createMediaStreamSource(stream);
-    source.connect(analyser);
-    audioCtxRef.current = ctx;
-    analyserRef.current = analyser;
-
-    const data = new Uint8Array(analyser.frequencyBinCount);
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const draw = () => {
-      analyser.getByteFrequencyData(data);
-      const c = canvas.getContext("2d");
-      if (!c) return;
-      c.clearRect(0, 0, canvas.width, canvas.height);
-      const barCount = 28;
-      const barW = 3;
-      const gap = 3;
-      const step = Math.floor(data.length / barCount);
-      for (let i = 0; i < barCount; i++) {
-        const amp = data[i * step] / 255;
-        const h = Math.max(3, amp * canvas.height * 0.85);
-        const x = i * (barW + gap);
-        const y = (canvas.height - h) / 2;
-        c.fillStyle = "#2de08a";
-        c.beginPath();
-        if (c.roundRect) {
-          c.roundRect(x, y, barW, h, 1.5);
-        } else {
-          c.rect(x, y, barW, h);
-        }
-        c.fill();
-      }
-      animFrameRef.current = requestAnimationFrame(draw);
-    };
-    draw();
-  }, []);
-
-  const stopWaveform = useCallback(() => {
-    if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
-    if (audioCtxRef.current) {
-      audioCtxRef.current.close();
-      audioCtxRef.current = null;
-    }
-    analyserRef.current = null;
-    const canvas = canvasRef.current;
-    if (canvas) canvas.getContext("2d")?.clearRect(0, 0, canvas.width, canvas.height);
-  }, []);
-
   const stopRecording = useCallback(() => {
     mediaRecorderRef.current?.stop();
     mediaRecorderRef.current = null;
     setListening(false);
     stopWaveform();
     clearInterval(timerRef.current);
+    getTg()?.HapticFeedback?.impactOccurred("light");
   }, [stopWaveform]);
 
   const handleDictate = useCallback(async () => {
@@ -221,11 +174,7 @@ export function VoiceTextArea({
     };
   }, [stopWaveform]);
 
-  const dictateLabel = transcribing
-    ? "Распознаю…"
-    : listening
-      ? "⏹ Стоп"
-      : "🎤 Надиктовать";
+  const showMicButton = micAvailable && !listening && !transcribing;
 
   return (
     <div className="flex flex-col gap-2">
@@ -242,38 +191,39 @@ export function VoiceTextArea({
         </p>
       )}
 
-      {listening && (
-        <div className="voice-recording-panel">
-          <span className="voice-rec-dot" />
-          <canvas
-            ref={canvasRef}
-            width={168}
-            height={32}
-            className="voice-waveform-canvas"
-          />
-          <span className="voice-timer">
-            {Math.floor(recordSeconds / 60)}:{String(recordSeconds % 60).padStart(2, "0")}
-          </span>
-        </div>
-      )}
+      <VoiceRecordingBar
+        visible={listening}
+        recordSeconds={recordSeconds}
+        canvasRef={canvasRef}
+        onStop={stopRecording}
+      />
 
-      {transcribing && (
-        <div className="voice-transcribing-panel">
-          <span className="voice-spinner" />
-          <span className="voice-transcribing-label">Распознаю речь…</span>
-        </div>
-      )}
+      <VoiceTranscribingBar visible={transcribing} />
 
       <div className="flex flex-wrap gap-2">
-        {micAvailable && (
-          <Button
-            variant="secondary"
+        {showMicButton && (
+          <button
+            type="button"
             onClick={handleDictate}
-            disabled={listening ? false : transcribing}
-            className="!min-h-[44px] flex-1"
+            disabled={transcribing}
+            className="voice-mic-trigger"
+            aria-label="Надиктовать"
           >
-            {dictateLabel}
-          </Button>
+            <span className="voice-mic-trigger__glow" aria-hidden />
+            <span className="voice-mic-trigger__icon" aria-hidden>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                <path
+                  d="M12 14a3 3 0 0 0 3-3V6a3 3 0 1 0-6 0v5a3 3 0 0 0 3 3Z"
+                  fill="currentColor"
+                />
+                <path
+                  d="M19 11a1 1 0 1 0-2 0 5 5 0 0 1-10 0 1 1 0 1 0-2 0 7 7 0 0 0 6 6.92V21H9a1 1 0 1 0 0 2h6a1 1 0 1 0 0-2h-2v-3.08A7 7 0 0 0 19 11Z"
+                  fill="currentColor"
+                />
+              </svg>
+            </span>
+            <span className="voice-mic-trigger__label">Надиктовать</span>
+          </button>
         )}
         {value.length > 20 && (
           <Button
