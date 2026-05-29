@@ -19,44 +19,35 @@ export function VoiceRecordingBar({ visible, recordSeconds, canvasRef, onStop }:
     <AnimatePresence>
       {visible && (
         <motion.div
-          className="voice-messenger-bar"
-          initial={{ opacity: 0, y: 10, scale: 0.98 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: 6, scale: 0.98 }}
-          transition={{ type: "spring", stiffness: 420, damping: 32 }}
+          className="vr-bar"
+          initial={{ opacity: 0, scaleY: 0.85 }}
+          animate={{ opacity: 1, scaleY: 1 }}
+          exit={{ opacity: 0, scaleY: 0.85 }}
+          transition={{ duration: 0.18, ease: [0.25, 0.1, 0.25, 1] }}
+          style={{ originY: 0.5 }}
         >
-          <div className="voice-messenger-bar__shine" aria-hidden />
-          <div className="voice-messenger-bar__body">
-            <div className="voice-rec-indicator" aria-hidden>
-              <span className="voice-rec-indicator__ring" />
-              <span className="voice-rec-indicator__ring voice-rec-indicator__ring--2" />
-              <span className="voice-rec-indicator__dot" />
-            </div>
+          <span className="vr-dot" aria-hidden />
 
-            <div className="voice-messenger-wave-wrap">
-              <canvas
-                ref={canvasRef}
-                width={280}
-                height={44}
-                className="voice-messenger-waveform"
-                aria-hidden
-              />
-            </div>
-
-            <div className="voice-messenger-meta">
-              <span className="voice-messenger-timer">{formatTime(recordSeconds)}</span>
-              <button
-                type="button"
-                className="voice-messenger-stop"
-                onClick={onStop}
-                aria-label="Остановить запись"
-              >
-                <span className="voice-messenger-stop__square" />
-              </button>
-            </div>
+          <div className="vr-wave-wrap">
+            <canvas
+              ref={canvasRef}
+              width={240}
+              height={32}
+              className="vr-waveform"
+              aria-hidden
+            />
           </div>
 
-          <p className="voice-messenger-hint">Говори — нажми квадрат, когда закончишь</p>
+          <span className="vr-timer">{formatTime(recordSeconds)}</span>
+
+          <button
+            type="button"
+            className="vr-stop"
+            onClick={onStop}
+            aria-label="Остановить запись"
+          >
+            <span className="vr-stop__icon" aria-hidden />
+          </button>
         </motion.div>
       )}
     </AnimatePresence>
@@ -72,41 +63,22 @@ export function VoiceTranscribingBar({ visible }: VoiceTranscribingBarProps) {
     <AnimatePresence>
       {visible && (
         <motion.div
-          className="voice-messenger-processing"
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: 4 }}
-          transition={{ duration: 0.25, ease: [0.25, 0.1, 0.25, 1] }}
+          className="vr-processing"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.15 }}
         >
-          <div className="voice-processing-wave" aria-hidden>
-            {Array.from({ length: 28 }, (_, i) => (
-              <span
-                key={i}
-                className="voice-processing-wave__bar"
-                style={{ animationDelay: `${(i % 7) * 0.08}s` }}
-              />
-            ))}
-          </div>
-          <div className="voice-processing-label">
-            <span className="voice-processing-spinner" aria-hidden />
-            <span>
-              Распознаю речь
-              <ProcessingDots />
+          <span className="vr-processing__spinner" aria-hidden />
+          <span className="vr-processing__label">
+            Распознаю речь
+            <span className="vr-processing__dots" aria-hidden>
+              <span>.</span><span>.</span><span>.</span>
             </span>
-          </div>
+          </span>
         </motion.div>
       )}
     </AnimatePresence>
-  );
-}
-
-function ProcessingDots() {
-  return (
-    <span className="voice-processing-dots" aria-hidden>
-      <span>.</span>
-      <span>.</span>
-      <span>.</span>
-    </span>
   );
 }
 
@@ -139,9 +111,9 @@ export function useVoiceWaveform(canvasRef: RefObject<HTMLCanvasElement | null>)
     audioCtxRef.current = ctx;
     analyserRef.current = analyser;
 
-    const barCount = 36;
+    const barCount = 30;
     const data = new Uint8Array(analyser.frequencyBinCount);
-    heightsRef.current = new Array(barCount).fill(0.12);
+    heightsRef.current = new Array(barCount).fill(0.1);
 
     const draw = () => {
       const canvas = canvasRef.current;
@@ -154,34 +126,28 @@ export function useVoiceWaveform(canvasRef: RefObject<HTMLCanvasElement | null>)
 
       const w = canvas.width;
       const h = canvas.height;
-      const cx = w / 2;
-      const barW = 3;
-      const gap = 2.5;
-      const half = barCount / 2;
+      const barW = 2.5;
+      const gap = 2;
+      const totalW = barCount * (barW + gap) - gap;
+      const startX = (w - totalW) / 2;
       const step = Math.max(1, Math.floor(data.length / barCount));
 
       c.clearRect(0, 0, w, h);
 
       for (let i = 0; i < barCount; i++) {
         const raw = data[i * step] / 255;
-        const target = Math.max(0.1, Math.pow(raw, 0.75));
-        heightsRef.current[i] = heightsRef.current[i] * 0.62 + target * 0.38;
-        const barH = heightsRef.current[i] * h * 0.88;
-        const dist = i - half + 0.5;
-        const x = cx + dist * (barW + gap) - barW / 2;
+        const target = Math.max(0.08, Math.pow(raw, 0.7));
+        heightsRef.current[i] = heightsRef.current[i] * 0.65 + target * 0.35;
+        const barH = Math.max(3, heightsRef.current[i] * h * 0.9);
+        const x = startX + i * (barW + gap);
         const y = (h - barH) / 2;
 
-        const grad = c.createLinearGradient(x, y, x, y + barH);
-        grad.addColorStop(0, "#34d399");
-        grad.addColorStop(0.5, "#10b981");
-        grad.addColorStop(1, "#059669");
-        c.fillStyle = grad;
-
+        c.fillStyle = "#10b981";
         c.beginPath();
         if (c.roundRect) {
-          c.roundRect(x, y, barW, Math.max(3, barH), 1.5);
+          c.roundRect(x, y, barW, barH, 1.5);
         } else {
-          c.rect(x, y, barW, Math.max(3, barH));
+          c.rect(x, y, barW, barH);
         }
         c.fill();
       }
