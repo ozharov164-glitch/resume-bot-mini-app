@@ -232,7 +232,9 @@ export function OnboardingPage() {
         setFounder(true);
         setPaid(true);
       }
-      useAppStore.setState({ previewReturnPage: "home" });
+      if (state.onboardingMode === "create") {
+        useAppStore.setState({ previewReturnPage: "home" });
+      }
       setPage("preview");
     } catch (error) {
       setPage("onboarding");

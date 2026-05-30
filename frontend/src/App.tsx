@@ -3,6 +3,7 @@ import { useEffect } from "react";
 import { authWithTelegram } from "./api";
 import { useFounderStatus } from "./hooks/useFounderStatus";
 import { isFounderTelegramId } from "./lib/founder";
+import { clearDeepLinkHash, parseDeepLink } from "./lib/deepLink";
 import { HistoryPage } from "./pages/History";
 import { HomePage } from "./pages/Home";
 import { LoadingPage } from "./pages/Loading";
@@ -15,7 +16,7 @@ import { useAppStore } from "./store";
 import { getTelegramUserId, initTelegramTheme, waitForInitData } from "./telegram";
 
 export default function App() {
-  const { page, setAuthToken, setFounder, isLoading, setLoading, startNewResume, setPage } =
+  const { page, setAuthToken, setFounder, isLoading, setLoading, startNewResume, setPage, setHomeTab } =
     useAppStore();
   useFounderStatus();
 
@@ -43,6 +44,18 @@ export default function App() {
     };
     void bootstrap();
   }, [setAuthToken, setFounder, setLoading]);
+
+  useEffect(() => {
+    if (isLoading) return;
+    const route = parseDeepLink(window.location.hash);
+    if (route === "history") {
+      setPage("history");
+    } else if (route === "examples") {
+      setPage("home");
+      setHomeTab("examples");
+    }
+    if (route) clearDeepLinkHash();
+  }, [isLoading, setPage, setHomeTab]);
 
   if (isLoading) {
     return (

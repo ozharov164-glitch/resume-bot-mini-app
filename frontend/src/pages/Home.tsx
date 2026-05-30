@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { motion } from "motion/react";
 
 import { fetchStatsCount } from "../api";
@@ -11,6 +11,8 @@ import { HeroIllustration } from "../components/ui/HeroIllustration";
 import { Icon } from "../components/ui/Icon";
 import { Screen } from "../components/ui/Screen";
 import { useFounderStatus } from "../hooks/useFounderStatus";
+import { useTelegramBackButton } from "../hooks/useTelegramBackButton";
+import { useAppStore } from "../store";
 import { getTg } from "../telegram";
 
 interface HomeProps {
@@ -31,15 +33,42 @@ const BENEFITS = [
   },
 ] as const;
 
-type HomeTab = "main" | "examples";
+const TRUST_POINTS = [
+  {
+    icon: "visibility" as const,
+    title: "Сначала смотри — потом плати",
+    subtitle: "Бесплатный предпросмотр до оплаты. Риска нет.",
+  },
+  {
+    icon: "verified" as const,
+    title: "Формат hh.ru",
+    subtitle: "HR привык к такому виду — не откладывают в стопку.",
+  },
+  {
+    icon: "savings" as const,
+    title: "149 ₽ вместо 500–1000 ₽",
+    subtitle: "Дешевле конкурентов, качество — как у дорогих сервисов.",
+  },
+  {
+    icon: "lock" as const,
+    title: "Данные только для резюме",
+    subtitle: "Не продаём и не передаём третьим лицам.",
+  },
+] as const;
 
 function useCountUp(target: number, durationMs = 1400) {
   const [value, setValue] = useState(0);
-  const started = useRef(false);
+  const animatingTarget = useRef(0);
 
   useEffect(() => {
-    if (started.current || target <= 0) return;
-    started.current = true;
+    if (target <= 0) {
+      setValue(0);
+      return;
+    }
+    if (animatingTarget.current === target) return;
+    animatingTarget.current = target;
+    setValue(0);
+
     const start = performance.now();
     const tick = (now: number) => {
       const progress = Math.min((now - start) / durationMs, 1);
@@ -54,8 +83,9 @@ function useCountUp(target: number, durationMs = 1400) {
 }
 
 export function HomePage({ onStart, onHistory }: HomeProps) {
-  const [tab, setTab] = useState<HomeTab>("main");
-  const [statsCount, setStatsCount] = useState(10000);
+  const { homeTab, setHomeTab } = useAppStore();
+  const [statsCount, setStatsCount] = useState(0);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
   const displayCount = useCountUp(statsCount);
   const isFounder = useFounderStatus();
 
@@ -69,22 +99,43 @@ export function HomePage({ onStart, onHistory }: HomeProps) {
     onStart();
   };
 
-  const switchTab = (next: HomeTab) => {
+  const switchTab = (next: typeof homeTab) => {
     getTg()?.HapticFeedback?.selectionChanged();
-    setTab(next);
+    setHomeTab(next);
   };
+
+  const handleBack = useCallback(() => {
+    getTg()?.HapticFeedback?.impactOccurred("light");
+    if (lightboxOpen) {
+      setLightboxOpen(false);
+      return;
+    }
+    if (homeTab === "examples") {
+      setHomeTab("main");
+    }
+  }, [homeTab, lightboxOpen, setHomeTab]);
+
+  useTelegramBackButton(homeTab === "examples" ? handleBack : null);
+
+  const statsLabel =
+    statsCount > 0
+      ? `${displayCount.toLocaleString("ru-RU")}+`
+      : "…";
 
   return (
     <Screen withBottomBar bottomBarButtons={2}>
-      <AppHeader />
+      <AppHeader
+        onBack={homeTab === "examples" ? handleBack : undefined}
+        showBack={homeTab === "examples"}
+      />
 
       <div className="home-tabs px-4 pt-1">
         <div className="home-tabs-track" role="tablist" aria-label="Разделы главной">
           <button
             type="button"
             role="tab"
-            aria-selected={tab === "main"}
-            className={`home-tab${tab === "main" ? " home-tab--active" : ""}`}
+            aria-selected={homeTab === "main"}
+            className={`home-tab${homeTab === "main" ? " home-tab--active" : ""}`}
             onClick={() => switchTab("main")}
           >
             Главная
@@ -92,8 +143,8 @@ export function HomePage({ onStart, onHistory }: HomeProps) {
           <button
             type="button"
             role="tab"
-            aria-selected={tab === "examples"}
-            className={`home-tab${tab === "examples" ? " home-tab--active" : ""}`}
+            aria-selected={homeTab === "examples"}
+            className={`home-tab${homeTab === "examples" ? " home-tab--active" : ""}`}
             onClick={() => switchTab("examples")}
           >
             <Icon name="description" size={16} />
@@ -102,9 +153,13 @@ export function HomePage({ onStart, onHistory }: HomeProps) {
         </div>
       </div>
 
-      {tab === "examples" ? (
+      {homeTab === "examples" ? (
         <main className="examples-tab-main flex flex-1 flex-col pt-2">
-          <ExamplesGallery onStart={start} />
+          <ExamplesGallery
+            onStart={start}
+            onLightboxOpenChange={setLightboxOpen}
+            lightboxOpen={lightboxOpen}
+          />
         </main>
       ) : (
       <main className="flex flex-1 flex-col items-center gap-4 px-4 pt-2 pb-2">
@@ -126,17 +181,10 @@ export function HomePage({ onStart, onHistory }: HomeProps) {
             className="flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium"
             style={{ background: "var(--surface-card)", borderColor: "var(--border-subtle)", color: "var(--text-primary)" }}
           >
-            <Icon name="verified" filled size={16} style={{ color: "var(--brand)" }} />
-            <span>Соответствует стандартам hh.ru</span>
-          </div>
-          <div
-            className="flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium"
-            style={{ background: "var(--surface-card)", borderColor: "var(--border-subtle)", color: "var(--text-primary)" }}
-          >
-            <Icon name="group" filled size={16} style={{ color: "var(--brand)" }} />
+            <Icon name="description" filled size={16} style={{ color: "var(--brand)" }} />
             <span>
-              Уже помогли{" "}
-              <span className="stat-number tabular-nums">{displayCount.toLocaleString("ru-RU")}+</span> человек
+              Уже создано{" "}
+              <span className="stat-number tabular-nums">{statsLabel}</span> резюме
             </span>
           </div>
         </div>
@@ -165,6 +213,33 @@ export function HomePage({ onStart, onHistory }: HomeProps) {
             </motion.div>
           ))}
         </div>
+
+        <section className="home-trust w-full">
+          <div className="home-trust-header">
+            <Icon name="shield" filled size={20} style={{ color: "var(--brand)" }} />
+            <h3 className="home-trust-title">Почему нам доверяют</h3>
+          </div>
+          <div className="home-trust-grid">
+            {TRUST_POINTS.map((item, i) => (
+              <motion.div
+                key={item.title}
+                className="home-trust-card"
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.12 + i * 0.06 }}
+              >
+                <Icon name={item.icon} filled size={18} style={{ color: "var(--brand)" }} />
+                <div className="home-trust-card-text">
+                  <span className="home-trust-card-title">{item.title}</span>
+                  <span className="home-trust-card-sub">{item.subtitle}</span>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+          <p className="home-trust-footnote">
+            Не понравилось? Напиши в поддержку бота — вернём Stars.
+          </p>
+        </section>
       </main>
       )}
 

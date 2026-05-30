@@ -36,6 +36,57 @@ logger = logging.getLogger(__name__)
 MINI_APP_URL = settings.FRONTEND_URL.rstrip("/")
 
 
+def _start_keyboard() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        [
+            [InlineKeyboardButton("📝 Создать резюме", web_app=WebAppInfo(url=MINI_APP_URL))],
+            [
+                InlineKeyboardButton(
+                    "📋 Мои резюме", web_app=WebAppInfo(url=f"{MINI_APP_URL}#history")
+                ),
+                InlineKeyboardButton(
+                    "🖼 Примеры", web_app=WebAppInfo(url=f"{MINI_APP_URL}#examples")
+                ),
+            ],
+            [InlineKeyboardButton("❓ Как это работает", callback_data="how_it_works")],
+            [InlineKeyboardButton("🛡️ Почему нам доверяют", callback_data="trust")],
+            [InlineKeyboardButton("🎁 Пригласить друга", callback_data="invite_prompt")],
+        ]
+    )
+
+
+def _trust_text(count: int) -> str:
+    return (
+        "🛡️ <b>Почему нам доверяют:</b>\n\n"
+        f"📊 Уже <b>{count:,}+</b> резюме — люди реально пользуются\n"
+        "👀 <b>Сначала смотри — потом плати</b>\n"
+        "   Бесплатный предпросмотр до оплаты. Риска нет.\n"
+        "✅ <b>Формат hh.ru</b> — HR смотрит без лишних вопросов\n"
+        "💰 <b>149 ₽</b> вместо 500–1000 ₽ у конкурентов\n"
+        "🔒 Данные только для твоего резюме — никуда не продаём\n"
+        "🤖 ИИ не выдумывает опыт — только твои ответы\n"
+        "💳 Оплата через Telegram Stars — без карты на сайте\n"
+        "↩️ Не понравилось? /support — <b>вернём Stars</b>\n\n"
+        "⏱ Весь процесс — 3–5 минут. Проще, чем писать самому."
+    )
+
+
+def _start_text(count: int, greeting: str | None = None) -> str:
+    intro = f"Привет, {greeting}! 👋\n\n" if greeting else ""
+    return (
+        "🎯 <b>Профессиональное резюме за 5 минут</b>\n\n"
+        f"{intro}"
+        "Как это работает:\n"
+        "📝 Отвечаешь на простые вопросы\n"
+        "🤖 ИИ составляет сильное резюме\n"
+        "📄 Получаешь готовый PDF прямо в этот чат\n\n"
+        "✅ Формат hh.ru — работодатели привыкли\n"
+        "🎤 Можно диктовать голосом\n"
+        f"📄 Уже создано <b>{count:,}+</b> резюме\n\n"
+        "💳 Стоимость: <b>99 ⭐ Stars</b> или <b>149 ₽</b>"
+    )
+
+
 def _display_name(user) -> str:
     raw = user.first_name or user.username or "друг"
     return html.escape(str(raw), quote=False)
@@ -81,37 +132,9 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     count = await _get_resume_count()
 
-    text = (
-        "🎯 <b>Профессиональное резюме за 5 минут</b>\n\n"
-        f"Привет, {_display_name(update.message.from_user)}! 👋\n\n"
-        "Как это работает:\n"
-        "📝 Отвечаешь на простые вопросы\n"
-        "🤖 ИИ составляет сильное резюме\n"
-        "📄 Получаешь готовый PDF прямо в этот чат\n\n"
-        "✅ Формат hh.ru — работодатели привыкли\n"
-        "🎤 Можно диктовать голосом\n"
-        f"👥 Уже создано <b>{count:,}+</b> резюме\n\n"
-        "💳 Стоимость: <b>99 ⭐ Stars</b> или <b>149 ₽</b>"
-    )
+    text = _start_text(count, _display_name(update.message.from_user))
 
-    keyboard = InlineKeyboardMarkup(
-        [
-            [InlineKeyboardButton("📝 Создать резюме", web_app=WebAppInfo(url=MINI_APP_URL))],
-            [
-                InlineKeyboardButton(
-                    "📋 Мои резюме", web_app=WebAppInfo(url=f"{MINI_APP_URL}#history")
-                ),
-                InlineKeyboardButton(
-                    "🖼 Примеры", web_app=WebAppInfo(url=f"{MINI_APP_URL}#examples")
-                ),
-            ],
-            [InlineKeyboardButton("❓ Как это работает", callback_data="how_it_works")],
-            [InlineKeyboardButton("🛡️ Почему нам доверяют", callback_data="trust")],
-            [InlineKeyboardButton("🎁 Пригласить друга", callback_data="invite_prompt")],
-        ]
-    )
-
-    await update.message.reply_text(text, reply_markup=keyboard, parse_mode="HTML")
+    await update.message.reply_text(text, reply_markup=_start_keyboard(), parse_mode="HTML")
 
 
 async def resume_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -163,17 +186,16 @@ async def examples_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def trust_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     count = await _get_resume_count()
     await update.message.reply_text(
-        f"🛡️ <b>Почему ResumeBot — надёжный выбор:</b>\n\n"
-        f"📊 Создано {count:,}+ резюме\n"
-        "✅ Формат hh.ru — проверен работодателями\n"
-        "🔒 Данные не передаются третьим лицам\n"
-        "🤖 ИИ пишет текст — но не выдумывает факты\n"
-        "💳 Оплата через Telegram Stars — безопасно\n"
-        "📄 PDF без водяных знаков сразу после оплаты\n"
-        "🔄 Можно редактировать и пересобирать\n\n"
-        "Вопросы? Напиши /support",
+        _trust_text(count),
         reply_markup=InlineKeyboardMarkup(
-            [[InlineKeyboardButton("📝 Создать резюме", web_app=WebAppInfo(url=MINI_APP_URL))]]
+            [
+                [InlineKeyboardButton("📝 Создать резюме", web_app=WebAppInfo(url=MINI_APP_URL))],
+                [
+                    InlineKeyboardButton(
+                        "🖼 Примеры", web_app=WebAppInfo(url=f"{MINI_APP_URL}#examples")
+                    )
+                ],
+            ]
         ),
         parse_mode="HTML",
     )
@@ -265,18 +287,15 @@ async def trust_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await query.answer()
     count = await _get_resume_count()
     await query.edit_message_text(
-        f"🛡️ <b>Почему нам доверяют:</b>\n\n"
-        f"📊 Создано {count:,}+ резюме\n"
-        "✅ Формат hh.ru\n"
-        "🔒 Данные не передаются третьим лицам\n"
-        "🤖 ИИ не выдумывает факты — только твои данные\n"
-        "💳 Оплата через Telegram Stars\n"
-        "📄 PDF без водяных знаков после оплаты\n"
-        "🔄 Можно редактировать резюме\n\n"
-        "Вопросы? /support",
+        _trust_text(count),
         reply_markup=InlineKeyboardMarkup(
             [
                 [InlineKeyboardButton("📝 Создать резюме", web_app=WebAppInfo(url=MINI_APP_URL))],
+                [
+                    InlineKeyboardButton(
+                        "🖼 Примеры", web_app=WebAppInfo(url=f"{MINI_APP_URL}#examples")
+                    )
+                ],
                 [InlineKeyboardButton("◀️ Назад", callback_data="back_to_start")],
             ]
         ),
@@ -315,37 +334,31 @@ async def back_to_start_callback(update: Update, context: ContextTypes.DEFAULT_T
     query = update.callback_query
     await query.answer()
     count = await _get_resume_count()
-    text = (
-        "🎯 <b>Профессиональное резюме за 5 минут</b>\n\n"
-        "📝 Отвечаешь на простые вопросы\n"
-        "🤖 ИИ составляет сильное резюме\n"
-        "📄 Получаешь готовый PDF прямо в этот чат\n\n"
-        "✅ Формат hh.ru  🎤 Голосовой ввод\n"
-        f"👥 Уже создано <b>{count:,}+</b> резюме\n\n"
-        "💳 <b>99 ⭐ Stars</b> или <b>149 ₽</b>"
+    await query.edit_message_text(
+        _start_text(count),
+        reply_markup=_start_keyboard(),
+        parse_mode="HTML",
     )
-    keyboard = InlineKeyboardMarkup(
-        [
-            [InlineKeyboardButton("📝 Создать резюме", web_app=WebAppInfo(url=MINI_APP_URL))],
-            [InlineKeyboardButton("❓ Как это работает", callback_data="how_it_works")],
-            [InlineKeyboardButton("🛡️ Почему нам доверяют", callback_data="trust")],
-            [InlineKeyboardButton("🎁 Пригласить друга", callback_data="invite_prompt")],
-        ]
-    )
-    await query.edit_message_text(text, reply_markup=keyboard, parse_mode="HTML")
 
 
 async def fallback_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    keyboard = InlineKeyboardMarkup(
-        [
-            [InlineKeyboardButton("📝 Создать резюме", web_app=WebAppInfo(url=MINI_APP_URL))],
-            [InlineKeyboardButton("❓ Как это работает", callback_data="how_it_works")],
-        ]
-    )
     await update.message.reply_text(
         "Я работаю через мини-приложение — там удобнее всего. 👇\n\n"
         "Если что-то не работает — напиши /support",
-        reply_markup=keyboard,
+        reply_markup=InlineKeyboardMarkup(
+            [
+                [InlineKeyboardButton("📝 Создать резюме", web_app=WebAppInfo(url=MINI_APP_URL))],
+                [
+                    InlineKeyboardButton(
+                        "📋 Мои резюме", web_app=WebAppInfo(url=f"{MINI_APP_URL}#history")
+                    ),
+                    InlineKeyboardButton(
+                        "🖼 Примеры", web_app=WebAppInfo(url=f"{MINI_APP_URL}#examples")
+                    ),
+                ],
+                [InlineKeyboardButton("❓ Как это работает", callback_data="how_it_works")],
+            ]
+        ),
     )
 
 

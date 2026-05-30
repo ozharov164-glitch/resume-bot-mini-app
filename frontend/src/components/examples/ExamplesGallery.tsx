@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 
 import { exampleImageUrl, RESUME_EXAMPLES, type ResumeExample } from "../../data/resumeExamples";
@@ -7,6 +7,8 @@ import { Icon } from "../ui/Icon";
 interface ExamplesGalleryProps {
   compact?: boolean;
   onStart?: () => void;
+  lightboxOpen?: boolean;
+  onLightboxOpenChange?: (open: boolean) => void;
 }
 
 function ExampleAlbumCard({
@@ -119,15 +121,38 @@ function ExampleLightbox({
   );
 }
 
-export function ExamplesGallery({ compact = false, onStart }: ExamplesGalleryProps) {
+export function ExamplesGallery({
+  compact = false,
+  onStart,
+  lightboxOpen: lightboxOpenProp,
+  onLightboxOpenChange,
+}: ExamplesGalleryProps) {
+  const [lightbox, setLightboxInternal] = useState<ResumeExample | null>(null);
+
+  const setLightbox = useCallback(
+    (example: ResumeExample | null) => {
+      setLightboxInternal(example);
+      onLightboxOpenChange?.(example !== null);
+    },
+    [onLightboxOpenChange],
+  );
+
+  useEffect(() => {
+    if (lightboxOpenProp === false && lightbox) {
+      setLightboxInternal(null);
+    }
+  }, [lightboxOpenProp, lightbox]);
+
+  const openLightbox = useCallback(
+    (example: ResumeExample) => {
+      setLightbox(example);
+    },
+    [setLightbox],
+  );
+
+  const closeLightbox = useCallback(() => setLightbox(null), [setLightbox]);
+
   const [activeIndex, setActiveIndex] = useState(0);
-  const [lightbox, setLightbox] = useState<ResumeExample | null>(null);
-
-  const openLightbox = useCallback((example: ResumeExample) => {
-    setLightbox(example);
-  }, []);
-
-  const closeLightbox = useCallback(() => setLightbox(null), []);
 
   return (
     <section className={`examples-gallery${compact ? " examples-gallery--compact" : ""}`}>

@@ -878,6 +878,69 @@ textarea::placeholder {
   box-shadow: 0 2px 10px rgba(0, 60, 40, 0.08);
 }
 
+.home-trust {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 0.25rem;
+}
+
+.home-trust-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.home-trust-title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.home-trust-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.625rem;
+}
+
+.home-trust-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  border-radius: 0.875rem;
+  border: 1px solid var(--border-subtle);
+  background: var(--surface-card);
+}
+
+.home-trust-card-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.home-trust-card-title {
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.home-trust-card-sub {
+  font-size: 0.6875rem;
+  line-height: 1.35;
+  color: var(--text-muted);
+}
+
+.home-trust-footnote {
+  margin: 0;
+  text-align: center;
+  font-size: 0.6875rem;
+  line-height: 1.4;
+  color: var(--text-muted);
+}
+
 /* Examples gallery */
 .examples-tab-main {
   min-height: 0;

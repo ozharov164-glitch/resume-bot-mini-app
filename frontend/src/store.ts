@@ -4,6 +4,7 @@ import type { ResumeData, UserAnswers, WorkEntry } from "./types";
 
 type Page = "home" | "onboarding" | "skill_pick" | "loading" | "preview" | "payment" | "success" | "history";
 type OnboardingMode = "create" | "edit";
+type HomeTab = "main" | "examples";
 
 interface AppState {
   page: Page;
@@ -26,6 +27,8 @@ interface AppState {
   previewReturnPage: Page;
   onboardingStep: number;
   setOnboardingStep: (step: number) => void;
+  homeTab: HomeTab;
+  setHomeTab: (tab: HomeTab) => void;
   startNewResume: () => void;
   startEditResume: () => void;
   cancelEditResume: () => void;
@@ -59,6 +62,8 @@ export const useAppStore = create<AppState>((set, get) => ({
   previewReturnPage: "home",
   onboardingStep: 0,
   setOnboardingStep: (onboardingStep) => set({ onboardingStep }),
+  homeTab: "main",
+  setHomeTab: (homeTab) => set({ homeTab }),
   startNewResume: () =>
     set({
       page: "onboarding",
