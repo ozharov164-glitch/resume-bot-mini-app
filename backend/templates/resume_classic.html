@@ -46,7 +46,8 @@
     </div>
     {% endif %}
 
-    {% if resume.languages %}
+    {% set non_native_langs = resume.languages | reject('equalto', 'Русский — родной') | list %}
+    {% if non_native_langs | length > 0 %}
     <div>
       <div class="section-title">Языки</div>
       {% for lang in resume.languages %}
@@ -70,7 +71,7 @@
 
     <div class="hero-section">
       <div class="main-name">{{ resume.full_name }}</div>
-      <div class="main-position">{{ resume.target_position }}</div>
+      <div class="main-position">{{ resume.target_position | capitalize }}</div>
     </div>
 
     {% if resume.summary %}

@@ -26,6 +26,7 @@ class GenerateResumeRequest(BaseModel):
     email: str = ""
     languages: str = ""
     certificates: str = ""
+    gender: str = ""
 
 
 class SuggestSkillsRequest(BaseModel):

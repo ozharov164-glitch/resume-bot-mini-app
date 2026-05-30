@@ -111,7 +111,7 @@ async def preview_resume_image(
         png_bytes = generate_preview_png(
             resume_data,
             watermark=not paid,
-            resolution=130 if paid else 110,
+            resolution=130 if paid else 72,
         )
     except Exception as exc:
         logger.exception("preview image failed resume_id=%s", resume_id)

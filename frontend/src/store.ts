@@ -65,7 +65,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       onboardingMode: "create",
       previewReturnPage: "home",
       onboardingStep: 0,
-      answers: {},
+      answers: { gender: "" },
       resumeId: null,
       resumeData: null,
       isPaid: false,

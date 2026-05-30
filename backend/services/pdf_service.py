@@ -118,6 +118,7 @@ def get_pdf_styles() -> str:
         flex: 1;
         padding: 24px 22px 24px 20px;
         background: #ffffff;
+        min-height: 220mm;
     }
 
     /* Sidebar — section titles */
@@ -235,7 +236,7 @@ def get_pdf_styles() -> str:
         border-bottom: 2px solid #2de08a;
         display: inline-block;
     }
-    .section-block { margin-bottom: 14px; }
+    .section-block { margin-bottom: 14pt; }
 
     /* Summary */
     .summary-text {
@@ -317,7 +318,7 @@ def get_preview_watermark_styles() -> str:
         inset: 0;
         z-index: 9999;
         pointer-events: none;
-        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='160'%3E%3Ctext x='50%25' y='50%25' font-family='DejaVu Sans,Arial,sans-serif' font-size='26' font-weight='800' fill='%230d1f14' fill-opacity='0.24' text-anchor='middle' dominant-baseline='middle' transform='rotate(-32 150 80)'%3E%D0%9F%D0%A0%D0%95%D0%94%D0%9F%D0%A0%D0%9E%D0%A1%D0%9C%D0%9E%D0%A2%D0%A0%3C/text%3E%3C/svg%3E");
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='160'%3E%3Ctext x='50%25' y='50%25' font-family='DejaVu Sans,Arial,sans-serif' font-size='26' font-weight='800' fill='%230d1f14' fill-opacity='0.50' text-anchor='middle' dominant-baseline='middle' transform='rotate(-32 150 80)'%3E%D0%9F%D0%A0%D0%95%D0%94%D0%9F%D0%A0%D0%9E%D0%A1%D0%9C%D0%9E%D0%A2%D0%A0%3C/text%3E%3C/svg%3E");
         background-repeat: repeat;
     }
 
@@ -326,7 +327,7 @@ def get_preview_watermark_styles() -> str:
         inset: 0;
         z-index: 9998;
         pointer-events: none;
-        opacity: 0.14;
+        opacity: 0.25;
         background-image: repeating-linear-gradient(
             -35deg,
             rgba(13, 31, 20, 0.08) 0,
@@ -348,7 +349,7 @@ def get_preview_watermark_styles() -> str:
         font-size: 52pt;
         font-weight: 800;
         letter-spacing: 0.12em;
-        color: rgba(13, 31, 20, 0.16);
+        color: rgba(13, 31, 20, 0.42);
         transform: rotate(-28deg);
         white-space: nowrap;
     }
@@ -358,14 +359,14 @@ def get_preview_watermark_styles() -> str:
         left: 0;
         right: 0;
         bottom: 0;
-        height: 42%;
+        height: 65%;
         z-index: 10001;
         pointer-events: none;
         background: linear-gradient(
             to bottom,
-            rgba(255, 255, 255, 0) 0%,
-            rgba(255, 255, 255, 0.72) 45%,
-            rgba(255, 255, 255, 0.96) 100%
+            transparent 30%,
+            rgba(255, 255, 255, 0.95) 55%,
+            white 65%
         );
     }
     """
@@ -427,7 +428,7 @@ def generate_preview_png(
     template_name: str = "classic",
     *,
     watermark: bool = True,
-    resolution: int = 110,
+    resolution: int = 72,
 ) -> bytes:
     """First-page PNG for unpaid preview — not a downloadable PDF."""
     document = _render_document(resume_data, template_name, preview=watermark)

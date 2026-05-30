@@ -24,6 +24,7 @@ export interface OnboardingStep {
   optionsByPosition?: Record<string, readonly string[]>;
   allowCustomInput?: boolean;
   customInputPlaceholder?: string;
+  validate?: (value: string) => string | null;
 }
 
 export const PROFESSION_PRESETS = [
@@ -43,6 +44,23 @@ export const ONBOARDING_STEPS: OnboardingStep[] = [
     type: "text",
     placeholder: "Иван Петров",
     hint: "Введи полностью: Имя Фамилия (например: Дмитрий Петров)",
+    validate: (value: string) => {
+      const hasVowel = /[аеёиоуыьъэюяАЕЁИОУЫЬЪЭЮЯaeiouyAEIOUY]/.test(value);
+      const hasSpace = value.trim().includes(" ");
+      const longEnough = value.trim().length >= 4;
+      if (!hasVowel || !hasSpace || !longEnough) {
+        return "Введи настоящее имя и фамилию (например: Иван Петров)";
+      }
+      return null;
+    },
+  },
+  {
+    id: "gender",
+    question: "Укажи пол",
+    type: "options",
+    options: ["Мужской", "Женский"],
+    hint: "Нужно для правильных формулировок в резюме",
+    required: true,
   },
   {
     id: "contacts",
@@ -125,7 +143,7 @@ export const ONBOARDING_STEPS: OnboardingStep[] = [
   },
 ];
 
-export const OPTIONS_ONLY = new Set(["education", "languages"]);
+export const OPTIONS_ONLY = new Set(["education", "languages", "gender"]);
 
 export function getVisibleSteps(answers: Partial<UserAnswers>): OnboardingStep[] {
   return ONBOARDING_STEPS.filter((s) => !s.showIf || s.showIf(answers));

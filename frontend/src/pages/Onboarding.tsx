@@ -68,6 +68,7 @@ export function OnboardingPage() {
     professionOtherSelected(String(answers.target_position ?? "")),
   );
   const [submitting, setSubmitting] = useState(false);
+  const [fieldError, setFieldError] = useState<string | null>(null);
 
   const isEdit = onboardingMode === "edit";
   const current = visibleSteps[step];
@@ -128,6 +129,7 @@ export function OnboardingPage() {
 
   const goToStep = useCallback(
     (nextStep: number) => {
+      setFieldError(null);
       setOnboardingStep(nextStep);
       const steps = getVisibleSteps(useAppStore.getState().answers);
       const next = steps[nextStep];
@@ -189,6 +191,14 @@ export function OnboardingPage() {
   const next = async () => {
     if (submitting) return;
     if (!canContinue && !current.optional) return;
+
+    const error = current.validate?.(value);
+    if (error) {
+      setFieldError(error);
+      return;
+    }
+    setFieldError(null);
+
     getTg()?.HapticFeedback?.impactOccurred("light");
     persistCurrentStep();
 
@@ -403,13 +413,23 @@ export function OnboardingPage() {
             )}
 
             {showTextInput && current.type !== "profession" && current.id !== "education_place" && (
-              <TextInput
-                value={value}
-                onChange={(e) => setValue(e.target.value)}
-                placeholder={current.placeholder}
-                inputMode={current.id === "name" ? "text" : "text"}
-                autoComplete={current.id === "name" ? "name" : "off"}
-              />
+              <>
+                <TextInput
+                  value={value}
+                  onChange={(e) => {
+                    setFieldError(null);
+                    setValue(e.target.value);
+                  }}
+                  placeholder={current.placeholder}
+                  inputMode={current.id === "name" ? "text" : "text"}
+                  autoComplete={current.id === "name" ? "name" : "off"}
+                />
+                {fieldError && (
+                  <p className="text-sm" style={{ color: "#dc2626" }}>
+                    {fieldError}
+                  </p>
+                )}
+              </>
             )}
 
             {current.type === "work_history" && (
@@ -422,20 +442,30 @@ export function OnboardingPage() {
             )}
 
             {current.type === "textarea" && (
-              <VoiceTextArea
-                fieldId={`onboarding-${current.id}`}
-                fieldType={
-                  current.id === "about"
-                    ? "about"
-                    : current.id === "certificates"
-                      ? "certificates"
-                      : "experience"
-                }
-                value={value}
-                onChange={setValue}
-                placeholder={current.placeholder}
-                rows={5}
-              />
+              <>
+                <VoiceTextArea
+                  fieldId={`onboarding-${current.id}`}
+                  fieldType={
+                    current.id === "about"
+                      ? "about"
+                      : current.id === "certificates"
+                        ? "certificates"
+                        : "experience"
+                  }
+                  value={value}
+                  onChange={(v) => {
+                    setFieldError(null);
+                    setValue(v);
+                  }}
+                  placeholder={current.placeholder}
+                  rows={5}
+                />
+                {fieldError && (
+                  <p className="text-sm" style={{ color: "#dc2626" }}>
+                    {fieldError}
+                  </p>
+                )}
+              </>
             )}
           </motion.div>
         </AnimatePresence>

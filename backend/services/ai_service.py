@@ -58,6 +58,29 @@ SYSTEM_PROMPT = """Ты — старший HR-редактор резюме дл
 ЗАРПЛАТА: только цифры без суффиксов
 ТЕЛЕФОН / EMAIL: точно из запроса, не изменяй
 
+ПРАВИЛО РОДА (соблюдать строго):
+- Если «Пол кандидата: Женский» — ВСЕ глаголы и прилагательные в женском роде:
+  организовывала, обеспечивала, выполняла, контролировала, внедряла, вела, участвовала
+  Прилагательные: ответственная, пунктуальная, стрессоустойчивая, коммуникабельная
+  Summary начинать: «Ответственная [должность]...» или «Опытная [должность]...»
+- Если «Пол кандидата: Мужской» или поле отсутствует → мужской род (текущее поведение)
+
+ПРАВИЛО 13 (опыт):
+- Если work_history пустой ИЛИ experience_level = «Нет опыта» →
+  НЕЛЬЗЯ использовать слова «опытный», «с опытом», «опыт N лет» в summary.
+  Использовать: «начинающий специалист», «стремлюсь развиваться», «готов к обучению».
+  Ключевые качества — на первый план.
+
+ПРАВИЛО 14 (разрыв образование/работа):
+- Если образование явно не соответствует должности (медицинский ВУЗ + работа уборщиком,
+  технический ВУЗ + работа курьером и т.д.) → добавить в summary одно объяснительное
+  предложение: «Совмещаю обучение/подработку с развитием в профессии» или
+  «Получаю практический опыт в смежной области» — без оценочных суждений.
+
+ПРАВИЛО 15 (capitalize):
+- target_position в JSON должна начинаться с заглавной буквы: «Уборщик», «Фармацевт».
+  Никогда строчными: «уборщик», «фармацевт» — это неверно для резюме.
+
 ═══ ОТВЕТ: ТОЛЬКО JSON, без markdown, без пояснений ═══
 {"full_name":"","target_position":"","city":"","phone":"","email":"","salary":"","summary":"","experience":[{"company":"","position":"","period":"","description":""}],"education":[{"institution":"","degree":"","year":""}],"skills":[],"languages":["Русский — родной"],"certificates":[]}"""
 
@@ -199,6 +222,8 @@ def _build_user_payload(user_data: dict) -> str:
     email = (user_data.get("email") or "").strip()
     if email:
         blocks.append(f"Email: {email}")
+    if user_data.get("gender"):
+        blocks.append(f"Пол кандидата: {user_data['gender']}")
     return "\n\n".join(blocks)
 
 
@@ -383,6 +408,38 @@ def _apply_work_history_to_experience(resume_data: dict, user_data: dict) -> Non
             job["position"] = str(src.get("position")).strip()
 
 
+def normalize_organization_name(name: str) -> str:
+    """
+    Нормализует ALL CAPS названия из DaData/ЕГРЮЛ.
+    АО 'ТРАНСНЕФТЬ - ДИАСКАН' → АО 'Транснефть - Диаскан'
+    ФГБОУ ВО РЯЗГМУ МИНЗДРАВА РОССИИ → ФГБОУ ВО РязГМУ Минздрава России
+    """
+    if not name or name != name.upper():
+        return name
+
+    KEEP_UPPER = {
+        "АО", "ООО", "ПАО", "ЗАО", "ОАО", "НКО", "АНО", "МУП", "ГУП", "НАО",
+        "ГБУ", "ГБУЗ", "ГБОУ", "ФГБОУ", "ФГБУ", "МАУ", "КГУ", "МГУ", "СПбГУ",
+        "ВО", "РФ", "РАН", "ФНС", "МВД", "МЧС", "ФСБ", "ФСО",
+    }
+
+    words = name.split()
+    result = []
+    for word in words:
+        stripped = word.strip("\"'«»")
+        prefix = word[: len(word) - len(word.lstrip("\"'«»"))]
+        suffix = word[len(word.rstrip("\"'«»")) :]
+
+        if stripped.upper() in KEEP_UPPER:
+            result.append(word)
+        elif stripped.upper() == stripped and len(stripped) > 3:
+            result.append(prefix + stripped.capitalize() + suffix)
+        else:
+            result.append(word)
+
+    return " ".join(result)
+
+
 def finalize_resume_data(resume_data: dict, user_data: dict) -> dict:
     """Post-process AI output: fix hallucinations, preserve user facts."""
     resume_data["skills"] = _merge_skills(resume_data.get("skills"), user_data)
@@ -400,6 +457,15 @@ def finalize_resume_data(resume_data: dict, user_data: dict) -> dict:
     wh = user_data.get("work_history") or []
     if isinstance(exp, list) and wh:
         resume_data["experience"] = sanitize_experience_descriptions(exp, wh)
+
+    for exp_entry in resume_data.get("experience", []):
+        if isinstance(exp_entry, dict) and exp_entry.get("company"):
+            exp_entry["company"] = normalize_organization_name(exp_entry["company"])
+
+    for edu_entry in resume_data.get("education", []):
+        if isinstance(edu_entry, dict) and edu_entry.get("institution"):
+            edu_entry["institution"] = normalize_organization_name(edu_entry["institution"])
+
     return resume_data
 
 
