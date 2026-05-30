@@ -6,6 +6,7 @@ from jose import JWTError, jwt
 from config import settings
 from database import get_db
 from models.schemas import TelegramAuthRequest, TokenResponse
+from services.admin_notify import notify_new_user
 from services.founder import is_founder
 from services.telegram_service import verify_telegram_init_data
 
@@ -48,6 +49,12 @@ async def auth_with_telegram(payload: TelegramAuthRequest, db=Depends(get_db)):
             telegram_id=telegram_id,
             first_name=user_data.get("first_name", ""),
             last_name=user_data.get("last_name", ""),
+            username=user_data.get("username", ""),
+        )
+        await notify_new_user(
+            db,
+            telegram_id=telegram_id,
+            first_name=user_data.get("first_name", ""),
             username=user_data.get("username", ""),
         )
 

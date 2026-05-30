@@ -36,10 +36,15 @@ if grep -q '^FOUNDER_TELEGRAM_IDS=' .env 2>/dev/null; then
 else
   echo 'FOUNDER_TELEGRAM_IDS=7595981350' >> .env
 fi
+if grep -q '^ADMIN_GROUP_CHAT_ID=' .env 2>/dev/null; then
+  sed -i 's/^ADMIN_GROUP_CHAT_ID=.*/ADMIN_GROUP_CHAT_ID=1003959501619/' .env
+else
+  echo 'ADMIN_GROUP_CHAT_ID=1003959501619' >> .env
+fi
 systemctl restart resumebot-api resumebot-bot
-sleep 2
+sleep 4
 systemctl is-active resumebot-api resumebot-bot
-curl -sf http://127.0.0.1:8000/health
+curl -sf --retry 3 --retry-delay 2 http://127.0.0.1:8000/health
 echo ""
 echo VPS_UPDATE_OK
 """

@@ -29,6 +29,7 @@ sys.path.insert(0, str(ROOT / "backend"))
 
 from config import settings  # noqa: E402
 from database import get_db  # noqa: E402
+from services.admin_notify import PaymentNotifyInfo, notify_new_user  # noqa: E402
 from services.payment_fulfillment import fulfill_paid_resume  # noqa: E402
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
@@ -97,15 +98,16 @@ def _display_name(user) -> str:
     return html.escape(str(raw), quote=False)
 
 
-def _ensure_user_row(db, tg_user) -> None:
+def _ensure_user_row(db, tg_user) -> bool:
     if db.find_user_by_telegram_id(tg_user.id):
-        return
+        return False
     db.create_user(
         telegram_id=tg_user.id,
         first_name=tg_user.first_name or "",
         last_name=tg_user.last_name or "",
         username=tg_user.username or "",
     )
+    return True
 
 
 def _resume_count_from_db() -> int:
@@ -137,7 +139,14 @@ async def _get_resume_count() -> int:
 async def _persist_referral(referrer_id: int, tg_user) -> None:
     try:
         db = get_db()
-        await asyncio.to_thread(_ensure_user_row, db, tg_user)
+        created = await asyncio.to_thread(_ensure_user_row, db, tg_user)
+        if created:
+            await notify_new_user(
+                db,
+                telegram_id=tg_user.id,
+                first_name=tg_user.first_name or "",
+                username=tg_user.username or "",
+            )
         await asyncio.to_thread(db.save_referral, referrer_id, tg_user.id)
     except Exception as exc:
         logger.warning("Referral save failed: %s", exc)
@@ -426,8 +435,18 @@ async def successful_payment(update: Update, context: ContextTypes.DEFAULT_TYPE)
         payload = json.loads(payment.invoice_payload)
         resume_id = payload["resume_id"]
         telegram_id = update.message.from_user.id
+        from_user = update.message.from_user
         db = get_db()
-        await fulfill_paid_resume(db, resume_id, telegram_id)
+        pay_info = PaymentNotifyInfo(
+            provider="telegram_stars",
+            amount=str(payment.total_amount),
+            currency="⭐" if payment.currency == "XTR" else payment.currency,
+            resume_id=resume_id,
+            telegram_id=telegram_id,
+            username=from_user.username or "",
+            first_name=from_user.first_name or "",
+        )
+        await fulfill_paid_resume(db, resume_id, telegram_id, payment=pay_info)
 
         if context.job_queue:
             context.job_queue.run_once(

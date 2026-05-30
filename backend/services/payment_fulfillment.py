@@ -3,6 +3,7 @@ import logging
 from datetime import datetime
 from typing import Any
 
+from services.admin_notify import PaymentNotifyInfo, notify_payment
 from services.pdf_service import generate_pdf
 from services.telegram_service import send_document_to_user
 
@@ -17,13 +18,20 @@ def parse_resume_data(raw: Any) -> dict:
     raise ValueError("resume data must be dict or json string")
 
 
-async def fulfill_paid_resume(db: Any, resume_id: str, telegram_id: int) -> bool:
+async def fulfill_paid_resume(
+    db: Any,
+    resume_id: str,
+    telegram_id: int,
+    *,
+    payment: PaymentNotifyInfo | None = None,
+) -> bool:
     """Mark resume paid and send PDF to user's Telegram chat. Idempotent."""
     resume = db.find_resume(resume_id)
     if not resume:
         logger.warning("fulfill: resume %s not found", resume_id)
         return False
 
+    first_payment = not resume.get("is_paid")
     if resume.get("is_paid"):
         logger.info("fulfill: resume %s already paid, resending PDF", resume_id)
     else:
@@ -54,4 +62,8 @@ async def fulfill_paid_resume(db: Any, resume_id: str, telegram_id: int) -> bool
         caption=caption.strip(),
     )
     logger.info("fulfill: PDF sent for resume %s to telegram_id=%s", resume_id, telegram_id)
+
+    if payment and first_payment:
+        await notify_payment(db, payment, first_payment=True)
+
     return True

@@ -24,6 +24,7 @@ os.environ.setdefault("SUPABASE_KEY", "test")
 os.environ.setdefault("JWT_SECRET", "test-secret")
 os.environ.setdefault("APP_URL", "https://62-217-182-239.nip.io")
 os.environ.setdefault("FRONTEND_URL", "https://example.github.io/app")
+os.environ.setdefault("ADMIN_GROUP_CHAT_ID", "")
 
 from storage.backends import SQLiteBackend  # noqa: E402
 
@@ -66,7 +67,7 @@ async def test_start_referral_flow() -> None:
             with patch.object(bot_module, "_get_resume_count", AsyncMock(return_value=1200)):
                 backend.create_user(telegram_id=555, first_name="Referrer")
                 await bot_module.start(update, context)
-                await asyncio.sleep(0.05)
+                await asyncio.sleep(0.2)
 
         user = backend.find_user_by_telegram_id(999)
         assert user is not None

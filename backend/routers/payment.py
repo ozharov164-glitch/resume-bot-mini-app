@@ -8,6 +8,7 @@ from config import settings
 from database import get_db
 from dependencies import get_current_user
 from services.founder import is_founder
+from services.admin_notify import PaymentNotifyInfo
 from services.payment_fulfillment import fulfill_paid_resume
 from services.payment_service import create_stars_invoice_link, create_yookassa_payment
 
@@ -64,8 +65,18 @@ async def telegram_payment_webhook(request: Request, db=Depends(get_db)):
         try:
             payload = json.loads(payment.invoice_payload)
             resume_id = payload["resume_id"]
-            telegram_id = update.message.from_user.id
-            await fulfill_paid_resume(db, resume_id, telegram_id)
+            from_user = update.message.from_user
+            telegram_id = from_user.id
+            pay_info = PaymentNotifyInfo(
+                provider="telegram_stars",
+                amount=str(payment.total_amount),
+                currency="⭐" if payment.currency == "XTR" else payment.currency,
+                resume_id=resume_id,
+                telegram_id=telegram_id,
+                username=from_user.username or "",
+                first_name=from_user.first_name or "",
+            )
+            await fulfill_paid_resume(db, resume_id, telegram_id, payment=pay_info)
         except Exception:
             logger.exception("telegram-webhook fulfill failed")
 

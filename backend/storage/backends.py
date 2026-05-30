@@ -170,6 +170,16 @@ class SQLiteBackend:
             row = conn.execute("SELECT COUNT(*) AS c FROM resumes").fetchone()
         return int(row["c"]) if row else 0
 
+    def count_users(self) -> int:
+        with self._connect() as conn:
+            row = conn.execute("SELECT COUNT(*) AS c FROM users").fetchone()
+        return int(row["c"]) if row else 0
+
+    def count_paid_resumes(self) -> int:
+        with self._connect() as conn:
+            row = conn.execute("SELECT COUNT(*) AS c FROM resumes WHERE is_paid = 1").fetchone()
+        return int(row["c"]) if row else 0
+
     def list_resumes_for_user(self, user_id: str, limit: int = 30) -> list[dict[str, Any]]:
         with self._connect() as conn:
             rows = conn.execute(
@@ -252,6 +262,23 @@ class SupabaseBackend:
 
     def count_resumes(self) -> int:
         result = self.client.table("resumes").select("id", count="exact").execute()
+        if result.count is not None:
+            return int(result.count)
+        return len(result.data or [])
+
+    def count_users(self) -> int:
+        result = self.client.table("users").select("id", count="exact").execute()
+        if result.count is not None:
+            return int(result.count)
+        return len(result.data or [])
+
+    def count_paid_resumes(self) -> int:
+        result = (
+            self.client.table("resumes")
+            .select("id", count="exact")
+            .eq("is_paid", True)
+            .execute()
+        )
         if result.count is not None:
             return int(result.count)
         return len(result.data or [])
