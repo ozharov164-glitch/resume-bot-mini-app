@@ -1,10 +1,27 @@
+import html
 import json
 import logging
 import sys
 from pathlib import Path
 
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update, WebAppInfo
-from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandler, PreCheckoutQueryHandler, filters
+import httpx
+from telegram import (
+    BotCommand,
+    InlineKeyboardButton,
+    InlineKeyboardMarkup,
+    MenuButtonWebApp,
+    Update,
+    WebAppInfo,
+)
+from telegram.ext import (
+    Application,
+    CallbackQueryHandler,
+    CommandHandler,
+    ContextTypes,
+    MessageHandler,
+    PreCheckoutQueryHandler,
+    filters,
+)
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "backend"))
@@ -19,26 +36,346 @@ logger = logging.getLogger(__name__)
 MINI_APP_URL = settings.FRONTEND_URL.rstrip("/")
 
 
+def _display_name(user) -> str:
+    raw = user.first_name or user.username or "друг"
+    return html.escape(str(raw), quote=False)
+
+
+def _ensure_user_row(db, tg_user) -> None:
+    if db.find_user_by_telegram_id(tg_user.id):
+        return
+    db.create_user(
+        telegram_id=tg_user.id,
+        first_name=tg_user.first_name or "",
+        last_name=tg_user.last_name or "",
+        username=tg_user.username or "",
+    )
+
+
+async def _get_resume_count() -> int:
+    try:
+        async with httpx.AsyncClient(timeout=3.0) as client:
+            r = await client.get(f"{settings.APP_URL.rstrip('/')}/api/stats/count")
+            if r.status_code == 200:
+                return r.json().get("count", 1200)
+    except Exception:
+        pass
+    return 1200
+
+
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    keyboard = [[InlineKeyboardButton(text="Создать резюме", web_app=WebAppInfo(url=MINI_APP_URL))]]
-    reply_markup = InlineKeyboardMarkup(keyboard)
+    referrer_id = None
+    if context.args and context.args[0].startswith("ref_"):
+        try:
+            referrer_id = int(context.args[0][4:])
+            user_tg_id = update.message.from_user.id
+            if referrer_id != user_tg_id:
+                try:
+                    db = get_db()
+                    _ensure_user_row(db, update.message.from_user)
+                    db.save_referral(referrer_id, user_tg_id)
+                except Exception as e:
+                    logger.warning("Referral save failed: %s", e)
+        except (ValueError, IndexError):
+            pass
+
+    count = await _get_resume_count()
+
+    text = (
+        "🎯 <b>Профессиональное резюме за 5 минут</b>\n\n"
+        f"Привет, {_display_name(update.message.from_user)}! 👋\n\n"
+        "Как это работает:\n"
+        "📝 Отвечаешь на простые вопросы\n"
+        "🤖 ИИ составляет сильное резюме\n"
+        "📄 Получаешь готовый PDF прямо в этот чат\n\n"
+        "✅ Формат hh.ru — работодатели привыкли\n"
+        "🎤 Можно диктовать голосом\n"
+        f"👥 Уже создано <b>{count:,}+</b> резюме\n\n"
+        "💳 Стоимость: <b>99 ⭐ Stars</b> или <b>149 ₽</b>"
+    )
+
+    keyboard = InlineKeyboardMarkup(
+        [
+            [InlineKeyboardButton("📝 Создать резюме", web_app=WebAppInfo(url=MINI_APP_URL))],
+            [
+                InlineKeyboardButton(
+                    "📋 Мои резюме", web_app=WebAppInfo(url=f"{MINI_APP_URL}#history")
+                ),
+                InlineKeyboardButton(
+                    "🖼 Примеры", web_app=WebAppInfo(url=f"{MINI_APP_URL}#examples")
+                ),
+            ],
+            [InlineKeyboardButton("❓ Как это работает", callback_data="how_it_works")],
+            [InlineKeyboardButton("🛡️ Почему нам доверяют", callback_data="trust")],
+            [InlineKeyboardButton("🎁 Пригласить друга", callback_data="invite_prompt")],
+        ]
+    )
+
+    await update.message.reply_text(text, reply_markup=keyboard, parse_mode="HTML")
+
+
+async def resume_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    keyboard = InlineKeyboardMarkup(
+        [[InlineKeyboardButton("📝 Открыть конструктор", web_app=WebAppInfo(url=MINI_APP_URL))]]
+    )
     await update.message.reply_text(
-        text=(
-            "Привет! Я помогу создать профессиональное резюме за несколько минут.\n\n"
-            "Ты отвечаешь на понятные вопросы, а я формирую аккуратное резюме для отклика на вакансии."
+        "Нажми кнопку — откроется конструктор резюме.\n"
+        "Ответь на несколько вопросов, и ИИ составит профессиональное резюме за 5 минут.",
+        reply_markup=keyboard,
+    )
+
+
+async def my_resumes_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    keyboard = InlineKeyboardMarkup(
+        [
+            [
+                InlineKeyboardButton(
+                    "📋 Открыть историю", web_app=WebAppInfo(url=f"{MINI_APP_URL}#history")
+                )
+            ]
+        ]
+    )
+    await update.message.reply_text(
+        "Здесь хранятся все твои резюме.\n"
+        "Можно открыть, отредактировать или скачать PDF повторно.",
+        reply_markup=keyboard,
+    )
+
+
+async def examples_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    keyboard = InlineKeyboardMarkup(
+        [
+            [
+                InlineKeyboardButton(
+                    "🖼 Смотреть примеры", web_app=WebAppInfo(url=f"{MINI_APP_URL}#examples")
+                )
+            ]
+        ]
+    )
+    await update.message.reply_text(
+        "Посмотри примеры резюме, которые создаёт наш ИИ:\n\n"
+        "🚗 Водитель  🔒 Охранник  💊 Фармацевт  🛒 Продавец\n\n"
+        "Каждое резюме — профессиональный дизайн, формат hh.ru.",
+        reply_markup=keyboard,
+    )
+
+
+async def trust_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    count = await _get_resume_count()
+    await update.message.reply_text(
+        f"🛡️ <b>Почему ResumeBot — надёжный выбор:</b>\n\n"
+        f"📊 Создано {count:,}+ резюме\n"
+        "✅ Формат hh.ru — проверен работодателями\n"
+        "🔒 Данные не передаются третьим лицам\n"
+        "🤖 ИИ пишет текст — но не выдумывает факты\n"
+        "💳 Оплата через Telegram Stars — безопасно\n"
+        "📄 PDF без водяных знаков сразу после оплаты\n"
+        "🔄 Можно редактировать и пересобирать\n\n"
+        "Вопросы? Напиши /support",
+        reply_markup=InlineKeyboardMarkup(
+            [[InlineKeyboardButton("📝 Создать резюме", web_app=WebAppInfo(url=MINI_APP_URL))]]
         ),
-        reply_markup=reply_markup,
+        parse_mode="HTML",
+    )
+
+
+async def support_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text(
+        "🆘 <b>Нужна помощь?</b>\n\n"
+        "Частые вопросы:\n"
+        "• <b>PDF не пришёл</b> → подожди 1-2 минуты, затем напиши /start\n"
+        "• <b>Хочу изменить резюме</b> → открой «Мои резюме» → «Изменить ответы»\n"
+        "• <b>Ошибка оплаты</b> → попробуй ещё раз или выбери другой способ\n\n"
+        "Не помогло? Опиши проблему — ответим в течение часа.\n"
+        "Гарантия: если что-то пошло не так — вернём Stars.",
+        parse_mode="HTML",
     )
 
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(
-        "Как это работает:\n"
-        "1) Открой Mini App\n"
-        "2) Ответь на вопросы\n"
-        "3) Получи готовое резюме\n"
-        "4) Оплати Stars прямо в приложении — PDF придёт в этот чат"
+    keyboard = InlineKeyboardMarkup(
+        [[InlineKeyboardButton("📝 Создать резюме", web_app=WebAppInfo(url=MINI_APP_URL))]]
     )
+    await update.message.reply_text(
+        "📌 <b>Как создать резюме:</b>\n\n"
+        "1️⃣ Нажми «Создать резюме» — откроется мини-приложение\n"
+        "2️⃣ Ответь на 11 простых вопросов (можно голосом 🎤)\n"
+        "3️⃣ ИИ напишет профессиональное резюме по твоим ответам\n"
+        "4️⃣ Посмотри бесплатный предпросмотр\n"
+        "5️⃣ Оплати 99 ⭐ или 149 ₽ — PDF придёт в этот чат\n\n"
+        "⏱ Весь процесс: 3-5 минут.\n"
+        "📄 Соответствует формату hh.ru.",
+        reply_markup=keyboard,
+        parse_mode="HTML",
+    )
+
+
+async def invite_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.message.from_user.id
+    invite_link = f"https://t.me/{settings.BOT_USERNAME}?start=ref_{user_id}"
+
+    await update.message.reply_text(
+        "🎁 <b>Пригласи друга — получи бесплатное резюме!</b>\n\n"
+        "Как это работает:\n"
+        "1. Отправь ссылку другу\n"
+        "2. Друг создаёт и оплачивает резюме\n"
+        "3. Ты получаешь одно бесплатное резюме 🎉\n\n"
+        f"Твоя личная ссылка:\n<code>{invite_link}</code>\n\n"
+        "Нажми и удержи ссылку чтобы скопировать, "
+        "или используй кнопку «Поделиться».",
+        reply_markup=InlineKeyboardMarkup(
+            [
+                [
+                    InlineKeyboardButton(
+                        "📤 Поделиться с другом",
+                        switch_inline_query=(
+                            f"Создай профессиональное резюме за 5 минут → {invite_link}"
+                        ),
+                    )
+                ],
+            ]
+        ),
+        parse_mode="HTML",
+    )
+
+
+async def how_it_works_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    await query.edit_message_text(
+        "📌 <b>Как создать резюме:</b>\n\n"
+        "1️⃣ Нажми «Создать резюме»\n"
+        "2️⃣ Ответь на 11 вопросов (можно голосом 🎤)\n"
+        "3️⃣ ИИ составляет профессиональное резюме\n"
+        "4️⃣ Смотри бесплатный предпросмотр\n"
+        "5️⃣ Оплати 99 ⭐ или 149 ₽ — PDF в чат\n\n"
+        "⏱ 3-5 минут от начала до PDF.",
+        reply_markup=InlineKeyboardMarkup(
+            [
+                [InlineKeyboardButton("📝 Создать резюме", web_app=WebAppInfo(url=MINI_APP_URL))],
+                [InlineKeyboardButton("◀️ Назад", callback_data="back_to_start")],
+            ]
+        ),
+        parse_mode="HTML",
+    )
+
+
+async def trust_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    count = await _get_resume_count()
+    await query.edit_message_text(
+        f"🛡️ <b>Почему нам доверяют:</b>\n\n"
+        f"📊 Создано {count:,}+ резюме\n"
+        "✅ Формат hh.ru\n"
+        "🔒 Данные не передаются третьим лицам\n"
+        "🤖 ИИ не выдумывает факты — только твои данные\n"
+        "💳 Оплата через Telegram Stars\n"
+        "📄 PDF без водяных знаков после оплаты\n"
+        "🔄 Можно редактировать резюме\n\n"
+        "Вопросы? /support",
+        reply_markup=InlineKeyboardMarkup(
+            [
+                [InlineKeyboardButton("📝 Создать резюме", web_app=WebAppInfo(url=MINI_APP_URL))],
+                [InlineKeyboardButton("◀️ Назад", callback_data="back_to_start")],
+            ]
+        ),
+        parse_mode="HTML",
+    )
+
+
+async def invite_prompt_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    user_id = query.from_user.id
+    invite_link = f"https://t.me/{settings.BOT_USERNAME}?start=ref_{user_id}"
+    await query.edit_message_text(
+        "🎁 <b>Пригласи друга — получи бесплатное резюме!</b>\n\n"
+        "Как это работает:\n"
+        "1. Отправь ссылку другу\n"
+        "2. Друг создаёт и оплачивает резюме\n"
+        "3. Ты получаешь одно бесплатное резюме 🎉\n\n"
+        f"Твоя ссылка:\n<code>{invite_link}</code>",
+        reply_markup=InlineKeyboardMarkup(
+            [
+                [
+                    InlineKeyboardButton(
+                        "📤 Поделиться",
+                        switch_inline_query=f"Создай резюме за 5 минут! {invite_link}",
+                    )
+                ],
+                [InlineKeyboardButton("◀️ Назад", callback_data="back_to_start")],
+            ]
+        ),
+        parse_mode="HTML",
+    )
+
+
+async def back_to_start_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    count = await _get_resume_count()
+    text = (
+        "🎯 <b>Профессиональное резюме за 5 минут</b>\n\n"
+        "📝 Отвечаешь на простые вопросы\n"
+        "🤖 ИИ составляет сильное резюме\n"
+        "📄 Получаешь готовый PDF прямо в этот чат\n\n"
+        "✅ Формат hh.ru  🎤 Голосовой ввод\n"
+        f"👥 Уже создано <b>{count:,}+</b> резюме\n\n"
+        "💳 <b>99 ⭐ Stars</b> или <b>149 ₽</b>"
+    )
+    keyboard = InlineKeyboardMarkup(
+        [
+            [InlineKeyboardButton("📝 Создать резюме", web_app=WebAppInfo(url=MINI_APP_URL))],
+            [InlineKeyboardButton("❓ Как это работает", callback_data="how_it_works")],
+            [InlineKeyboardButton("🛡️ Почему нам доверяют", callback_data="trust")],
+            [InlineKeyboardButton("🎁 Пригласить друга", callback_data="invite_prompt")],
+        ]
+    )
+    await query.edit_message_text(text, reply_markup=keyboard, parse_mode="HTML")
+
+
+async def fallback_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    keyboard = InlineKeyboardMarkup(
+        [
+            [InlineKeyboardButton("📝 Создать резюме", web_app=WebAppInfo(url=MINI_APP_URL))],
+            [InlineKeyboardButton("❓ Как это работает", callback_data="how_it_works")],
+        ]
+    )
+    await update.message.reply_text(
+        "Я работаю через мини-приложение — там удобнее всего. 👇\n\n"
+        "Если что-то не работает — напиши /support",
+        reply_markup=keyboard,
+    )
+
+
+async def follow_up_after_payment(context: ContextTypes.DEFAULT_TYPE):
+    job = context.job
+    telegram_id = job.data["telegram_id"]
+    user_name = job.data.get("first_name", "")
+    user_id = job.data.get("user_id")
+    invite_link = f"https://t.me/{settings.BOT_USERNAME}?start=ref_{user_id}"
+
+    keyboard = InlineKeyboardMarkup(
+        [
+            [InlineKeyboardButton("🎁 Получить бесплатное резюме", callback_data="invite_prompt")],
+            [InlineKeyboardButton("📝 Создать ещё резюме", web_app=WebAppInfo(url=MINI_APP_URL))],
+        ]
+    )
+    try:
+        await context.bot.send_message(
+            chat_id=telegram_id,
+            text=(
+                f"Как тебе резюме{', ' + html.escape(str(user_name), quote=False) if user_name else ''}? 😊\n\n"
+                "Если понравилось — пригласи друга!\n"
+                "За каждого, кто оплатит резюме, ты получишь <b>одно бесплатное</b>.\n\n"
+                f"Твоя ссылка:\n<code>{invite_link}</code>"
+            ),
+            reply_markup=keyboard,
+            parse_mode="HTML",
+        )
+    except Exception as e:
+        logger.warning("Follow-up failed for %s: %s", telegram_id, e)
 
 
 async def pre_checkout(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -55,6 +392,17 @@ async def successful_payment(update: Update, context: ContextTypes.DEFAULT_TYPE)
         telegram_id = update.message.from_user.id
         db = get_db()
         await fulfill_paid_resume(db, resume_id, telegram_id)
+
+        if context.job_queue:
+            context.job_queue.run_once(
+                follow_up_after_payment,
+                when=45,
+                data={
+                    "telegram_id": telegram_id,
+                    "first_name": update.message.from_user.first_name,
+                    "user_id": telegram_id,
+                },
+            )
     except Exception:
         logger.exception("successful_payment handler failed")
         await update.message.reply_text(
@@ -62,12 +410,55 @@ async def successful_payment(update: Update, context: ContextTypes.DEFAULT_TYPE)
         )
 
 
+async def post_init(application: Application) -> None:
+    await application.bot.set_my_commands(
+        [
+            BotCommand("start", "Запустить бота"),
+            BotCommand("resume", "Создать новое резюме"),
+            BotCommand("myresumes", "Мои резюме"),
+            BotCommand("examples", "Примеры резюме"),
+            BotCommand("invite", "Пригласить друга"),
+            BotCommand("trust", "Почему нам доверяют"),
+            BotCommand("support", "Связаться с поддержкой"),
+            BotCommand("help", "Как это работает"),
+        ]
+    )
+    await application.bot.set_chat_menu_button(
+        menu_button=MenuButtonWebApp(
+            text="📝 Создать резюме",
+            web_app=WebAppInfo(url=MINI_APP_URL),
+        )
+    )
+
+
 def main():
-    app = Application.builder().token(settings.BOT_TOKEN).build()
+    app = (
+        Application.builder()
+        .token(settings.BOT_TOKEN)
+        .post_init(post_init)
+        .build()
+    )
+
     app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("resume", resume_command))
+    app.add_handler(CommandHandler("myresumes", my_resumes_command))
+    app.add_handler(CommandHandler("examples", examples_command))
     app.add_handler(CommandHandler("help", help_command))
+    app.add_handler(CommandHandler("trust", trust_command))
+    app.add_handler(CommandHandler("invite", invite_command))
+    app.add_handler(CommandHandler("support", support_command))
+
+    app.add_handler(CallbackQueryHandler(how_it_works_callback, pattern="^how_it_works$"))
+    app.add_handler(CallbackQueryHandler(trust_callback, pattern="^trust$"))
+    app.add_handler(CallbackQueryHandler(back_to_start_callback, pattern="^back_to_start$"))
+    app.add_handler(CallbackQueryHandler(invite_prompt_callback, pattern="^invite_prompt$"))
+
     app.add_handler(PreCheckoutQueryHandler(pre_checkout))
     app.add_handler(MessageHandler(filters.SUCCESSFUL_PAYMENT, successful_payment))
+
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, fallback_text))
+
+    logger.info("Bot started")
     app.run_polling(allowed_updates=Update.ALL_TYPES)
 
 

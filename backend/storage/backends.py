@@ -46,6 +46,25 @@ class SQLiteBackend:
                 );
                 """
             )
+            for col_sql in [
+                "ALTER TABLE users ADD COLUMN referred_by INTEGER DEFAULT NULL",
+                "ALTER TABLE users ADD COLUMN referral_bonus INTEGER DEFAULT 0",
+            ]:
+                try:
+                    conn.execute(col_sql)
+                except Exception:
+                    pass
+
+    def save_referral(self, referrer_tg_id: int, referee_tg_id: int) -> None:
+        try:
+            with self._connect() as conn:
+                conn.execute(
+                    "UPDATE users SET referred_by = ? WHERE telegram_id = ?",
+                    (referrer_tg_id, referee_tg_id),
+                )
+                conn.commit()
+        except Exception as e:
+            logger.warning("save_referral failed: %s", e)
 
     @staticmethod
     def _row_to_dict(row: sqlite3.Row | None) -> dict | None:
@@ -264,3 +283,11 @@ class SupabaseBackend:
                 }
             )
         return items
+
+    def save_referral(self, referrer_tg_id: int, referee_tg_id: int) -> None:
+        try:
+            self.client.table("users").update({"referred_by": referrer_tg_id}).eq(
+                "telegram_id", referee_tg_id
+            ).execute()
+        except Exception as e:
+            logger.warning("save_referral failed: %s", e)
