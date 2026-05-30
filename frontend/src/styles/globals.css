@@ -879,15 +879,20 @@ textarea::placeholder {
 }
 
 /* Examples gallery */
+.examples-tab-main {
+  min-height: 0;
+}
+
 .examples-gallery {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 1.125rem;
+  padding: 0 1rem;
 }
 
 .examples-gallery-header {
   text-align: center;
-  padding: 0 0.25rem;
+  padding: 0 0.5rem;
 }
 
 .examples-gallery-title {
@@ -899,18 +904,20 @@ textarea::placeholder {
 }
 
 .examples-gallery-sub {
-  margin: 0.35rem 0 0;
+  margin: 0.4rem 0 0;
   font-size: 0.8125rem;
-  line-height: 1.45;
+  line-height: 1.5;
   color: var(--text-muted);
 }
 
 .examples-gallery-scroll {
   display: flex;
-  gap: 0.875rem;
+  gap: 1rem;
   overflow-x: auto;
   scroll-snap-type: x mandatory;
-  padding: 0.35rem 0.15rem 0.5rem;
+  scroll-padding-inline: max(1rem, calc((100% - min(78vw, 280px)) / 2));
+  padding: 0.5rem max(1rem, calc((100% - min(78vw, 280px)) / 2)) 0.75rem;
+  margin: 0 -1rem;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
 }
@@ -924,22 +931,29 @@ textarea::placeholder {
   scroll-snap-align: center;
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 0;
   padding: 0;
   border: none;
   background: transparent;
   text-align: left;
   cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.example-album-visual {
   position: relative;
+  isolation: isolate;
+  padding-bottom: 12px;
 }
 
 .example-album-stack {
   position: absolute;
-  top: 0.5rem;
-  left: 0.65rem;
-  right: 0.65rem;
-  height: calc(100% - 5.5rem);
+  top: 6px;
+  left: 8px;
+  right: 8px;
+  bottom: 12px;
   pointer-events: none;
+  z-index: 0;
 }
 
 .example-album-stack-sheet {
@@ -947,17 +961,17 @@ textarea::placeholder {
   inset: 0;
   border-radius: 14px;
   border: 1px solid rgba(60, 74, 66, 0.08);
-  background: #f3f6f4;
+  background: #eef2ef;
 }
 
 .example-album-stack-sheet--1 {
-  transform: translateY(5px) scale(0.985);
-  opacity: 0.65;
+  transform: translateY(4px) scale(0.988);
+  opacity: 0.55;
 }
 
 .example-album-stack-sheet--2 {
-  transform: translateY(10px) scale(0.97);
-  opacity: 0.35;
+  transform: translateY(8px) scale(0.976);
+  opacity: 0.28;
 }
 
 .example-album-frame {
@@ -965,18 +979,19 @@ textarea::placeholder {
   z-index: 1;
   overflow: hidden;
   border-radius: 16px;
-  padding: 0.35rem;
-  background: linear-gradient(145deg, #ffffff 0%, #f4f7f5 100%);
-  border: 1px solid rgba(60, 74, 66, 0.1);
+  padding: 0.3rem;
+  background: linear-gradient(160deg, #ffffff 0%, #f6f9f7 100%);
+  border: 1px solid rgba(60, 74, 66, 0.09);
   box-shadow:
-    0 10px 28px rgba(0, 60, 40, 0.08),
-    0 2px 8px rgba(0, 0, 0, 0.04);
+    0 8px 24px rgba(0, 60, 40, 0.07),
+    0 2px 6px rgba(0, 0, 0, 0.03);
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
 }
 
 .example-album-card--active .example-album-frame {
   box-shadow:
-    0 14px 36px rgba(0, 108, 73, 0.12),
-    0 4px 12px rgba(0, 0, 0, 0.05);
+    0 12px 32px rgba(0, 108, 73, 0.11),
+    0 3px 10px rgba(0, 0, 0, 0.04);
 }
 
 .example-album-accent {
@@ -984,50 +999,64 @@ textarea::placeholder {
   top: 0;
   left: 0;
   right: 0;
-  height: 4px;
+  height: 3px;
   z-index: 2;
+  border-radius: 16px 16px 0 0;
 }
 
 .example-album-image {
   display: block;
   width: 100%;
+  aspect-ratio: 210 / 297;
+  object-fit: cover;
+  object-position: top center;
   border-radius: 12px;
   user-select: none;
   -webkit-user-select: none;
   pointer-events: none;
+  background: #fff;
 }
 
 .example-album-meta {
+  position: relative;
+  z-index: 2;
   display: flex;
   flex-direction: column;
-  gap: 0.2rem;
-  padding: 0 0.25rem;
+  gap: 0.25rem;
+  margin-top: 0.875rem;
+  padding: 0 0.125rem 0.25rem;
 }
 
 .example-album-badge {
   font-size: 0.6875rem;
   font-weight: 700;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
+  line-height: 1.3;
 }
 
 .example-album-name {
   font-size: 0.9375rem;
   font-weight: 700;
+  line-height: 1.25;
   color: var(--text-primary);
 }
 
 .example-album-tagline {
   font-size: 0.75rem;
-  line-height: 1.35;
+  line-height: 1.4;
   color: var(--text-muted);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .example-album-city {
   display: inline-flex;
   align-items: center;
   gap: 0.2rem;
-  margin-top: 0.15rem;
+  margin-top: 0.125rem;
   font-size: 0.75rem;
   color: var(--text-muted);
 }
@@ -1035,7 +1064,9 @@ textarea::placeholder {
 .examples-gallery-dots {
   display: flex;
   justify-content: center;
-  gap: 0.4rem;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.125rem 0;
 }
 
 .examples-gallery-dot {
@@ -1044,13 +1075,13 @@ textarea::placeholder {
   border-radius: 999px;
   border: none;
   padding: 0;
-  background: rgba(60, 74, 66, 0.18);
+  background: rgba(60, 74, 66, 0.16);
   cursor: pointer;
-  transition: width 0.2s ease, background 0.2s ease;
+  transition: width 0.22s ease, background 0.22s ease;
 }
 
 .examples-gallery-dot--active {
-  width: 1.25rem;
+  width: 1.35rem;
   background: var(--brand);
 }
 
@@ -1068,6 +1099,11 @@ textarea::placeholder {
   font-size: 0.9375rem;
   font-weight: 700;
   cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.examples-gallery-cta:active {
+  background: rgba(16, 185, 129, 0.14);
 }
 
 /* Example lightbox */
@@ -1109,13 +1145,20 @@ textarea::placeholder {
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
 }
 
+.example-lightbox-visual {
+  position: relative;
+  isolation: isolate;
+  padding-bottom: 14px;
+}
+
 .example-lightbox-stack {
   position: absolute;
-  top: 1.5rem;
-  left: 0.75rem;
-  right: 0.75rem;
-  height: calc(100% - 4rem);
+  top: 8px;
+  left: 10px;
+  right: 10px;
+  bottom: 14px;
   pointer-events: none;
+  z-index: 0;
 }
 
 .example-lightbox-stack-sheet {
@@ -1123,27 +1166,27 @@ textarea::placeholder {
   inset: 0;
   border-radius: 16px;
   border: 1px solid rgba(60, 74, 66, 0.08);
-  background: #f3f6f4;
+  background: #eef2ef;
 }
 
 .example-lightbox-stack-sheet--1 {
-  transform: translateY(6px) scale(0.985);
-  opacity: 0.65;
+  transform: translateY(5px) scale(0.988);
+  opacity: 0.55;
 }
 
 .example-lightbox-stack-sheet--2 {
-  transform: translateY(12px) scale(0.97);
-  opacity: 0.35;
+  transform: translateY(10px) scale(0.976);
+  opacity: 0.28;
 }
 
 .example-lightbox-frame {
   position: relative;
   z-index: 1;
-  padding: 0.4rem;
+  padding: 0.35rem;
   border-radius: 18px;
-  background: linear-gradient(145deg, #ffffff 0%, #f4f7f5 100%);
-  border: 1px solid rgba(60, 74, 66, 0.1);
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.18);
+  background: linear-gradient(160deg, #ffffff 0%, #f6f9f7 100%);
+  border: 1px solid rgba(60, 74, 66, 0.09);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.16);
 }
 
 .example-lightbox-image {
@@ -1153,7 +1196,7 @@ textarea::placeholder {
 }
 
 .example-lightbox-caption {
-  margin-top: 0.75rem;
+  margin-top: 1rem;
   text-align: center;
 }
 
@@ -1164,7 +1207,7 @@ textarea::placeholder {
 }
 
 .example-lightbox-sub {
-  margin: 0.2rem 0 0;
+  margin: 0.25rem 0 0;
   font-size: 0.8125rem;
   color: var(--text-muted);
 }

@@ -103,7 +103,7 @@ export function HomePage({ onStart, onHistory }: HomeProps) {
       </div>
 
       {tab === "examples" ? (
-        <main className="flex flex-1 flex-col gap-3 px-4 pb-2 pt-2">
+        <main className="examples-tab-main flex flex-1 flex-col pt-2">
           <ExamplesGallery onStart={start} />
         </main>
       ) : (

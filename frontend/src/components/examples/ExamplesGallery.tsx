@@ -30,24 +30,26 @@ function ExampleAlbumCard({
       transition={{ delay: index * 0.06 }}
       aria-label={`Пример резюме: ${example.position}`}
     >
-      <div className="example-album-stack" aria-hidden>
-        <div className="example-album-stack-sheet example-album-stack-sheet--2" />
-        <div className="example-album-stack-sheet example-album-stack-sheet--1" />
-      </div>
+      <div className="example-album-visual">
+        <div className="example-album-stack" aria-hidden>
+          <div className="example-album-stack-sheet example-album-stack-sheet--2" />
+          <div className="example-album-stack-sheet example-album-stack-sheet--1" />
+        </div>
 
-      <div className="example-album-frame">
-        <div
-          className="example-album-accent"
-          style={{ background: example.accent }}
-          aria-hidden
-        />
-        <img
-          src={exampleImageUrl(example.slug)}
-          alt={`Резюме — ${example.name}, ${example.position}`}
-          className="example-album-image"
-          loading="lazy"
-          draggable={false}
-        />
+        <div className="example-album-frame">
+          <div
+            className="example-album-accent"
+            style={{ background: example.accent }}
+            aria-hidden
+          />
+          <img
+            src={exampleImageUrl(example.slug)}
+            alt={`Резюме — ${example.name}, ${example.position}`}
+            className="example-album-image"
+            loading="lazy"
+            draggable={false}
+          />
+        </div>
       </div>
 
       <div className="example-album-meta">
@@ -92,18 +94,20 @@ function ExampleLightbox({
           <Icon name="close" size={22} />
         </button>
 
-        <div className="example-lightbox-stack" aria-hidden>
-          <div className="example-lightbox-stack-sheet example-lightbox-stack-sheet--2" />
-          <div className="example-lightbox-stack-sheet example-lightbox-stack-sheet--1" />
-        </div>
+        <div className="example-lightbox-visual">
+          <div className="example-lightbox-stack" aria-hidden>
+            <div className="example-lightbox-stack-sheet example-lightbox-stack-sheet--2" />
+            <div className="example-lightbox-stack-sheet example-lightbox-stack-sheet--1" />
+          </div>
 
-        <div className="example-lightbox-frame">
-          <img
-            src={exampleImageUrl(example.slug)}
-            alt={`Резюме — ${example.name}`}
-            className="example-lightbox-image"
-            draggable={false}
-          />
+          <div className="example-lightbox-frame">
+            <img
+              src={exampleImageUrl(example.slug)}
+              alt={`Резюме — ${example.name}`}
+              className="example-lightbox-image"
+              draggable={false}
+            />
+          </div>
         </div>
 
         <div className="example-lightbox-caption">
