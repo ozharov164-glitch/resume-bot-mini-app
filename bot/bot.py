@@ -30,6 +30,13 @@ sys.path.insert(0, str(ROOT / "backend"))
 from config import settings  # noqa: E402
 from database import get_db  # noqa: E402
 from services.admin_notify import PaymentNotifyInfo, notify_new_user  # noqa: E402
+from services.founder_contact import (  # noqa: E402
+    ensure_founder_username,
+    founder_chat_hint_text,
+    founder_display_name,
+    founder_dm_url,
+    support_hub_text,
+)
 from services.payment_fulfillment import fulfill_paid_resume  # noqa: E402
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
@@ -55,7 +62,10 @@ def _start_keyboard() -> InlineKeyboardMarkup:
                 ),
             ],
             [InlineKeyboardButton("❓ Как это работает", callback_data="how_it_works")],
-            [InlineKeyboardButton("🛡️ Почему нам доверяют", callback_data="trust")],
+            [
+                InlineKeyboardButton("🛡️ Доверие", callback_data="trust"),
+                InlineKeyboardButton("💬 Поддержка", callback_data="support_hub"),
+            ],
             [InlineKeyboardButton("🎁 Пригласить друга", callback_data="invite_prompt")],
         ]
     )
@@ -72,7 +82,7 @@ def _trust_text(count: int) -> str:
         "🔒 Данные только для твоего резюме — никуда не продаём\n"
         "🤖 ИИ не выдумывает опыт — только твои ответы\n"
         "💳 Оплата через Telegram Stars — без карты на сайте\n"
-        "↩️ Не понравилось? /support — <b>вернём Stars</b>\n\n"
+        "↩️ Не понравилось? «💬 Поддержка» — <b>вернём Stars</b>\n\n"
         "⏱ Весь процесс — 3–5 минут. Проще, чем писать самому."
     )
 
@@ -134,6 +144,39 @@ def get_resume_count() -> int:
 
 async def _get_resume_count() -> int:
     return get_resume_count()
+
+
+async def _support_keyboard(bot) -> InlineKeyboardMarkup:
+    username = await ensure_founder_username(bot)
+    dm_url = founder_dm_url(username)
+    label = f"✉️ Написать {founder_display_name()}"
+    if dm_url:
+        contact_row = [InlineKeyboardButton(label, url=dm_url)]
+    else:
+        contact_row = [InlineKeyboardButton(label, callback_data="founder_dm_hint")]
+    return InlineKeyboardMarkup(
+        [
+            contact_row,
+            [InlineKeyboardButton("📝 Создать резюме", web_app=WebAppInfo(url=MINI_APP_URL))],
+            [InlineKeyboardButton("◀️ В меню", callback_data="back_to_start")],
+        ]
+    )
+
+
+async def _reply_support_hub(update: Update, *, edit: bool = False) -> None:
+    user = update.effective_user
+    greeting = _display_name(user) if user else None
+    text = support_hub_text(greeting=greeting)
+    bot = update.get_bot()
+    keyboard = await _support_keyboard(bot)
+    if edit and update.callback_query:
+        await update.callback_query.edit_message_text(
+            text, reply_markup=keyboard, parse_mode="HTML"
+        )
+        return
+    message = update.effective_message
+    if message:
+        await message.reply_text(text, reply_markup=keyboard, parse_mode="HTML")
 
 
 async def _persist_referral(referrer_id: int, tg_user) -> None:
@@ -234,15 +277,42 @@ async def trust_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def support_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(
-        "🆘 <b>Нужна помощь?</b>\n\n"
-        "Частые вопросы:\n"
-        "• <b>PDF не пришёл</b> → подожди 1-2 минуты, затем напиши /start\n"
-        "• <b>Хочу изменить резюме</b> → открой «Мои резюме» → «Изменить ответы»\n"
-        "• <b>Ошибка оплаты</b> → попробуй ещё раз или выбери другой способ\n\n"
-        "Не помогло? Опиши проблему — ответим в течение часа.\n"
-        "Гарантия: если что-то пошло не так — вернём Stars.",
+    await _reply_support_hub(update)
+
+
+async def founder_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await _reply_support_hub(update)
+
+
+async def support_hub_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    await _reply_support_hub(update, edit=True)
+
+
+async def founder_dm_hint_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    username = await ensure_founder_username(query.get_bot())
+    if not username:
+        await query.edit_message_text(
+            "Не удалось открыть личный чат автоматически.\n"
+            "Напиши /support ещё раз чуть позже или опиши проблему здесь — мы увидим сообщение.",
+            reply_markup=InlineKeyboardMarkup(
+                [[InlineKeyboardButton("◀️ В меню", callback_data="back_to_start")]]
+            ),
+        )
+        return
+    await query.edit_message_text(
+        founder_chat_hint_text(username),
+        reply_markup=InlineKeyboardMarkup(
+            [
+                [InlineKeyboardButton(f"✉️ @{username}", url=founder_dm_url(username))],
+                [InlineKeyboardButton("◀️ Назад", callback_data="support_hub")],
+            ]
+        ),
         parse_mode="HTML",
+        disable_web_page_preview=True,
     )
 
 
@@ -376,7 +446,7 @@ async def back_to_start_callback(update: Update, context: ContextTypes.DEFAULT_T
 async def fallback_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "Я работаю через мини-приложение — там удобнее всего. 👇\n\n"
-        "Если что-то не работает — напиши /support",
+        "Если что-то не работает — нажми «💬 Поддержка»",
         reply_markup=InlineKeyboardMarkup(
             [
                 [InlineKeyboardButton("📝 Создать резюме", web_app=WebAppInfo(url=MINI_APP_URL))],
@@ -388,7 +458,10 @@ async def fallback_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
                         "🖼 Примеры", web_app=WebAppInfo(url=f"{MINI_APP_URL}#examples")
                     ),
                 ],
-                [InlineKeyboardButton("❓ Как это работает", callback_data="how_it_works")],
+                [
+                    InlineKeyboardButton("❓ Как это работает", callback_data="how_it_works"),
+                    InlineKeyboardButton("💬 Поддержка", callback_data="support_hub"),
+                ],
             ]
         ),
     )
@@ -467,6 +540,7 @@ async def successful_payment(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
 async def post_init(application: Application) -> None:
     get_resume_count()
+    await ensure_founder_username(application.bot)
     await application.bot.set_my_commands(
         [
             BotCommand("start", "Запустить бота"),
@@ -475,7 +549,8 @@ async def post_init(application: Application) -> None:
             BotCommand("examples", "Примеры резюме"),
             BotCommand("invite", "Пригласить друга"),
             BotCommand("trust", "Почему нам доверяют"),
-            BotCommand("support", "Связаться с поддержкой"),
+            BotCommand("support", "Помощь и связь с основателем"),
+            BotCommand("founder", "Написать основателю"),
             BotCommand("help", "Как это работает"),
         ]
     )
@@ -503,9 +578,12 @@ def main():
     app.add_handler(CommandHandler("trust", trust_command))
     app.add_handler(CommandHandler("invite", invite_command))
     app.add_handler(CommandHandler("support", support_command))
+    app.add_handler(CommandHandler("founder", founder_command))
 
     app.add_handler(CallbackQueryHandler(how_it_works_callback, pattern="^how_it_works$"))
     app.add_handler(CallbackQueryHandler(trust_callback, pattern="^trust$"))
+    app.add_handler(CallbackQueryHandler(support_hub_callback, pattern="^support_hub$"))
+    app.add_handler(CallbackQueryHandler(founder_dm_hint_callback, pattern="^founder_dm_hint$"))
     app.add_handler(CallbackQueryHandler(back_to_start_callback, pattern="^back_to_start$"))
     app.add_handler(CallbackQueryHandler(invite_prompt_callback, pattern="^invite_prompt$"))
 

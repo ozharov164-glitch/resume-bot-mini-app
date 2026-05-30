@@ -80,6 +80,26 @@ async def test_start_referral_flow() -> None:
         assert len(rows) == 5
 
 
+async def test_support_hub_callback() -> None:
+    update = MagicMock()
+    update.effective_user.first_name = "Test"
+    update.effective_user.username = ""
+    update.callback_query = MagicMock()
+    update.callback_query.answer = AsyncMock()
+    update.callback_query.edit_message_text = AsyncMock()
+    update.get_bot = MagicMock()
+
+    with patch.object(bot_module, "ensure_founder_username", AsyncMock(return_value="founder_test")):
+        await bot_module.support_hub_callback(update, MagicMock())
+
+    update.callback_query.answer.assert_awaited_once()
+    update.callback_query.edit_message_text.assert_awaited_once()
+    text = update.callback_query.edit_message_text.await_args.args[0]
+    assert "Поддержка ResumeBot" in text
+    markup = update.callback_query.edit_message_text.await_args.kwargs["reply_markup"]
+    assert markup.inline_keyboard[0][0].url == "https://t.me/founder_test"
+
+
 async def test_fallback_and_help() -> None:
     update = MagicMock()
     update.message.reply_text = AsyncMock()
@@ -107,6 +127,7 @@ def test_main_registers_handlers() -> None:
 def main() -> None:
     test_referral_columns_and_save()
     asyncio.run(test_start_referral_flow())
+    asyncio.run(test_support_hub_callback())
     asyncio.run(test_fallback_and_help())
     test_main_registers_handlers()
     print("OK: all bot verification checks passed")

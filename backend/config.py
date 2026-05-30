@@ -40,6 +40,11 @@ class Settings(BaseSettings):
     # Supergroup for admin alerts (bare id 100… or full -100…).
     ADMIN_GROUP_CHAT_ID: str = "1003959501619"
 
+    # Founder contact in bot (optional @username; auto-resolved via Bot API if empty).
+    FOUNDER_TELEGRAM_USERNAME: str = ""
+    FOUNDER_DISPLAY_NAME: str = "Дмитрию"
+    FOUNDER_RESPONSE_TIME: str = "в течение 1–2 часов"
+
     # Local SQLite when Supabase key is invalid or missing.
     SQLITE_PATH: str = "data/resumebot.db"
 
