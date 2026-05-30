@@ -1,10 +1,11 @@
+import asyncio
 import html
 import json
 import logging
 import sys
+import time
 from pathlib import Path
 
-import httpx
 from telegram import (
     BotCommand,
     InlineKeyboardButton,
@@ -31,9 +32,13 @@ from database import get_db  # noqa: E402
 from services.payment_fulfillment import fulfill_paid_resume  # noqa: E402
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
+logging.getLogger("httpx").setLevel(logging.WARNING)
 logger = logging.getLogger(__name__)
 
 MINI_APP_URL = settings.FRONTEND_URL.rstrip("/")
+_FALLBACK_COUNT = 1200
+_STATS_TTL_SEC = 60.0
+_stats_cache: tuple[int, float] | None = None
 
 
 def _start_keyboard() -> InlineKeyboardMarkup:
@@ -103,38 +108,56 @@ def _ensure_user_row(db, tg_user) -> None:
     )
 
 
-async def _get_resume_count() -> int:
+def _resume_count_from_db() -> int:
     try:
-        async with httpx.AsyncClient(timeout=3.0) as client:
-            r = await client.get(f"{settings.APP_URL.rstrip('/')}/api/stats/count")
-            if r.status_code == 200:
-                return r.json().get("count", 1200)
-    except Exception:
-        pass
-    return 1200
+        count = get_db().count_resumes()
+        if count < 1:
+            return _FALLBACK_COUNT
+        return count + _FALLBACK_COUNT
+    except Exception as exc:
+        logger.warning("resume count from db failed: %s", exc)
+        return _FALLBACK_COUNT
+
+
+def get_resume_count() -> int:
+    """Cached resume count — same formula as /api/stats/count, no HTTP round-trip."""
+    global _stats_cache
+    now = time.monotonic()
+    if _stats_cache and now - _stats_cache[1] < _STATS_TTL_SEC:
+        return _stats_cache[0]
+    count = _resume_count_from_db()
+    _stats_cache = (count, now)
+    return count
+
+
+async def _get_resume_count() -> int:
+    return get_resume_count()
+
+
+async def _persist_referral(referrer_id: int, tg_user) -> None:
+    try:
+        db = get_db()
+        await asyncio.to_thread(_ensure_user_row, db, tg_user)
+        await asyncio.to_thread(db.save_referral, referrer_id, tg_user.id)
+    except Exception as exc:
+        logger.warning("Referral save failed: %s", exc)
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     referrer_id = None
+    tg_user = update.message.from_user
     if context.args and context.args[0].startswith("ref_"):
         try:
             referrer_id = int(context.args[0][4:])
-            user_tg_id = update.message.from_user.id
-            if referrer_id != user_tg_id:
-                try:
-                    db = get_db()
-                    _ensure_user_row(db, update.message.from_user)
-                    db.save_referral(referrer_id, user_tg_id)
-                except Exception as e:
-                    logger.warning("Referral save failed: %s", e)
         except (ValueError, IndexError):
-            pass
+            referrer_id = None
 
-    count = await _get_resume_count()
-
-    text = _start_text(count, _display_name(update.message.from_user))
-
+    count = get_resume_count()
+    text = _start_text(count, _display_name(tg_user))
     await update.message.reply_text(text, reply_markup=_start_keyboard(), parse_mode="HTML")
+
+    if referrer_id and referrer_id != tg_user.id:
+        asyncio.create_task(_persist_referral(referrer_id, tg_user))
 
 
 async def resume_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -184,7 +207,7 @@ async def examples_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def trust_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    count = await _get_resume_count()
+    count = get_resume_count()
     await update.message.reply_text(
         _trust_text(count),
         reply_markup=InlineKeyboardMarkup(
@@ -285,7 +308,7 @@ async def how_it_works_callback(update: Update, context: ContextTypes.DEFAULT_TY
 async def trust_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
-    count = await _get_resume_count()
+    count = get_resume_count()
     await query.edit_message_text(
         _trust_text(count),
         reply_markup=InlineKeyboardMarkup(
@@ -333,7 +356,7 @@ async def invite_prompt_callback(update: Update, context: ContextTypes.DEFAULT_T
 async def back_to_start_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
-    count = await _get_resume_count()
+    count = get_resume_count()
     await query.edit_message_text(
         _start_text(count),
         reply_markup=_start_keyboard(),
@@ -424,6 +447,7 @@ async def successful_payment(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
 
 async def post_init(application: Application) -> None:
+    get_resume_count()
     await application.bot.set_my_commands(
         [
             BotCommand("start", "Запустить бота"),

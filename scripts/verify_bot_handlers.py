@@ -66,6 +66,7 @@ async def test_start_referral_flow() -> None:
             with patch.object(bot_module, "_get_resume_count", AsyncMock(return_value=1200)):
                 backend.create_user(telegram_id=555, first_name="Referrer")
                 await bot_module.start(update, context)
+                await asyncio.sleep(0.05)
 
         user = backend.find_user_by_telegram_id(999)
         assert user is not None
