@@ -60,7 +60,7 @@ export default function App() {
   if (isLoading) {
     return (
       <div
-        className="min-h-screen flex flex-col items-center justify-center gap-4 px-6"
+        className="flex h-full flex-col items-center justify-center gap-4 px-6"
         style={{ background: "var(--tg-bg)", color: "var(--tg-text)" }}
       >
         <div

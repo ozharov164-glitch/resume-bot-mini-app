@@ -130,7 +130,7 @@ export function SkillPickPage() {
   return (
     <Screen withBottomBar className="px-4">
       <AppHeader onBack={handleBack} showBack />
-      <main className="flex flex-1 flex-col gap-5 py-4">
+      <main className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto overscroll-y-contain py-4">
         {!showSkills && (
           <div className="mx-auto flex w-full max-w-md flex-1 flex-col items-center justify-center">
             <LoadingIllustration />

@@ -154,7 +154,7 @@ export function HomePage({ onStart, onHistory }: HomeProps) {
       </div>
 
       {homeTab === "examples" ? (
-        <main className="examples-tab-main flex flex-1 flex-col pt-2">
+        <main className="examples-tab-main flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-y-contain pt-2">
           <ExamplesGallery
             onStart={start}
             onLightboxOpenChange={setLightboxOpen}
@@ -162,7 +162,7 @@ export function HomePage({ onStart, onHistory }: HomeProps) {
           />
         </main>
       ) : (
-      <main className="flex flex-1 flex-col items-center gap-4 px-4 pt-2 pb-2">
+      <main className="flex min-h-0 flex-1 flex-col items-center gap-4 overflow-y-auto overscroll-y-contain px-4 pt-2 pb-2">
         {isFounder && <FounderBadge />}
 
         <HeroIllustration />

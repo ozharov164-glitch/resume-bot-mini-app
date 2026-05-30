@@ -294,7 +294,7 @@ export function OnboardingPage() {
   return (
     <Screen withBottomBar className="px-4">
       <AppHeader onBack={handleBack} showBack />
-      <main className="flex flex-1 flex-col gap-6 py-4">
+      <main className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto overscroll-y-contain py-4">
         {isEdit && (
           <div
             className="rounded-xl px-4 py-3 text-center text-sm"

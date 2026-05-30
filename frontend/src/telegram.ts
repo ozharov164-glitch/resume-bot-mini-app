@@ -10,6 +10,8 @@ export interface TelegramWebApp {
       username?: string;
     };
   };
+  viewportStableHeight?: number;
+  viewportHeight?: number;
   themeParams: Record<string, string>;
   MainButton?: {
     text: string;
@@ -82,20 +84,39 @@ function syncTelegramChrome() {
 
 const onThemeChanged = () => applyLockedLightTheme();
 
+function syncViewportStableHeight() {
+  const webApp = getTg();
+  const height = webApp?.viewportStableHeight ?? window.innerHeight;
+  document.documentElement.style.setProperty("--tg-viewport-stable-height", `${height}px`);
+}
+
+const onViewportChanged = () => syncViewportStableHeight();
+
 export function initTelegramTheme() {
   applyLockedLightTheme();
 
   const webApp = getTg();
-  if (!webApp) return;
+  if (!webApp) {
+    syncViewportStableHeight();
+    return;
+  }
 
   webApp.ready();
   webApp.expand();
   webApp.disableVerticalSwipes?.();
+  syncViewportStableHeight();
   syncTelegramChrome();
 
   webApp.offEvent?.("themeChanged", onThemeChanged);
   webApp.onEvent?.("themeChanged", onThemeChanged);
+  webApp.offEvent?.("viewportChanged", onViewportChanged);
+  webApp.onEvent?.("viewportChanged", onViewportChanged);
 
   applyLockedLightTheme();
   syncTelegramChrome();
+}
+
+/** True inside Telegram Mini App — use native BackButton instead of header arrow. */
+export function isTelegramMiniApp(): boolean {
+  return Boolean(getTg()?.initData);
 }
