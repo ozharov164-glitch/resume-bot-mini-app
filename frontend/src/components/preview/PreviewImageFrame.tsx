@@ -22,7 +22,9 @@ export function PreviewImageFrame({ src, locked }: PreviewImageFrameProps) {
       </div>
 
       <div className={`preview-image-frame${locked ? " preview-image-frame--locked" : ""}`}>
-        <div className="no-copy preview-protected preview-image-paper">
+        <div
+          className={`no-copy preview-protected preview-image-paper${locked ? " preview-image-paper--scroll" : ""}`}
+        >
           <img
             src={src}
             alt="Предпросмотр резюме"
@@ -36,23 +38,9 @@ export function PreviewImageFrame({ src, locked }: PreviewImageFrameProps) {
             <>
               <PreviewWatermarkOverlay />
               <div className="preview-image-vignette" aria-hidden />
-              <div className="preview-image-fade" aria-hidden />
-
               <div className="preview-image-badge">
                 <Icon name="visibility" size={14} />
                 <span>Бесплатный предпросмотр</span>
-              </div>
-
-              <div className="preview-image-lock-card">
-                <div className="preview-image-lock-icon">
-                  <Icon name="lock" filled size={20} style={{ color: "var(--brand)" }} />
-                </div>
-                <div className="preview-image-lock-copy">
-                  <p className="preview-image-lock-title">Полный PDF после оплаты</p>
-                  <p className="preview-image-lock-sub">
-                    Чистый файл без водяных знаков — сразу в Telegram
-                  </p>
-                </div>
               </div>
             </>
           ) : (
@@ -62,6 +50,22 @@ export function PreviewImageFrame({ src, locked }: PreviewImageFrameProps) {
             </div>
           )}
         </div>
+
+        {locked && (
+          <>
+            <div className="preview-image-lock-card">
+              <div className="preview-image-lock-icon">
+                <Icon name="lock" filled size={20} style={{ color: "var(--brand)" }} />
+              </div>
+              <div className="preview-image-lock-copy">
+                <p className="preview-image-lock-title">Полный PDF после оплаты</p>
+                <p className="preview-image-lock-sub">
+                  Чистый файл без водяных знаков — сразу в Telegram
+                </p>
+              </div>
+            </div>
+          </>
+        )}
       </div>
 
       {locked && (

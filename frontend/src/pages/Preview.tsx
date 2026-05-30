@@ -99,7 +99,7 @@ export function PreviewPage() {
   return (
     <Screen withBottomBar bottomBarButtons={2}>
       <AppHeader onBack={handleBack} showBack title="Предпросмотр" />
-      <main className="flex flex-1 flex-col gap-4 px-4 py-3 pb-2">
+      <main className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto overscroll-y-contain px-4 py-3 pb-2">
         <PreviewStatusHero />
         {previewUrl && !previewError ? (
           <PreviewImageFrame src={previewUrl} locked={previewLocked} />
