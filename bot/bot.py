@@ -37,14 +37,27 @@ from services.founder_contact import (  # noqa: E402
     founder_dm_url,
     support_hub_text,
 )
+from services.bot_copy import (  # noqa: E402
+    examples_text,
+    fallback_text as bot_fallback_text,
+    follow_up_after_payment_text,
+    founder_dm_fallback_text,
+    how_it_works_text,
+    invite_text,
+    my_resumes_text,
+    payment_error_text,
+    resume_command_text,
+    start_text,
+    trust_text,
+)
 from services.payment_fulfillment import fulfill_paid_resume  # noqa: E402
+from services.stats_display import public_resume_count  # noqa: E402
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
 logging.getLogger("httpx").setLevel(logging.WARNING)
 logger = logging.getLogger(__name__)
 
 MINI_APP_URL = settings.FRONTEND_URL.rstrip("/")
-_FALLBACK_COUNT = 1200
 _STATS_TTL_SEC = 60.0
 _stats_cache: tuple[int, float] | None = None
 
@@ -63,43 +76,11 @@ def _start_keyboard() -> InlineKeyboardMarkup:
             ],
             [InlineKeyboardButton("❓ Как это работает", callback_data="how_it_works")],
             [
-                InlineKeyboardButton("🛡️ Доверие", callback_data="trust"),
+                InlineKeyboardButton("🛡️ Почему мы", callback_data="trust"),
                 InlineKeyboardButton("💬 Поддержка", callback_data="support_hub"),
             ],
             [InlineKeyboardButton("🎁 Пригласить друга", callback_data="invite_prompt")],
         ]
-    )
-
-
-def _trust_text(count: int) -> str:
-    return (
-        "🛡️ <b>Почему нам доверяют:</b>\n\n"
-        f"📊 Уже <b>{count:,}+</b> резюме — люди реально пользуются\n"
-        "👀 <b>Сначала смотри — потом плати</b>\n"
-        "   Бесплатный предпросмотр до оплаты. Риска нет.\n"
-        "✅ <b>Формат hh.ru</b> — HR смотрит без лишних вопросов\n"
-        "💰 <b>149 ₽</b> вместо 500–1000 ₽ у конкурентов\n"
-        "🔒 Данные только для твоего резюме — никуда не продаём\n"
-        "🤖 ИИ не выдумывает опыт — только твои ответы\n"
-        "💳 Оплата через Telegram Stars — без карты на сайте\n"
-        "↩️ Не понравилось? «💬 Поддержка» — <b>вернём Stars</b>\n\n"
-        "⏱ Весь процесс — 3–5 минут. Проще, чем писать самому."
-    )
-
-
-def _start_text(count: int, greeting: str | None = None) -> str:
-    intro = f"Привет, {greeting}! 👋\n\n" if greeting else ""
-    return (
-        "🎯 <b>Профессиональное резюме за 5 минут</b>\n\n"
-        f"{intro}"
-        "Как это работает:\n"
-        "📝 Отвечаешь на простые вопросы\n"
-        "🤖 ИИ составляет сильное резюме\n"
-        "📄 Получаешь готовый PDF прямо в этот чат\n\n"
-        "✅ Формат hh.ru — работодатели привыкли\n"
-        "🎤 Можно диктовать голосом\n"
-        f"📄 Уже создано <b>{count:,}+</b> резюме\n\n"
-        "💳 Стоимость: <b>99 ⭐ Stars</b> или <b>149 ₽</b>"
     )
 
 
@@ -120,24 +101,13 @@ def _ensure_user_row(db, tg_user) -> bool:
     return True
 
 
-def _resume_count_from_db() -> int:
-    try:
-        count = get_db().count_resumes()
-        if count < 1:
-            return _FALLBACK_COUNT
-        return count + _FALLBACK_COUNT
-    except Exception as exc:
-        logger.warning("resume count from db failed: %s", exc)
-        return _FALLBACK_COUNT
-
-
 def get_resume_count() -> int:
-    """Cached resume count — same formula as /api/stats/count, no HTTP round-trip."""
+    """Cached public resume count — same formula as /api/stats/count."""
     global _stats_cache
     now = time.monotonic()
     if _stats_cache and now - _stats_cache[1] < _STATS_TTL_SEC:
         return _stats_cache[0]
-    count = _resume_count_from_db()
+    count = public_resume_count(get_db())
     _stats_cache = (count, now)
     return count
 
@@ -205,7 +175,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             referrer_id = None
 
     count = get_resume_count()
-    text = _start_text(count, _display_name(tg_user))
+    text = start_text(count, _display_name(tg_user))
     await update.message.reply_text(text, reply_markup=_start_keyboard(), parse_mode="HTML")
 
     if referrer_id and referrer_id != tg_user.id:
@@ -216,11 +186,7 @@ async def resume_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = InlineKeyboardMarkup(
         [[InlineKeyboardButton("📝 Открыть конструктор", web_app=WebAppInfo(url=MINI_APP_URL))]]
     )
-    await update.message.reply_text(
-        "Нажми кнопку — откроется конструктор резюме.\n"
-        "Ответь на несколько вопросов, и ИИ составит профессиональное резюме за 5 минут.",
-        reply_markup=keyboard,
-    )
+    await update.message.reply_text(resume_command_text(), reply_markup=keyboard)
 
 
 async def my_resumes_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -233,11 +199,7 @@ async def my_resumes_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
             ]
         ]
     )
-    await update.message.reply_text(
-        "Здесь хранятся все твои резюме.\n"
-        "Можно открыть, отредактировать или скачать PDF повторно.",
-        reply_markup=keyboard,
-    )
+    await update.message.reply_text(my_resumes_text(), reply_markup=keyboard)
 
 
 async def examples_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -250,18 +212,13 @@ async def examples_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             ]
         ]
     )
-    await update.message.reply_text(
-        "Посмотри примеры резюме, которые создаёт наш ИИ:\n\n"
-        "🚗 Водитель  🔒 Охранник  💊 Фармацевт  🛒 Продавец\n\n"
-        "Каждое резюме — профессиональный дизайн, формат hh.ru.",
-        reply_markup=keyboard,
-    )
+    await update.message.reply_text(examples_text(), reply_markup=keyboard)
 
 
 async def trust_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     count = get_resume_count()
     await update.message.reply_text(
-        _trust_text(count),
+        trust_text(count),
         reply_markup=InlineKeyboardMarkup(
             [
                 [InlineKeyboardButton("📝 Создать резюме", web_app=WebAppInfo(url=MINI_APP_URL))],
@@ -296,8 +253,7 @@ async def founder_dm_hint_callback(update: Update, context: ContextTypes.DEFAULT
     username = await ensure_founder_username(query.get_bot())
     if not username:
         await query.edit_message_text(
-            "Не удалось открыть личный чат автоматически.\n"
-            "Напиши /support ещё раз чуть позже или опиши проблему здесь — мы увидим сообщение.",
+            founder_dm_fallback_text(),
             reply_markup=InlineKeyboardMarkup(
                 [[InlineKeyboardButton("◀️ В меню", callback_data="back_to_start")]]
             ),
@@ -321,14 +277,7 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [[InlineKeyboardButton("📝 Создать резюме", web_app=WebAppInfo(url=MINI_APP_URL))]]
     )
     await update.message.reply_text(
-        "📌 <b>Как создать резюме:</b>\n\n"
-        "1️⃣ Нажми «Создать резюме» — откроется мини-приложение\n"
-        "2️⃣ Ответь на 11 простых вопросов (можно голосом 🎤)\n"
-        "3️⃣ ИИ напишет профессиональное резюме по твоим ответам\n"
-        "4️⃣ Посмотри бесплатный предпросмотр\n"
-        "5️⃣ Оплати 99 ⭐ или 149 ₽ — PDF придёт в этот чат\n\n"
-        "⏱ Весь процесс: 3-5 минут.\n"
-        "📄 Соответствует формату hh.ru.",
+        how_it_works_text(),
         reply_markup=keyboard,
         parse_mode="HTML",
     )
@@ -339,14 +288,7 @@ async def invite_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     invite_link = f"https://t.me/{settings.BOT_USERNAME}?start=ref_{user_id}"
 
     await update.message.reply_text(
-        "🎁 <b>Пригласи друга — получи бесплатное резюме!</b>\n\n"
-        "Как это работает:\n"
-        "1. Отправь ссылку другу\n"
-        "2. Друг создаёт и оплачивает резюме\n"
-        "3. Ты получаешь одно бесплатное резюме 🎉\n\n"
-        f"Твоя личная ссылка:\n<code>{invite_link}</code>\n\n"
-        "Нажми и удержи ссылку чтобы скопировать, "
-        "или используй кнопку «Поделиться».",
+        invite_text(invite_link),
         reply_markup=InlineKeyboardMarkup(
             [
                 [
@@ -367,13 +309,7 @@ async def how_it_works_callback(update: Update, context: ContextTypes.DEFAULT_TY
     query = update.callback_query
     await query.answer()
     await query.edit_message_text(
-        "📌 <b>Как создать резюме:</b>\n\n"
-        "1️⃣ Нажми «Создать резюме»\n"
-        "2️⃣ Ответь на 11 вопросов (можно голосом 🎤)\n"
-        "3️⃣ ИИ составляет профессиональное резюме\n"
-        "4️⃣ Смотри бесплатный предпросмотр\n"
-        "5️⃣ Оплати 99 ⭐ или 149 ₽ — PDF в чат\n\n"
-        "⏱ 3-5 минут от начала до PDF.",
+        how_it_works_text(),
         reply_markup=InlineKeyboardMarkup(
             [
                 [InlineKeyboardButton("📝 Создать резюме", web_app=WebAppInfo(url=MINI_APP_URL))],
@@ -389,7 +325,7 @@ async def trust_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await query.answer()
     count = get_resume_count()
     await query.edit_message_text(
-        _trust_text(count),
+        trust_text(count),
         reply_markup=InlineKeyboardMarkup(
             [
                 [InlineKeyboardButton("📝 Создать резюме", web_app=WebAppInfo(url=MINI_APP_URL))],
@@ -411,12 +347,7 @@ async def invite_prompt_callback(update: Update, context: ContextTypes.DEFAULT_T
     user_id = query.from_user.id
     invite_link = f"https://t.me/{settings.BOT_USERNAME}?start=ref_{user_id}"
     await query.edit_message_text(
-        "🎁 <b>Пригласи друга — получи бесплатное резюме!</b>\n\n"
-        "Как это работает:\n"
-        "1. Отправь ссылку другу\n"
-        "2. Друг создаёт и оплачивает резюме\n"
-        "3. Ты получаешь одно бесплатное резюме 🎉\n\n"
-        f"Твоя ссылка:\n<code>{invite_link}</code>",
+        invite_text(invite_link, compact=True),
         reply_markup=InlineKeyboardMarkup(
             [
                 [
@@ -437,7 +368,7 @@ async def back_to_start_callback(update: Update, context: ContextTypes.DEFAULT_T
     await query.answer()
     count = get_resume_count()
     await query.edit_message_text(
-        _start_text(count),
+        start_text(count),
         reply_markup=_start_keyboard(),
         parse_mode="HTML",
     )
@@ -445,8 +376,7 @@ async def back_to_start_callback(update: Update, context: ContextTypes.DEFAULT_T
 
 async def fallback_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
-        "Я работаю через мини-приложение — там удобнее всего. 👇\n\n"
-        "Если что-то не работает — нажми «💬 Поддержка»",
+        bot_fallback_text(),
         reply_markup=InlineKeyboardMarkup(
             [
                 [InlineKeyboardButton("📝 Создать резюме", web_app=WebAppInfo(url=MINI_APP_URL))],
@@ -483,12 +413,7 @@ async def follow_up_after_payment(context: ContextTypes.DEFAULT_TYPE):
     try:
         await context.bot.send_message(
             chat_id=telegram_id,
-            text=(
-                f"Как тебе резюме{', ' + html.escape(str(user_name), quote=False) if user_name else ''}? 😊\n\n"
-                "Если понравилось — пригласи друга!\n"
-                "За каждого, кто оплатит резюме, ты получишь <b>одно бесплатное</b>.\n\n"
-                f"Твоя ссылка:\n<code>{invite_link}</code>"
-            ),
+            text=follow_up_after_payment_text(user_name or None, invite_link),
             reply_markup=keyboard,
             parse_mode="HTML",
         )
@@ -533,9 +458,7 @@ async def successful_payment(update: Update, context: ContextTypes.DEFAULT_TYPE)
             )
     except Exception:
         logger.exception("successful_payment handler failed")
-        await update.message.reply_text(
-            "Оплата получена, но PDF не удалось отправить. Напиши /help — мы поможем."
-        )
+        await update.message.reply_text(payment_error_text())
 
 
 async def post_init(application: Application) -> None:

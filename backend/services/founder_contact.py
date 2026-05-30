@@ -7,6 +7,7 @@ import logging
 from typing import TYPE_CHECKING
 
 from config import settings
+from services.bot_copy import PAYMENT_SHORT
 from services.founder import founder_telegram_ids
 
 if TYPE_CHECKING:
@@ -64,15 +65,15 @@ def support_hub_text(*, greeting: str | None = None) -> str:
     hello = f"{html.escape(greeting)}, " if greeting else ""
     return (
         f"💬 <b>Поддержка ResumeBot</b>\n\n"
-        f"{hello}я на связи лично — без ботов и тикетов.\n\n"
+        f"{hello}я на связи лично — без ботов и очередей.\n\n"
         f"<b>Частые вопросы</b>\n"
-        "• <b>PDF не пришёл</b> — подожди 1–2 минуты, затем /start\n"
+        "• <b>PDF не пришёл</b> — подождите 1–2 минуты, затем нажмите /start\n"
         "• <b>Изменить резюме</b> — «Мои резюме» → «Изменить ответы»\n"
-        "• <b>Ошибка оплаты</b> — попробуй Stars или 149 ₽ ещё раз\n\n"
-        f"<b>Не нашёл ответ?</b> Напиши {who} — обычно отвечаю "
+        f"• <b>Ошибка оплаты</b> — повторите попытку: {PAYMENT_SHORT}\n\n"
+        f"<b>Не нашли ответ?</b> Напишите {who} — обычно отвечаю "
         f"<b>{html.escape(response_time_label())}</b>.\n\n"
-        "↩️ Оплата не сработала как ожидалось — <b>вернём Stars</b>, "
-        "просто опиши ситуацию в личке."
+        "↩️ Если оплата не сработала — <b>вернём Stars</b>. "
+        "Опишите ситуацию в личном сообщении."
     )
 
 
@@ -88,5 +89,5 @@ def founder_chat_hint_text(username: str) -> str:
         f"✉️ <b>Личное сообщение {who}</b>\n\n"
         f"Нажми на ссылку — откроется чат в Telegram:\n"
         f'<a href="https://t.me/{uname}">@{uname}</a>\n\n'
-        "В первом сообщении коротко опиши проблему — так быстрее помогу."
+        "В первом сообщении кратко опишите ситуацию — так я быстрее помогу."
     )

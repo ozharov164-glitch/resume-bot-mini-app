@@ -74,7 +74,7 @@ async def test_start_referral_flow() -> None:
         assert user["referred_by"] == 555
         text = update.message.reply_text.call_args[0][0]
         assert "Test&lt;User&gt;" in text or "Test<User>" not in text
-        assert "1,200+" in text
+        assert "5 000" in text or "5000" in text
         markup = update.message.reply_text.call_args[1]["reply_markup"]
         rows = markup.inline_keyboard
         assert len(rows) == 5
