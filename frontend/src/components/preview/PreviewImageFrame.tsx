@@ -25,30 +25,35 @@ export function PreviewImageFrame({ src, locked }: PreviewImageFrameProps) {
         <div
           className={`no-copy preview-protected preview-image-paper${locked ? " preview-image-paper--scroll" : ""}`}
         >
-          <img
-            src={src}
-            alt="Предпросмотр резюме"
-            className="preview-image"
-            draggable={false}
-            onContextMenu={(e) => e.preventDefault()}
-            onDragStart={(e) => e.preventDefault()}
-          />
-
-          {locked ? (
-            <>
-              <PreviewWatermarkOverlay />
-              <div className="preview-image-vignette" aria-hidden />
-              <div className="preview-image-badge">
-                <Icon name="visibility" size={14} />
-                <span>Бесплатный предпросмотр</span>
-              </div>
-            </>
-          ) : (
-            <div className="preview-image-badge preview-image-badge--paid">
-              <Icon name="verified" filled size={14} />
-              <span>PDF разблокирован</span>
+          {locked && (
+            <div className="preview-image-badge">
+              <Icon name="visibility" size={14} />
+              <span>Бесплатный предпросмотр</span>
             </div>
           )}
+
+          <div className="preview-image-canvas">
+            <img
+              src={src}
+              alt="Предпросмотр резюме"
+              className="preview-image"
+              draggable={false}
+              onContextMenu={(e) => e.preventDefault()}
+              onDragStart={(e) => e.preventDefault()}
+            />
+
+            {locked ? (
+              <>
+                <PreviewWatermarkOverlay />
+                <div className="preview-image-vignette" aria-hidden />
+              </>
+            ) : (
+              <div className="preview-image-badge preview-image-badge--paid">
+                <Icon name="verified" filled size={14} />
+                <span>PDF разблокирован</span>
+              </div>
+            )}
+          </div>
         </div>
 
         {locked && (

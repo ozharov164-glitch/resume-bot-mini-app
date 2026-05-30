@@ -209,10 +209,47 @@ body {
   touch-action: pan-y;
 }
 
+@media (min-width: 640px) {
+  .preview-image-paper--scroll {
+    max-height: min(560px, 62dvh);
+  }
+}
+
 .preview-image-paper--scroll .preview-image-badge {
   position: sticky;
   top: 12px;
   z-index: 4;
+  margin: 0 auto 0.5rem;
+  width: fit-content;
+}
+
+.preview-image-canvas {
+  position: relative;
+  display: block;
+  width: 100%;
+  line-height: 0;
+  isolation: isolate;
+}
+
+.preview-image-canvas .preview-watermark-grid,
+.preview-image-canvas .preview-watermark-shield,
+.preview-image-canvas .preview-image-vignette {
+  position: absolute;
+}
+
+.preview-image-canvas .preview-watermark-shield,
+.preview-image-canvas .preview-image-vignette {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.preview-image-canvas .preview-watermark-grid {
+  inset: -30%;
+  width: 160%;
+  height: 160%;
+  min-width: 160%;
+  min-height: 160%;
 }
 
 .preview-image {
