@@ -22,6 +22,7 @@
   --surface-variant: #ececec;
   --border-subtle: rgba(60, 74, 66, 0.12);
   --text-muted: #707579;
+  --input-placeholder: rgba(112, 117, 121, 0.42);
   --text-variant: #3c4a42;
   --benefit-bg: rgba(16, 185, 129, 0.12);
   --benefit-border: rgba(16, 185, 129, 0.25);
@@ -533,7 +534,20 @@ textarea {
 
 input::placeholder,
 textarea::placeholder {
-  color: #707579;
+  color: var(--input-placeholder);
+  opacity: 1;
+  -webkit-text-fill-color: var(--input-placeholder);
+}
+
+input::-webkit-input-placeholder,
+textarea::-webkit-input-placeholder {
+  color: var(--input-placeholder);
+  -webkit-text-fill-color: var(--input-placeholder);
+}
+
+input::-moz-placeholder,
+textarea::-moz-placeholder {
+  color: var(--input-placeholder);
   opacity: 1;
 }
 
