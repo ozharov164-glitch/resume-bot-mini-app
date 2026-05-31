@@ -12,6 +12,7 @@
   --tg-safe-bottom: env(safe-area-inset-bottom, 0px);
   --tg-viewport-stable-height: 100svh;
   --app-header-height: 3.5rem;
+  --app-max-width: 480px;
   --brand: #006c49;
   --brand-bright: #10b981;
   --accent: #10b981;
@@ -68,6 +69,50 @@ body {
   overflow: hidden;
   user-select: none;
   -webkit-user-select: none;
+}
+
+.app-shell {
+  position: relative;
+  width: 100%;
+  max-width: var(--app-max-width);
+  height: var(--tg-viewport-stable-height);
+  margin: 0 auto;
+  overflow: hidden;
+  background: #ffffff;
+}
+
+@media (min-width: 520px) {
+  html,
+  body {
+    background: #e4ebe6;
+  }
+
+  #root {
+    display: flex;
+    justify-content: center;
+  }
+
+  .app-shell {
+    box-shadow:
+      0 0 0 1px rgba(0, 0, 0, 0.06),
+      0 16px 48px rgba(0, 0, 0, 0.1);
+  }
+
+  .app-header {
+    left: 50%;
+    right: auto;
+    width: min(100vw, var(--app-max-width));
+    max-width: var(--app-max-width);
+    transform: translateX(-50%) translateZ(0);
+  }
+
+  .fixed-bottom-bar {
+    left: 50%;
+    right: auto;
+    width: min(100vw, var(--app-max-width));
+    max-width: var(--app-max-width);
+    transform: translateX(-50%);
+  }
 }
 
 .no-copy,

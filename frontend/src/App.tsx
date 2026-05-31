@@ -1,5 +1,6 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 
+import { AppShell } from "./components/ui/AppShell";
 import { BootstrapScreen } from "./components/BootstrapScreen";
 import { useFounderStatus } from "./hooks/useFounderStatus";
 import { isFounderTelegramId } from "./lib/founder";
@@ -112,48 +113,54 @@ export default function App() {
 
   if (isLoading) {
     return (
-      <BootstrapScreen
-        message={
-          discoverPaymentReturnResumeId() ? "Проверяем оплату…" : "Загружаем приложение…"
-        }
-      />
+      <AppShell>
+        <BootstrapScreen
+          message={
+            discoverPaymentReturnResumeId() ? "Проверяем оплату…" : "Загружаем приложение…"
+          }
+        />
+      </AppShell>
     );
   }
 
   if (bootstrapError || !authToken) {
     return (
-      <BootstrapScreen
-        message="Загружаем приложение…"
-        error={bootstrapError || "Не удалось войти. Откройте приложение через @resumeez_bot."}
-        onRetry={() => setBootstrapAttempt((n) => n + 1)}
-      />
+      <AppShell>
+        <BootstrapScreen
+          message="Загружаем приложение…"
+          error={bootstrapError || "Не удалось войти. Откройте приложение через @resumeez_bot."}
+          onRetry={() => setBootstrapAttempt((n) => n + 1)}
+        />
+      </AppShell>
     );
   }
 
   return (
-    <Suspense fallback={<PageFallback />}>
-      {page === "home" ? (
-        <HomePage onStart={startNewResume} onHistory={() => setPage("history")} />
-      ) : null}
-      {page === "history" ? <HistoryPage /> : null}
-      {page === "template_pick" ? <TemplatePickPage /> : null}
-      {page === "skill_pick" ? <SkillPickPage /> : null}
-      {page === "loading" ? <LoadingPage /> : null}
-      {page === "preview" ? <PreviewPage /> : null}
-      {page === "template_select" ? <TemplateSelectPage /> : null}
-      {page === "payment" ? <PaymentPage /> : null}
-      {page === "success" ? <SuccessPage /> : null}
-      {      page !== "home" &&
-      page !== "history" &&
-      page !== "template_pick" &&
-      page !== "skill_pick" &&
-      page !== "loading" &&
-      page !== "preview" &&
-      page !== "template_select" &&
-      page !== "payment" &&
-      page !== "success" ? (
-        <OnboardingPage />
-      ) : null}
-    </Suspense>
+    <AppShell>
+      <Suspense fallback={<PageFallback />}>
+        {page === "home" ? (
+          <HomePage onStart={startNewResume} onHistory={() => setPage("history")} />
+        ) : null}
+        {page === "history" ? <HistoryPage /> : null}
+        {page === "template_pick" ? <TemplatePickPage /> : null}
+        {page === "skill_pick" ? <SkillPickPage /> : null}
+        {page === "loading" ? <LoadingPage /> : null}
+        {page === "preview" ? <PreviewPage /> : null}
+        {page === "template_select" ? <TemplateSelectPage /> : null}
+        {page === "payment" ? <PaymentPage /> : null}
+        {page === "success" ? <SuccessPage /> : null}
+        {page !== "home" &&
+        page !== "history" &&
+        page !== "template_pick" &&
+        page !== "skill_pick" &&
+        page !== "loading" &&
+        page !== "preview" &&
+        page !== "template_select" &&
+        page !== "payment" &&
+        page !== "success" ? (
+          <OnboardingPage />
+        ) : null}
+      </Suspense>
+    </AppShell>
   );
 }
