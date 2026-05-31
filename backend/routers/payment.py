@@ -47,12 +47,36 @@ async def create_invoice(resume_id: str, current_user: dict = Depends(get_curren
 
 
 @router.post("/create-yookassa/{resume_id}")
-async def create_yookassa_invoice(resume_id: str, current_user: dict = Depends(get_current_user)):
+async def create_yookassa_invoice(
+    resume_id: str,
+    current_user: dict = Depends(get_current_user),
+    db=Depends(get_db),
+):
+    resume = db.find_resume(resume_id, current_user["id"])
+    if not resume:
+        raise HTTPException(status_code=404, detail="Резюме не найдено.")
+    if is_founder(current_user.get("telegram_id")):
+        raise HTTPException(
+            status_code=400,
+            detail="Для founder PDF бесплатный — скачай из превью.",
+        )
     try:
         payment = create_yookassa_payment(resume_id=resume_id, user_id=current_user["id"])
+        url = payment.get("confirmation_url")
+        if not url:
+            logger.error("yookassa: empty confirmation_url resume_id=%s", resume_id)
+            raise HTTPException(status_code=502, detail="ЮKassa не вернула ссылку на оплату.")
         return {"status": "created", "provider": "yookassa", **payment}
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.exception("create_yookassa_payment failed resume_id=%s", resume_id)
+        raise HTTPException(
+            status_code=502,
+            detail="Не удалось создать платёж. Попробуйте ещё раз или оплатите Stars.",
+        ) from exc
 
 
 @router.post("/yookassa-webhook")

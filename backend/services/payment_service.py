@@ -19,6 +19,11 @@ def _stars_prices() -> list[LabeledPrice]:
     return [LabeledPrice(label="PDF-резюме", amount=settings.STARS_PRICE_SINGLE_PDF)]
 
 
+def yookassa_return_url(resume_id: str) -> str:
+    base = (settings.YOKASSA_RETURN_URL or settings.FRONTEND_URL).rstrip("/")
+    return f"{base}/#payment-return?resume_id={resume_id}"
+
+
 def create_yookassa_payment(resume_id: str, user_id: str, amount_rub: str = "149.00") -> dict:
     if not settings.YOKASSA_SHOP_ID or not settings.YOKASSA_SECRET_KEY:
         raise ValueError("YooKassa credentials are not configured.")
@@ -30,7 +35,7 @@ def create_yookassa_payment(resume_id: str, user_id: str, amount_rub: str = "149
             "amount": {"value": amount_rub, "currency": "RUB"},
             "confirmation": {
                 "type": "redirect",
-                "return_url": settings.YOKASSA_RETURN_URL or settings.FRONTEND_URL,
+                "return_url": yookassa_return_url(resume_id),
             },
             "capture": True,
             "description": "ResumeBot: PDF-резюме",

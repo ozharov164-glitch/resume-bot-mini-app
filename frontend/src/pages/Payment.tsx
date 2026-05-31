@@ -8,13 +8,21 @@ import { Screen } from "../components/ui/Screen";
 import { useTelegramBackButton } from "../hooks/useTelegramBackButton";
 import { RUB_PRICE, STARS_PRICE } from "../lib/pricing";
 import { useAppStore } from "../store";
-import { getTg } from "../telegram";
+import { getTg, openExternalUrl } from "../telegram";
 
 type InvoiceStatus = "paid" | "cancelled" | "failed" | "pending";
+
+type YookassaCreateResponse = {
+  status: string;
+  provider: string;
+  confirmation_url?: string;
+  payment_id?: string;
+};
 
 export function PaymentPage() {
   const { authToken, resumeId, resumeData, answers, setPage, setPaid } = useAppStore();
   const [paying, setPaying] = useState(false);
+  const [cardPaying, setCardPaying] = useState(false);
 
   const handleBack = useCallback(() => setPage("preview"), [setPage]);
   useTelegramBackButton(handleBack);
@@ -90,13 +98,25 @@ export function PaymentPage() {
 
   const payYookassa = async () => {
     getTg()?.HapticFeedback?.impactOccurred("light");
+    setCardPaying(true);
     try {
-      const response = await createYookassaInvoice(authToken, resumeId);
-      window.location.href = response.confirmation_url;
-    } catch {
-      alert("ЮKassa сейчас недоступна. Попробуй оплату через Stars.");
+      const response = (await createYookassaInvoice(authToken, resumeId)) as YookassaCreateResponse;
+      const checkoutUrl = response.confirmation_url?.trim();
+      if (!checkoutUrl) {
+        throw new Error("Ссылка на оплату не получена");
+      }
+      openExternalUrl(checkoutUrl);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "ЮKassa недоступна";
+      alert(message.includes("ЮKassa") || message.includes("оплат")
+        ? message
+        : `Не удалось открыть оплату картой: ${message}. Попробуй Stars.`);
+    } finally {
+      setCardPaying(false);
     }
   };
+
+  const busy = paying || cardPaying;
 
   return (
     <Screen className="px-4">
@@ -132,7 +152,7 @@ export function PaymentPage() {
           <Button
             variant="brand"
             onClick={payStars}
-            disabled={paying}
+            disabled={busy}
             className="!min-h-[52px] flex items-center justify-center gap-2"
           >
             <Icon name="star" filled size={20} />
@@ -142,16 +162,16 @@ export function PaymentPage() {
           <Button
             variant="outline"
             onClick={payYookassa}
-            disabled={paying}
+            disabled={busy}
             className="!min-h-[52px] flex items-center justify-center gap-2"
           >
             <Icon name="credit_card" size={20} />
-            Оплатить картой — {RUB_PRICE} ₽
+            {cardPaying ? "Открываем оплату…" : `Оплатить картой — ${RUB_PRICE} ₽`}
           </Button>
         </div>
 
         <p className="mt-auto text-center text-sm leading-relaxed" style={{ color: "var(--text-muted)" }}>
-          Что будет после оплаты? PDF придёт в чат бота через несколько секунд.
+          Оплата картой откроется в браузере. После оплаты вернись в Telegram — PDF придёт в чат с ботом.
         </p>
       </main>
     </Screen>

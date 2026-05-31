@@ -43,6 +43,8 @@ export interface TelegramWebApp {
     url: string,
     callback?: (status: "paid" | "cancelled" | "failed" | "pending") => void,
   ) => void;
+  /** Open URL in external browser (required for YooKassa card checkout in Mini App). */
+  openLink?: (url: string, options?: { try_instant_view?: boolean }) => void;
 }
 
 declare global {
@@ -119,4 +121,16 @@ export function initTelegramTheme() {
 /** True inside Telegram Mini App — use native BackButton instead of header arrow. */
 export function isTelegramMiniApp(): boolean {
   return Boolean(getTg()?.initData);
+}
+
+/** Card / external checkout — location.href is blocked inside Telegram WebView. */
+export function openExternalUrl(url: string): void {
+  const trimmed = url.trim();
+  if (!trimmed) return;
+  const webApp = getTg();
+  if (webApp?.openLink) {
+    webApp.openLink(trimmed, { try_instant_view: false });
+    return;
+  }
+  window.open(trimmed, "_blank", "noopener,noreferrer");
 }

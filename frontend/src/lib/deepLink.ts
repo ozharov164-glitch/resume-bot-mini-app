@@ -1,8 +1,18 @@
 export type DeepLinkRoute = "history" | "examples" | null;
 
+/** Resume id after YooKassa redirect (#payment-return?resume_id=…). */
+export function parsePaymentReturnResumeId(hash: string): string | null {
+  const raw = hash.replace(/^#/, "").trim();
+  if (!raw.toLowerCase().startsWith("payment-return")) return null;
+  const query = raw.includes("?") ? raw.slice(raw.indexOf("?") + 1) : "";
+  const id = new URLSearchParams(query).get("resume_id");
+  return id?.trim() || null;
+}
+
 /** Parse Telegram WebApp hash routes (#history, #examples). */
 export function parseDeepLink(hash: string): DeepLinkRoute {
   const key = hash.replace(/^#/, "").trim().toLowerCase();
+  if (key.startsWith("payment-return")) return null;
   if (key === "history") return "history";
   if (key === "examples") return "examples";
   return null;
