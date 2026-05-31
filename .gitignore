@@ -16,3 +16,4 @@ frontend/dist/
 
 .idea/
 .vscode/
+backend/data/*.db
