@@ -18,7 +18,7 @@ class Settings(BaseSettings):
     # некоторые провайдеры запускают модель в reasoning-режиме и возвращают пустой ответ.
     OPENROUTER_PROVIDER_ONLY: str = ""
     # Достаточно для полноценного резюме; меньше 2000 — без лишнего запаса.
-    OPENROUTER_MAX_TOKENS: int = 2500
+    OPENROUTER_MAX_TOKENS: int = 1800
 
     SUPABASE_URL: str
     SUPABASE_KEY: str

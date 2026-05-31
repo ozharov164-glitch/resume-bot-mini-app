@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 
-import { ensureAuthToken, generateResume } from "../api";
+import { ensureAuthToken, generateResume, HttpTimeoutError } from "../api";
 import { OptionButton } from "../components/OptionButton";
 import { ProfessionChip } from "../components/ProfessionChip";
 import { ProgressBar } from "../components/ProgressBar";
@@ -182,7 +182,7 @@ export function OnboardingPage() {
     if (isEdit) {
       cancelEditResume();
     } else {
-      setPage("home");
+      setPage("template_pick");
     }
   }, [step, persistCurrentStep, goToStep, isEdit, cancelEditResume, setPage]);
 
@@ -226,7 +226,7 @@ export function OnboardingPage() {
         payload.last_job = last_job;
       }
       setAnswer("last_job", last_job);
-      const response = await generateResume(token, payload);
+      const response = await generateResume(token, payload, state.selectedTemplate);
       setResumeResult(response.resume_id, response.resume, response.paid);
       if (response.paid) {
         setFounder(true);
@@ -241,6 +241,8 @@ export function OnboardingPage() {
       const message = error instanceof Error ? error.message : "";
       if (message === "OPEN_VIA_BOT") {
         alert("Открой приложение через бота @resumeez_bot — без этого авторизация не работает.");
+      } else if (error instanceof HttpTimeoutError) {
+        alert("Генерация заняла слишком много времени. Проверь интернет и попробуй ещё раз.");
       } else if (/401|авториза|токен|пользователь/i.test(message)) {
         alert("Сессия истекла. Закрой Mini App и открой снова через бота.");
       } else {

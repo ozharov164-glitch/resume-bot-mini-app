@@ -293,7 +293,7 @@ async def _call_openrouter(
     model = model or settings.OPENROUTER_MODEL
     body = _build_request_body(messages, model, temperature, max_tokens)
 
-    async with httpx.AsyncClient(timeout=50.0) as client:
+    async with httpx.AsyncClient(timeout=90.0) as client:
         response = await client.post(
             "https://openrouter.ai/api/v1/chat/completions",
             headers={
@@ -498,7 +498,7 @@ async def generate_resume(user_data: dict) -> dict:
         {"role": "user", "content": _build_user_payload(user_data)},
     ]
     try:
-        raw = await _call_openrouter(messages, temperature=0.68)
+        raw = await _call_openrouter(messages, temperature=0.62, max_tokens=1600)
     except (json.JSONDecodeError, ValueError) as exc:
         logger.warning("primary model output invalid (%s), retrying fallback", exc)
         raw = await _call_openrouter(

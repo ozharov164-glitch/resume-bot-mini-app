@@ -17,6 +17,8 @@ from services.telegram_service import send_document_to_user
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/resume", tags=["resume"])
 
+VALID_TEMPLATES = frozenset({"classic", "modern", "compact"})
+
 
 def _as_str(value: object) -> str:
     if value is None:
@@ -56,6 +58,9 @@ async def create_resume(
         bonus = db.get_referral_bonus(current_user["telegram_id"])
         is_paid_by_bonus = bonus > 0 and db.use_referral_bonus(current_user["telegram_id"])
         is_paid = founder or is_paid_by_bonus
+        template_id = (user_data.template_id or "classic").strip().lower()
+        if template_id not in VALID_TEMPLATES:
+            template_id = "classic"
         db.create_resume(
             {
                 "id": resume_id,
@@ -63,6 +68,7 @@ async def create_resume(
                 "data": resume_data,
                 "user_answers": user_data.model_dump(),
                 "is_paid": is_paid,
+                "template_id": template_id,
                 "created_at": datetime.utcnow().isoformat(),
             }
         )
@@ -73,8 +79,7 @@ async def create_resume(
                 resume_id,
             )
         if is_paid_by_bonus:
-            tmpl = "classic"
-            pdf_bytes = generate_pdf(resume_data, tmpl)
+            pdf_bytes = generate_pdf(resume_data, template_id)
             safe_name = resume_data.get("full_name", "resume").replace(" ", "_")[:80]
             filename = f"resume_{safe_name}.pdf"
             name = (resume_data.get("full_name") or "").strip()
@@ -234,8 +239,6 @@ async def download_pdf(resume_id: str, current_user: dict = Depends(get_current_
         ) from exc
     return {"status": "sent", "filename": filename}
 
-
-VALID_TEMPLATES = frozenset({"classic", "modern", "compact"})
 
 
 @router.patch("/{resume_id}/template")

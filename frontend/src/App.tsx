@@ -17,6 +17,9 @@ const PreviewPage = lazy(() => import("./pages/Preview").then((m) => ({ default:
 const PaymentPage = lazy(() => import("./pages/Payment").then((m) => ({ default: m.PaymentPage })));
 const SuccessPage = lazy(() => import("./pages/Success").then((m) => ({ default: m.SuccessPage })));
 const SkillPickPage = lazy(() => import("./pages/SkillPick").then((m) => ({ default: m.SkillPickPage })));
+const TemplatePickPage = lazy(() =>
+  import("./pages/TemplatePick").then((m) => ({ default: m.TemplatePickPage })),
+);
 const TemplateSelectPage = lazy(() =>
   import("./pages/TemplateSelect").then((m) => ({ default: m.TemplateSelectPage })),
 );
@@ -133,14 +136,16 @@ export default function App() {
         <HomePage onStart={startNewResume} onHistory={() => setPage("history")} />
       ) : null}
       {page === "history" ? <HistoryPage /> : null}
+      {page === "template_pick" ? <TemplatePickPage /> : null}
       {page === "skill_pick" ? <SkillPickPage /> : null}
       {page === "loading" ? <LoadingPage /> : null}
       {page === "preview" ? <PreviewPage /> : null}
       {page === "template_select" ? <TemplateSelectPage /> : null}
       {page === "payment" ? <PaymentPage /> : null}
       {page === "success" ? <SuccessPage /> : null}
-      {page !== "home" &&
+      {      page !== "home" &&
       page !== "history" &&
+      page !== "template_pick" &&
       page !== "skill_pick" &&
       page !== "loading" &&
       page !== "preview" &&

@@ -1,60 +1,39 @@
-import { useCallback, useState, type CSSProperties } from "react";
+import { useCallback, type CSSProperties } from "react";
 import { motion } from "motion/react";
 
-import { requestPdf, setResumeTemplate } from "../api";
 import { AppHeader } from "../components/ui/AppHeader";
 import { Button } from "../components/ui/Button";
 import { FixedBottomBar } from "../components/ui/FixedBottomBar";
 import { Icon } from "../components/ui/Icon";
 import { Screen } from "../components/ui/Screen";
-import { useFounderStatus } from "../hooks/useFounderStatus";
-import { useTelegramBackButton } from "../hooks/useTelegramBackButton";
 import { PDF_TEMPLATES, templatePreviewUrl } from "../lib/templates";
-import { useAppStore } from "../store";
+import { useTelegramBackButton } from "../hooks/useTelegramBackButton";
+import { useAppStore, type TemplateId } from "../store";
 import { getTg } from "../telegram";
 
-export function TemplateSelectPage() {
-  const { authToken, resumeId, selectedTemplate, setSelectedTemplate, setPage, setPaid } =
-    useAppStore();
-  const founderActive = useFounderStatus();
-  const [saving, setSaving] = useState(false);
+export function TemplatePickPage() {
+  const { selectedTemplate, setSelectedTemplate, setPage } = useAppStore();
 
-  const handleBack = useCallback(() => setPage("preview"), [setPage]);
+  const handleBack = useCallback(() => setPage("home"), [setPage]);
   useTelegramBackButton(handleBack);
 
-  if (!authToken || !resumeId) return null;
-
-  const continueFlow = async () => {
+  const continueFlow = () => {
     getTg()?.HapticFeedback?.impactOccurred("medium");
-    setSaving(true);
-    try {
-      await setResumeTemplate(authToken, resumeId, selectedTemplate);
-      if (founderActive) {
-        await requestPdf(authToken, resumeId);
-        setPaid(true);
-        getTg()?.HapticFeedback?.notificationOccurred("success");
-        setPage("success");
-      } else {
-        setPage("payment");
-      }
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Не удалось сохранить шаблон";
-      alert(message);
-    } finally {
-      setSaving(false);
-    }
+    setPage("onboarding");
   };
 
   return (
     <Screen withBottomBar>
-      <AppHeader onBack={handleBack} showBack title="Подтверди шаблон" />
+      <AppHeader onBack={handleBack} showBack title="Выбери дизайн" />
       <main className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-4 py-3">
-        <div className="template-pick-hero template-pick-hero--compact">
-          <h2 className="template-pick-title">Перед оплатой</h2>
+        <div className="template-pick-hero">
+          <Icon name="palette" filled size={28} style={{ color: "var(--brand)" }} />
+          <h2 className="template-pick-title">Как будет выглядеть твоё резюме?</h2>
           <p className="template-pick-sub">
-            Можно оставить выбранный дизайн или сменить на другой — PDF сразу придёт в чат с ботом.
+            Выбери шаблон PDF сейчас — перед оплатой можно будет сменить на другой.
           </p>
         </div>
+
         <div className="flex flex-col gap-4">
           {PDF_TEMPLATES.map((tmpl, index) => {
             const selected = selectedTemplate === tmpl.id;
@@ -62,23 +41,27 @@ export function TemplateSelectPage() {
               <motion.button
                 key={tmpl.id}
                 type="button"
-                initial={{ opacity: 0, y: 12 }}
+                initial={{ opacity: 0, y: 14 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.06 }}
+                transition={{ delay: index * 0.07 }}
                 onClick={() => {
-                  setSelectedTemplate(tmpl.id);
+                  setSelectedTemplate(tmpl.id as TemplateId);
                   getTg()?.HapticFeedback?.selectionChanged();
                 }}
-                className={`template-pick-card template-pick-card--compact${selected ? " template-pick-card--selected" : ""}`}
+                className={`template-pick-card${selected ? " template-pick-card--selected" : ""}`}
                 style={{ "--pick-accent": tmpl.chipColor } as CSSProperties}
               >
-                <div className="template-pick-card-visual template-pick-card-visual--compact">
+                <div className="template-pick-card-visual">
+                  <div className="template-pick-card-stack" aria-hidden>
+                    <div className="template-pick-card-stack-sheet template-pick-card-stack-sheet--2" />
+                    <div className="template-pick-card-stack-sheet template-pick-card-stack-sheet--1" />
+                  </div>
                   <div className="template-pick-card-frame">
                     <img
                       src={templatePreviewUrl(tmpl.id)}
-                      alt={`Превью шаблона ${tmpl.name}`}
+                      alt={`Шаблон ${tmpl.name}`}
                       className="template-pick-card-image"
-                      loading="lazy"
+                      loading={index === 0 ? "eager" : "lazy"}
                       decoding="async"
                       draggable={false}
                     />
@@ -103,8 +86,9 @@ export function TemplateSelectPage() {
       </main>
 
       <FixedBottomBar>
-        <Button variant="brand" onClick={continueFlow} disabled={saving}>
-          {saving ? "Сохраняем…" : "Подтвердить и перейти к оплате"}
+        <Button variant="brand" onClick={continueFlow} className="flex items-center justify-center gap-2">
+          Продолжить
+          <Icon name="arrow_forward" size={20} />
         </Button>
       </FixedBottomBar>
     </Screen>

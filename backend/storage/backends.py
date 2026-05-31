@@ -161,8 +161,8 @@ class SQLiteBackend:
         with self._connect() as conn:
             conn.execute(
                 """
-                INSERT INTO resumes (id, user_id, data, user_answers, is_paid, paid_at, created_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO resumes (id, user_id, data, user_answers, is_paid, paid_at, created_at, template_id)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     record["id"],
@@ -172,6 +172,7 @@ class SQLiteBackend:
                     1 if record.get("is_paid") else 0,
                     record.get("paid_at"),
                     record["created_at"],
+                    record.get("template_id") or "classic",
                 ),
             )
 

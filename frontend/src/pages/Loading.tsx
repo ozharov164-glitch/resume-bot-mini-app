@@ -28,7 +28,7 @@ export function LoadingPage() {
 
   useEffect(() => {
     const start = performance.now();
-    const duration = 9000;
+    const duration = 75_000;
     const tick = (now: number) => {
       const elapsed = now - start;
       const ratio = Math.min(elapsed / duration, 1);
@@ -61,6 +61,9 @@ export function LoadingPage() {
         <h2 className="mb-2 text-center text-2xl font-bold leading-snug">
           Создаем твое идеальное резюме...
         </h2>
+        <p className="mb-3 text-center text-sm" style={{ color: "var(--text-muted)" }}>
+          Обычно 20–60 секунд — ИИ пишет текст и структуру
+        </p>
 
         <AnimatePresence mode="wait">
           <motion.p

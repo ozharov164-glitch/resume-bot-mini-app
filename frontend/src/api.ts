@@ -7,6 +7,8 @@ import { waitForInitData } from "./telegram";
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 const DEFAULT_TIMEOUT_MS = 12_000;
 
+export type TemplateId = "classic" | "modern" | "compact";
+
 async function http<T>(path: string, init: RequestInit, timeoutMs = DEFAULT_TIMEOUT_MS): Promise<T> {
   const response = await fetchWithTimeout(`${API_URL}${path}`, init, timeoutMs);
   const text = await response.text();
@@ -83,19 +85,31 @@ export async function fetchMe(token: string) {
 }
 
 export async function suggestSkills(token: string, position: string) {
-  return http<{ skills: string[]; groups: Record<string, string[]> }>("/api/skills/suggest", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-    body: JSON.stringify({ position }),
-  });
+  return http<{ skills: string[]; groups: Record<string, string[]> }>(
+    "/api/skills/suggest",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ position }),
+    },
+    30_000,
+  );
 }
 
-export async function generateResume(token: string, data: Partial<UserAnswers>) {
-  return http<{ resume_id: string; resume: any; paid: boolean }>("/api/resume/generate", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-    body: JSON.stringify(data),
-  });
+export async function generateResume(
+  token: string,
+  data: Partial<UserAnswers>,
+  templateId: TemplateId = "classic",
+) {
+  return http<{ resume_id: string; resume: ResumeData; paid: boolean }>(
+    "/api/resume/generate",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ ...data, template_id: templateId }),
+    },
+    120_000,
+  );
 }
 
 export async function createStarsInvoice(token: string, resumeId: string) {
@@ -195,7 +209,6 @@ export async function validatePromo(code: string, token: string) {
   };
 }
 
-export type TemplateId = "classic" | "modern" | "compact";
 
 export async function setResumeTemplate(token: string, resumeId: string, templateId: TemplateId) {
   return http<{ ok: boolean; template_id: string }>(`/api/resume/${resumeId}/template`, {

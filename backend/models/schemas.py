@@ -32,6 +32,7 @@ class GenerateResumeRequest(BaseModel):
     certificates: str = ""
     gender: str = ""
     achievements: str = ""
+    template_id: str = "classic"
 
 
 class SuggestSkillsRequest(BaseModel):
