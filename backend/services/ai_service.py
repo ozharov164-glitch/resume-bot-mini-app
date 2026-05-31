@@ -65,6 +65,7 @@ SYSTEM_PROMPT = """Ты — старший HR-редактор резюме дл
 СЕРТИФИКАТЫ: только из запроса, иначе []
 ЗАРПЛАТА: только цифры без суффиксов
 ТЕЛЕФОН / EMAIL: точно из запроса, не изменяй
+ФИО (full_name): из полей «Имя» и «Отчество» — формат «Имя Фамилия Отчество», без сокращений
 
 ПРАВИЛО РОДА (соблюдать строго):
 - Если «Пол кандидата: Женский» — ВСЕ глаголы и прилагательные в женском роде:
@@ -149,6 +150,7 @@ MAX_FIELD_LEN = {
     "about": 800,
     "target_position": 150,
     "name": 100,
+    "patronymic": 60,
     "city": 80,
     "vacancy": 2000,
 }
@@ -218,6 +220,7 @@ def _build_user_payload(user_data: dict) -> str:
         f"Город: {_truncate(user_data.get('city', ''), MAX_FIELD_LEN['city'])}",
         f"О себе (исходник от кандидата):\n{_truncate(user_data.get('about', ''), MAX_FIELD_LEN['about'])}",
         f"Имя: {_truncate(user_data.get('name', ''), MAX_FIELD_LEN['name'])}",
+        f"Отчество: {_truncate(user_data.get('patronymic', ''), MAX_FIELD_LEN['patronymic'])}",
         f"Телефон: {user_data.get('phone', '')}",
     ]
     salary = (user_data.get("salary") or "").strip()

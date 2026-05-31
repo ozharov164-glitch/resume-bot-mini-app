@@ -26,6 +26,16 @@ def _as_str(value: object) -> str:
     return str(value).strip()
 
 
+def _build_full_name(name: str, patronymic: str = "") -> str:
+    name = _as_str(name)
+    patronymic = _as_str(patronymic)
+    if not name:
+        return patronymic
+    if patronymic and patronymic.lower() not in name.lower():
+        return f"{name} {patronymic}"
+    return name
+
+
 def _normalize_resume_fields(resume_data: dict) -> dict:
     """AI JSON may return salary/year as numbers — normalize for PDF and storage."""
     if "salary" in resume_data:
@@ -45,6 +55,9 @@ async def create_resume(
     try:
         resume_data = await generate_resume(user_data.model_dump())
         resume_data = _normalize_resume_fields(resume_data)
+        user_full_name = _build_full_name(user_data.name, user_data.patronymic)
+        if user_full_name:
+            resume_data["full_name"] = user_full_name
         salary_user = _as_str(user_data.salary)
         if salary_user and not _as_str(resume_data.get("salary")):
             resume_data["salary"] = salary_user

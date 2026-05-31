@@ -43,7 +43,10 @@ export function PaymentPage() {
 
   if (!authToken || !resumeId) return null;
 
-  const fullName = resumeData?.full_name || answers.name || "клиента";
+  const fullName =
+    resumeData?.full_name ||
+    [answers.name, answers.patronymic].filter(Boolean).join(" ") ||
+    "клиента";
   const position = resumeData?.target_position || answers.target_position || "";
   const orderLabel = position
     ? `Резюме для ${fullName} (${position})`

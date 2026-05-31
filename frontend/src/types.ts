@@ -7,6 +7,7 @@ export interface WorkEntry {
 
 export interface UserAnswers {
   name: string;
+  patronymic: string;
   gender: "Мужской" | "Женский" | "";
   phone: string;
   target_position: string;

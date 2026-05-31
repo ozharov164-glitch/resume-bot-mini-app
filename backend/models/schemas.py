@@ -26,6 +26,7 @@ class GenerateResumeRequest(BaseModel):
     salary: str = ""
     about: str = ""
     name: str = ""
+    patronymic: str = ""
     phone: str = ""
     email: str = ""
     languages: str = ""
