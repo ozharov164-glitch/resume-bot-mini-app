@@ -7,8 +7,8 @@ from services.marketing_copy import HEADLINE, HOOK_LINE, TEMPLATE_LINE, VALUE_LI
 from services.stats_display import format_count
 
 
-PAYMENT_LINE = "99 ⭐ (Telegram Stars) или 149 ₽ банковской картой"
-PAYMENT_SHORT = "99 ⭐ или 149 ₽ картой"
+PAYMENT_LINE = "149 ⭐ (Telegram Stars) или 149 ₽ банковской картой"
+PAYMENT_SHORT = "149 ⭐ или 149 ₽ картой"
 
 
 def start_text(count: int, greeting: str | None = None) -> str:

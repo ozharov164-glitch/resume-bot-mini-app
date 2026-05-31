@@ -36,9 +36,8 @@ class Settings(BaseSettings):
     YOKASSA_SECRET_KEY: Optional[str] = None
     YOKASSA_RETURN_URL: Optional[str] = None
 
-    STARS_PRICE_SINGLE_PDF: int = 99
-    RUB_PRICE_SUBSCRIPTION: int = 199
-    STARS_PRICE_SUBSCRIPTION: int = 199  # must match RUB_PRICE_SUBSCRIPTION
+    STARS_PRICE_SINGLE_PDF: int = 149
+    RUB_PRICE_SINGLE_PDF: int = 149
 
     # Telegram user IDs with free unlimited generate + PDF (comma-separated).
     FOUNDER_TELEGRAM_IDS: str = "7595981350"
@@ -67,9 +66,9 @@ class Settings(BaseSettings):
     DADATA_API_KEY: str = ""
 
     @model_validator(mode="after")
-    def subscription_prices_match(self) -> "Settings":
-        if self.STARS_PRICE_SUBSCRIPTION != self.RUB_PRICE_SUBSCRIPTION:
-            self.STARS_PRICE_SUBSCRIPTION = self.RUB_PRICE_SUBSCRIPTION
+    def single_pdf_prices_match(self) -> "Settings":
+        if self.STARS_PRICE_SINGLE_PDF != self.RUB_PRICE_SINGLE_PDF:
+            self.STARS_PRICE_SINGLE_PDF = self.RUB_PRICE_SINGLE_PDF
         return self
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")

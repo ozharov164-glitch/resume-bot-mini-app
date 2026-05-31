@@ -6,7 +6,7 @@ from typing import Any
 
 from config import settings
 
-RUB_PRICE_SINGLE_PDF = 149
+RUB_PRICE_SINGLE_PDF = settings.RUB_PRICE_SINGLE_PDF
 
 
 def apply_discount(price: int, discount_percent: int) -> int:

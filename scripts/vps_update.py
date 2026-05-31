@@ -45,8 +45,8 @@ set_env() {
 set_env OPENROUTER_MODEL deepseek/deepseek-chat-v3.1
 set_env OPENROUTER_MODEL_FALLBACK deepseek/deepseek-v3.2
 set_env OPENROUTER_PROVIDER_ONLY ''
-set_env RUB_PRICE_SUBSCRIPTION 199
-set_env STARS_PRICE_SUBSCRIPTION 199
+set_env STARS_PRICE_SINGLE_PDF 149
+set_env RUB_PRICE_SINGLE_PDF 149
 if grep -q '^FOUNDER_TELEGRAM_IDS=' .env 2>/dev/null; then
   sed -i 's/^FOUNDER_TELEGRAM_IDS=.*/FOUNDER_TELEGRAM_IDS=7595981350/' .env
 else

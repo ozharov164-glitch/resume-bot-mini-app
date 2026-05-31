@@ -31,7 +31,7 @@ def create_yookassa_payment(
     Configuration.account_id = settings.YOKASSA_SHOP_ID
     Configuration.secret_key = settings.YOKASSA_SECRET_KEY
 
-    rub = amount_rub or "149.00"
+    rub = amount_rub or f"{settings.RUB_PRICE_SINGLE_PDF:.2f}"
     payment = Payment.create(
         {
             "amount": {"value": rub, "currency": "RUB"},
