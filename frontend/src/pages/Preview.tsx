@@ -22,6 +22,7 @@ export function PreviewPage() {
   const { resumeData, resumeId, authToken, setPage, setPaid, startEditResume, previewReturnPage, isPaid } =
     useAppStore();
   const founderActive = useFounderStatus();
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewError, setPreviewError] = useState(false);
   const previewLocked = !isPaid && !founderActive;
 
