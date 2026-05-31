@@ -56,11 +56,24 @@ class SQLiteBackend:
                     created_at TEXT NOT NULL,
                     expires_at TEXT DEFAULT NULL
                 );
+                CREATE TABLE IF NOT EXISTS promo_activations (
+                    id TEXT PRIMARY KEY,
+                    promo_code TEXT NOT NULL,
+                    owner_tg_id INTEGER DEFAULT NULL,
+                    user_tg_id INTEGER NOT NULL,
+                    activated_at TEXT NOT NULL,
+                    paid_at TEXT DEFAULT NULL,
+                    resume_id TEXT DEFAULT NULL
+                );
+                CREATE INDEX IF NOT EXISTS idx_promo_act_user ON promo_activations(user_tg_id);
+                CREATE INDEX IF NOT EXISTS idx_promo_act_code ON promo_activations(promo_code);
                 """
             )
             for col_sql in [
                 "ALTER TABLE users ADD COLUMN referred_by INTEGER DEFAULT NULL",
                 "ALTER TABLE users ADD COLUMN referral_bonus INTEGER DEFAULT 0",
+                "ALTER TABLE users ADD COLUMN active_promo_code TEXT DEFAULT NULL",
+                "ALTER TABLE users ADD COLUMN promo_activated_at TEXT DEFAULT NULL",
                 "ALTER TABLE resumes ADD COLUMN promo_code TEXT DEFAULT NULL",
                 "ALTER TABLE resumes ADD COLUMN discount_applied INTEGER DEFAULT 0",
                 "ALTER TABLE resumes ADD COLUMN final_price_stars INTEGER DEFAULT NULL",
@@ -296,6 +309,99 @@ class SQLiteBackend:
         with self._connect() as conn:
             rows = conn.execute(
                 "SELECT * FROM promo_codes ORDER BY created_at DESC"
+            ).fetchall()
+        return [dict(r) for r in rows]
+
+    def activate_promo_for_user(self, code: str, user_tg_id: int) -> dict:
+        promo = self.validate_promo_code(code, user_tg_id)
+        if not promo:
+            raise ValueError("Промокод не найден или недействителен.")
+        upper_code = str(promo["code"]).strip().upper()
+        user = self.find_user_by_telegram_id(user_tg_id)
+        if user and user.get("active_promo_code") == upper_code:
+            return {"already_active": True, **promo}
+
+        now = datetime.utcnow().isoformat()
+        owner = promo.get("owner_tg_id")
+        with self._connect() as conn:
+            conn.execute(
+                "UPDATE users SET active_promo_code = ?, promo_activated_at = ? WHERE telegram_id = ?",
+                (upper_code, now, user_tg_id),
+            )
+            if owner:
+                conn.execute(
+                    "UPDATE users SET referred_by = ? WHERE telegram_id = ? AND referred_by IS NULL",
+                    (int(owner), user_tg_id),
+                )
+            conn.execute(
+                """
+                INSERT INTO promo_activations (id, promo_code, owner_tg_id, user_tg_id, activated_at)
+                VALUES (?, ?, ?, ?, ?)
+                """,
+                (str(uuid.uuid4()), upper_code, owner, user_tg_id, now),
+            )
+            conn.commit()
+        return {"already_active": False, **promo}
+
+    def get_user_active_promo(self, user_tg_id: int) -> dict | None:
+        user = self.find_user_by_telegram_id(user_tg_id)
+        if not user or not user.get("active_promo_code"):
+            return None
+        return self.validate_promo_code(user["active_promo_code"], user_tg_id)
+
+    def mark_promo_activation_paid(self, user_tg_id: int, resume_id: str) -> None:
+        user = self.find_user_by_telegram_id(user_tg_id)
+        if not user or not user.get("active_promo_code"):
+            return
+        code = user["active_promo_code"]
+        now = datetime.utcnow().isoformat()
+        with self._connect() as conn:
+            conn.execute(
+                """
+                UPDATE promo_activations
+                SET paid_at = ?, resume_id = ?
+                WHERE id = (
+                    SELECT id FROM promo_activations
+                    WHERE user_tg_id = ? AND promo_code = ? AND paid_at IS NULL
+                    ORDER BY activated_at DESC
+                    LIMIT 1
+                )
+                """,
+                (now, resume_id, user_tg_id, code),
+            )
+            conn.commit()
+
+    def get_promo_analytics(self) -> list[dict]:
+        with self._connect() as conn:
+            rows = conn.execute("SELECT * FROM promo_codes ORDER BY created_at DESC").fetchall()
+            out: list[dict] = []
+            for row in rows:
+                promo = dict(row)
+                code = promo["code"]
+                act = conn.execute(
+                    "SELECT COUNT(*) AS c FROM promo_activations WHERE promo_code = ?",
+                    (code,),
+                ).fetchone()
+                paid = conn.execute(
+                    "SELECT COUNT(*) AS c FROM promo_activations WHERE promo_code = ? AND paid_at IS NOT NULL",
+                    (code,),
+                ).fetchone()
+                promo["activations"] = int(act["c"]) if act else 0
+                promo["paid_count"] = int(paid["c"]) if paid else 0
+                out.append(promo)
+            return out
+
+    def list_recent_promo_activations(self, limit: int = 20) -> list[dict]:
+        with self._connect() as conn:
+            rows = conn.execute(
+                """
+                SELECT pa.*, u.first_name, u.username
+                FROM promo_activations pa
+                LEFT JOIN users u ON u.telegram_id = pa.user_tg_id
+                ORDER BY pa.activated_at DESC
+                LIMIT ?
+                """,
+                (limit,),
             ).fetchall()
         return [dict(r) for r in rows]
 
@@ -589,6 +695,116 @@ class SupabaseBackend:
             .execute()
         )
         return result.data or []
+
+    def activate_promo_for_user(self, code: str, user_tg_id: int) -> dict:
+        promo = self.validate_promo_code(code, user_tg_id)
+        if not promo:
+            raise ValueError("Промокод не найден или недействителен.")
+        upper_code = str(promo["code"]).strip().upper()
+        user = self.find_user_by_telegram_id(user_tg_id)
+        if user and user.get("active_promo_code") == upper_code:
+            return {"already_active": True, **promo}
+
+        now = datetime.utcnow().isoformat()
+        owner = promo.get("owner_tg_id")
+        self.client.table("users").update(
+            {"active_promo_code": upper_code, "promo_activated_at": now}
+        ).eq("telegram_id", user_tg_id).execute()
+        if owner and user and not user.get("referred_by"):
+            self.client.table("users").update({"referred_by": int(owner)}).eq(
+                "telegram_id", user_tg_id
+            ).execute()
+        self.client.table("promo_activations").insert(
+            {
+                "id": str(uuid.uuid4()),
+                "promo_code": upper_code,
+                "owner_tg_id": owner,
+                "user_tg_id": user_tg_id,
+                "activated_at": now,
+            }
+        ).execute()
+        return {"already_active": False, **promo}
+
+    def get_user_active_promo(self, user_tg_id: int) -> dict | None:
+        user = self.find_user_by_telegram_id(user_tg_id)
+        if not user or not user.get("active_promo_code"):
+            return None
+        return self.validate_promo_code(user["active_promo_code"], user_tg_id)
+
+    def mark_promo_activation_paid(self, user_tg_id: int, resume_id: str) -> None:
+        user = self.find_user_by_telegram_id(user_tg_id)
+        if not user or not user.get("active_promo_code"):
+            return
+        code = user["active_promo_code"]
+        now = datetime.utcnow().isoformat()
+        try:
+            pending = (
+                self.client.table("promo_activations")
+                .select("id")
+                .eq("user_tg_id", user_tg_id)
+                .eq("promo_code", code)
+                .is_("paid_at", "null")
+                .order("activated_at", desc=True)
+                .limit(1)
+                .execute()
+            )
+            if not pending.data:
+                return
+            act_id = pending.data[0]["id"]
+            self.client.table("promo_activations").update(
+                {"paid_at": now, "resume_id": resume_id}
+            ).eq("id", act_id).execute()
+        except Exception as e:
+            logger.warning("mark_promo_activation_paid failed: %s", e)
+
+    def get_promo_analytics(self) -> list[dict]:
+        promos = self.list_promo_codes()
+        out: list[dict] = []
+        for promo in promos:
+            code = promo["code"]
+            try:
+                acts = (
+                    self.client.table("promo_activations")
+                    .select("id", count="exact")
+                    .eq("promo_code", code)
+                    .execute()
+                )
+                paid = (
+                    self.client.table("promo_activations")
+                    .select("id", count="exact")
+                    .eq("promo_code", code)
+                    .not_.is_("paid_at", "null")
+                    .execute()
+                )
+                promo["activations"] = int(acts.count or len(acts.data or []))
+                promo["paid_count"] = int(paid.count or len(paid.data or []))
+            except Exception as e:
+                logger.warning("get_promo_analytics failed for %s: %s", code, e)
+                promo["activations"] = 0
+                promo["paid_count"] = 0
+            out.append(promo)
+        return out
+
+    def list_recent_promo_activations(self, limit: int = 20) -> list[dict]:
+        try:
+            result = (
+                self.client.table("promo_activations")
+                .select("*")
+                .order("activated_at", desc=True)
+                .limit(limit)
+                .execute()
+            )
+            rows = result.data or []
+            out: list[dict] = []
+            for row in rows:
+                user = self.find_user_by_telegram_id(int(row["user_tg_id"]))
+                row["first_name"] = (user or {}).get("first_name", "")
+                row["username"] = (user or {}).get("username", "")
+                out.append(row)
+            return out
+        except Exception as e:
+            logger.warning("list_recent_promo_activations failed: %s", e)
+            return []
 
     def count_referred_users(self) -> int:
         try:

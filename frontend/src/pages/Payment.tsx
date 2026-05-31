@@ -1,6 +1,6 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
-import { createStarsInvoice, createYookassaInvoice, validatePromo, waitUntilPaid } from "../api";
+import { createStarsInvoice, createYookassaInvoice, fetchActivePromo, validatePromo, waitUntilPaid } from "../api";
 import { useYookassaReturnPoll } from "../hooks/useYookassaReturnPoll";
 import { markYookassaPending } from "../lib/paymentReturn";
 import { AppHeader } from "../components/ui/AppHeader";
@@ -36,10 +36,32 @@ export function PaymentPage() {
   const [promoDiscount, setPromoDiscount] = useState(0);
   const [promoLoading, setPromoLoading] = useState(false);
   const [promoError, setPromoError] = useState<string | null>(null);
+  const [promoReady, setPromoReady] = useState(false);
 
   const handleBack = useCallback(() => setPage("template_select"), [setPage]);
   useTelegramBackButton(handleBack);
   useYookassaReturnPoll(true);
+
+  useEffect(() => {
+    if (!authToken) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const active = await fetchActivePromo(authToken);
+        if (cancelled || !active.active || !active.code || !active.discount_percent) return;
+        setPromoCode(active.code);
+        setPromoDiscount(active.discount_percent);
+        setShowPromo(true);
+      } catch {
+        /* no active promo */
+      } finally {
+        if (!cancelled) setPromoReady(true);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [authToken]);
 
   if (!authToken || !resumeId) return null;
 
@@ -192,12 +214,12 @@ export function PaymentPage() {
           </div>
           {promoDiscount > 0 ? (
             <p className="mt-2 text-sm font-medium" style={{ color: "var(--brand)" }}>
-              Скидка {promoDiscount}% применена!
+              Скидка {promoDiscount}% применена{promoCode ? ` (промокод ${promoCode})` : ""}!
             </p>
           ) : null}
         </section>
 
-        {!showPromo ? (
+        {!showPromo && promoReady ? (
           <button
             type="button"
             className="text-sm underline"

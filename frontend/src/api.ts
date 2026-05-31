@@ -206,7 +206,26 @@ export async function validatePromo(code: string, token: string) {
     valid: boolean;
     discount_percent: number;
     code: string;
+    already_active?: boolean;
   };
+}
+
+export async function fetchActivePromo(token: string) {
+  return http<{ active: boolean; code?: string; discount_percent?: number }>("/api/promo/active", {
+    method: "GET",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export async function activatePromo(code: string, token: string) {
+  return http<{ ok: boolean; code: string; discount_percent: number; already_active?: boolean }>(
+    "/api/promo/activate",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ code }),
+    },
+  );
 }
 
 

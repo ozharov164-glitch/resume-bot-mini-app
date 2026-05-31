@@ -36,6 +36,22 @@ async def create_promo(body: dict, db=Depends(get_db)):
     return {"ok": True, "promo": promo}
 
 
+@router.get("/promos/analytics", dependencies=[Depends(verify_admin_key)])
+async def promo_analytics(db=Depends(get_db)):
+    try:
+        return {"promos": db.get_promo_analytics()}
+    except Exception:
+        return {"promos": []}
+
+
+@router.get("/promos/activations", dependencies=[Depends(verify_admin_key)])
+async def promo_activations(db=Depends(get_db), limit: int = 20):
+    try:
+        return {"activations": db.list_recent_promo_activations(min(limit, 50))}
+    except Exception:
+        return {"activations": []}
+
+
 @router.get("/stats", dependencies=[Depends(verify_admin_key)])
 async def admin_stats(db=Depends(get_db)):
     try:

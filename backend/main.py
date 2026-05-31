@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from config import settings
 from database import get_db, storage_mode
-from routers import admin, auth, enrich, payment, payment_return, resume, skills, stats, voice
+from routers import admin, auth, enrich, payment, payment_return, promo, resume, skills, stats, voice
 from services.pdf_service import ensure_fonts
 
 logging.basicConfig(
@@ -37,6 +37,7 @@ app.include_router(auth.router)
 app.include_router(resume.router)
 app.include_router(skills.router)
 app.include_router(payment.router)
+app.include_router(promo.router)
 app.include_router(payment_return.router)
 app.include_router(stats.router)
 app.include_router(admin.router)

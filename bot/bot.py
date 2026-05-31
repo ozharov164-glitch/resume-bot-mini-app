@@ -32,7 +32,8 @@ sys.path.insert(0, str(ROOT / "backend"))
 
 from config import settings  # noqa: E402
 from database import get_db  # noqa: E402
-from services.admin_notify import PaymentNotifyInfo  # noqa: E402
+from services.admin_notify import PaymentNotifyInfo, notify_promo_activation  # noqa: E402
+from services.promo_service import activate_promo  # noqa: E402
 from services.user_registration import register_telegram_user  # noqa: E402
 from services.founder_contact import (  # noqa: E402
     ensure_founder_username,
@@ -50,6 +51,9 @@ from services.bot_copy import (  # noqa: E402
     invite_text,
     my_resumes_text,
     payment_error_text,
+    promo_activated_text,
+    promo_invalid_text,
+    promo_prompt_text,
     resume_command_text,
     start_text,
     trust_text,
@@ -102,6 +106,9 @@ def _admin_menu_keyboard() -> InlineKeyboardMarkup:
                 InlineKeyboardButton("➕ /newpromo КОД", callback_data="adm_create_promo"),
                 InlineKeyboardButton("👥 Топ рефереры", callback_data="adm_refs"),
             ],
+            [
+                InlineKeyboardButton("📋 Активации промо", callback_data="adm_promo_acts"),
+            ],
         ]
     )
 
@@ -119,27 +126,33 @@ async def newpromo_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     args = context.args or []
     if not args:
         await update.message.reply_text(
-            "Использование: /newpromo КОД [скидка%] [лимит]\n"
-            "Пример: /newpromo BLOG10 10 200"
+            "Использование: /newpromo КОД [скидка%] [лимит] [owner_tg_id]\n"
+            "Пример: /newpromo BLOG10 10 200 123456789\n"
+            "owner_tg_id — Telegram ID траффера для атрибуции."
         )
         return
     code = args[0].strip()
     discount = int(args[1]) if len(args) > 1 else 10
     max_uses = int(args[2]) if len(args) > 2 else 100
+    owner_tg_id = int(args[3]) if len(args) > 3 else None
+    payload: dict = {"code": code, "discount": discount, "max_uses": max_uses}
+    if owner_tg_id is not None:
+        payload["owner_tg_id"] = owner_tg_id
     try:
         async with httpx.AsyncClient(timeout=15.0) as client:
             resp = await client.post(
                 f"{API_URL}/api/admin/promos",
                 headers=_admin_headers(),
-                json={"code": code, "discount": discount, "max_uses": max_uses},
+                json=payload,
             )
         if resp.status_code == 200:
             data = resp.json()
             promo = data.get("promo", {})
+            owner_line = f"\nТраффер: <code>{owner_tg_id}</code>" if owner_tg_id else ""
             await update.message.reply_text(
                 f"✅ Промокод создан: <b>{html.escape(promo.get('code', code))}</b>\n"
                 f"Скидка: {promo.get('discount_percent', discount)}%\n"
-                f"Лимит: {max_uses}",
+                f"Лимит: {max_uses}{owner_line}",
                 parse_mode="HTML",
             )
         else:
@@ -183,22 +196,29 @@ async def adm_promos_callback(update: Update, context: ContextTypes.DEFAULT_TYPE
     await query.answer()
     try:
         async with httpx.AsyncClient(timeout=15.0) as client:
-            resp = await client.get(f"{API_URL}/api/admin/promos", headers=_admin_headers())
+            resp = await client.get(f"{API_URL}/api/admin/promos/analytics", headers=_admin_headers())
         if resp.status_code != 200:
             await query.edit_message_text(f"❌ Ошибка promos: {resp.status_code}")
             return
         promos = resp.json().get("promos", [])
         if not promos:
-            text = "🎟 Промокодов пока нет.\n\nСоздай: /newpromo КОД 10 100"
+            text = "🎟 Промокодов пока нет.\n\nСоздай: /newpromo КОД 10 100 [owner_tg_id]"
         else:
-            lines = ["🎟 <b>Промокоды</b>\n"]
+            lines = ["🎟 <b>Промокоды</b> (активации / оплаты)\n"]
             for p in promos[:15]:
                 status = "✅" if p.get("is_active") else "❌"
                 code = html.escape(str(p.get("code", "")))
                 uses = p.get("uses_count", 0)
                 max_u = p.get("max_uses", "∞")
                 disc = p.get("discount_percent", 0)
-                lines.append(f"{status} <code>{code}</code> — {uses}/{max_u}, -{disc}%")
+                activations = p.get("activations", 0)
+                paid = p.get("paid_count", 0)
+                owner = p.get("owner_tg_id")
+                owner_part = f", траффер <code>{owner}</code>" if owner else ""
+                lines.append(
+                    f"{status} <code>{code}</code> −{disc}% · "
+                    f"активаций {activations}, оплат {paid}, использований {uses}/{max_u}{owner_part}"
+                )
             text = "\n".join(lines)
         keyboard = InlineKeyboardMarkup(
             [[InlineKeyboardButton("◀️ Назад", callback_data="adm_back")]]
@@ -258,10 +278,51 @@ async def adm_create_promo_callback(update: Update, context: ContextTypes.DEFAUL
         [[InlineKeyboardButton("◀️ Назад", callback_data="adm_back")]]
     )
     await query.edit_message_text(
-        "➕ Создание промокода:\n\n/newpromo КОД [скидка%] [лимит]\n"
-        "Пример: /newpromo BLOG10 10 200",
+        "➕ Создание промокода:\n\n/newpromo КОД [скидка%] [лимит] [owner_tg_id]\n"
+        "Пример: /newpromo BLOG10 10 200 123456789",
         reply_markup=keyboard,
     )
+
+
+@admin_only
+async def adm_promo_acts_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    keyboard = InlineKeyboardMarkup(
+        [[InlineKeyboardButton("◀️ Назад", callback_data="adm_back")]]
+    )
+    try:
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            resp = await client.get(
+                f"{API_URL}/api/admin/promos/activations",
+                headers=_admin_headers(),
+                params={"limit": 15},
+            )
+        if resp.status_code != 200:
+            await query.edit_message_text(
+                f"❌ Ошибка activations: {resp.status_code}", reply_markup=keyboard
+            )
+            return
+        activations = resp.json().get("activations", [])
+        if not activations:
+            text = "📋 <b>Активации промокодов</b>\n\nПока никто не активировал промокод."
+        else:
+            lines = ["📋 <b>Последние активации промокодов</b>\n"]
+            for act in activations:
+                code = html.escape(str(act.get("promo_code", "")))
+                name = html.escape(str(act.get("first_name") or "—"))
+                uname = act.get("username")
+                handle = f" @{html.escape(str(uname))}" if uname else ""
+                uid = act.get("user_tg_id")
+                paid = "✅ оплатил" if act.get("paid_at") else "⏳ ждём оплату"
+                owner = act.get("owner_tg_id")
+                owner_part = f" · траффер <code>{owner}</code>" if owner else ""
+                lines.append(f"• <code>{code}</code> — {name}{handle} (<code>{uid}</code>) — {paid}{owner_part}")
+            text = "\n".join(lines)
+        await query.edit_message_text(text, parse_mode="HTML", reply_markup=keyboard)
+    except Exception as exc:
+        logger.exception("adm_promo_acts failed")
+        await query.edit_message_text(f"❌ {exc}", reply_markup=keyboard)
 
 
 @admin_only
@@ -301,12 +362,65 @@ def _start_keyboard(is_admin: bool = False) -> InlineKeyboardMarkup:
             InlineKeyboardButton("💬 Поддержка", callback_data="support_hub"),
         ],
         [InlineKeyboardButton("🎁 Пригласить друга", callback_data="invite_prompt")],
+        [InlineKeyboardButton("🎟 Активировать промокод", callback_data="promo_prompt")],
     ]
     if is_admin:
         rows.append(
             [InlineKeyboardButton("🔧 Админ-панель", callback_data="adm_open")]
         )
     return InlineKeyboardMarkup(rows)
+
+
+def _promo_result_keyboard() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        [
+            [InlineKeyboardButton("📝 Создать резюме", web_app=WebAppInfo(url=MINI_APP_URL))],
+            [InlineKeyboardButton("◀️ В меню", callback_data="back_to_start")],
+        ]
+    )
+
+
+async def _activate_promo_for_user(tg_user, code: str, *, message=None) -> None:
+    if not tg_user or not code.strip():
+        return
+    try:
+        await register_telegram_user(
+            get_db(),
+            telegram_id=tg_user.id,
+            first_name=tg_user.first_name or "",
+            last_name=tg_user.last_name or "",
+            username=tg_user.username or "",
+        )
+        result = await asyncio.to_thread(activate_promo, get_db(), code.strip(), tg_user.id)
+        if not result.get("already_active"):
+            await notify_promo_activation(
+                get_db(),
+                promo_code=str(result.get("code", code)),
+                discount_percent=int(result.get("discount_percent") or 0),
+                telegram_id=tg_user.id,
+                first_name=tg_user.first_name or "",
+                username=tg_user.username or "",
+                owner_tg_id=result.get("owner_tg_id"),
+            )
+        text = promo_activated_text(
+            str(result.get("code", code)),
+            int(result.get("discount_percent") or 0),
+            already_active=bool(result.get("already_active")),
+        )
+        if message:
+            await message.reply_text(text, reply_markup=_promo_result_keyboard(), parse_mode="HTML")
+    except ValueError:
+        if message:
+            await message.reply_text(
+                promo_invalid_text(),
+                reply_markup=InlineKeyboardMarkup(
+                    [[InlineKeyboardButton("◀️ В меню", callback_data="back_to_start")]]
+                ),
+            )
+    except Exception:
+        logger.exception("promo activation failed telegram_id=%s", tg_user.id)
+        if message:
+            await message.reply_text("❌ Не удалось активировать промокод. Попробуйте позже.")
 
 
 def _display_name(user) -> str:
@@ -381,6 +495,14 @@ async def _reply_support_hub(update: Update, *, edit: bool = False) -> None:
         await message.reply_text(text, reply_markup=keyboard, parse_mode="HTML")
 
 
+async def promo_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    context.user_data["awaiting_promo"] = True
+    keyboard = InlineKeyboardMarkup(
+        [[InlineKeyboardButton("◀️ Отмена", callback_data="promo_cancel")]]
+    )
+    await update.message.reply_text(promo_prompt_text(), reply_markup=keyboard, parse_mode="HTML")
+
+
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.message:
         return
@@ -416,6 +538,10 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         except (ValueError, IndexError):
             referrer_id = None
 
+    promo_code_from_link = None
+    if context.args and context.args[0].startswith("promo_"):
+        promo_code_from_link = context.args[0][6:].strip()
+
     count = get_resume_count()
     text = start_text(count, _display_name(tg_user))
     is_admin = bool(tg_user and tg_user.id in _founder_ids())
@@ -424,6 +550,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
     asyncio.create_task(_register_bot_contact(tg_user, referrer_id))
+    if promo_code_from_link:
+        asyncio.create_task(_activate_promo_for_user(tg_user, promo_code_from_link, message=update.message))
 
 
 async def resume_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -619,6 +747,42 @@ async def back_to_start_callback(update: Update, context: ContextTypes.DEFAULT_T
     )
 
 
+async def promo_prompt_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    context.user_data["awaiting_promo"] = True
+    keyboard = InlineKeyboardMarkup(
+        [[InlineKeyboardButton("◀️ Отмена", callback_data="promo_cancel")]]
+    )
+    await query.message.reply_text(promo_prompt_text(), reply_markup=keyboard, parse_mode="HTML")
+
+
+async def promo_cancel_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    context.user_data.pop("awaiting_promo", None)
+    count = get_resume_count()
+    is_admin = bool(query.from_user and query.from_user.id in _founder_ids())
+    await query.message.reply_text(
+        start_text(count),
+        reply_markup=_start_keyboard(is_admin),
+        parse_mode="HTML",
+    )
+
+
+async def promo_text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not context.user_data.get("awaiting_promo"):
+        await fallback_text(update, context)
+        return
+    context.user_data.pop("awaiting_promo", None)
+    code = (update.message.text or "").strip()
+    if not code:
+        await update.message.reply_text("Отправьте промокод текстом, например: BLOG10")
+        context.user_data["awaiting_promo"] = True
+        return
+    await _activate_promo_for_user(update.effective_user, code, message=update.message)
+
+
 async def fallback_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         bot_fallback_text(),
@@ -716,6 +880,7 @@ async def post_init(application: Application) -> None:
             BotCommand("myresumes", "Мои резюме"),
             BotCommand("examples", "Примеры резюме"),
             BotCommand("invite", "Пригласить друга"),
+            BotCommand("promo", "Активировать промокод"),
             BotCommand("trust", "Почему нам доверяют"),
             BotCommand("support", "Помощь и связь с основателем"),
             BotCommand("founder", "Написать основателю"),
@@ -749,13 +914,18 @@ def main():
     app.add_handler(CommandHandler("founder", founder_command))
     app.add_handler(CommandHandler("admin", admin_command))
     app.add_handler(CommandHandler("newpromo", newpromo_command))
+    app.add_handler(CommandHandler("promo", promo_command))
 
     app.add_handler(CallbackQueryHandler(adm_open_callback, pattern="^adm_open$"))
     app.add_handler(CallbackQueryHandler(adm_stats_callback, pattern="^adm_stats$"))
     app.add_handler(CallbackQueryHandler(adm_promos_callback, pattern="^adm_promos$"))
     app.add_handler(CallbackQueryHandler(adm_refs_callback, pattern="^adm_refs$"))
     app.add_handler(CallbackQueryHandler(adm_create_promo_callback, pattern="^adm_create_promo$"))
+    app.add_handler(CallbackQueryHandler(adm_promo_acts_callback, pattern="^adm_promo_acts$"))
     app.add_handler(CallbackQueryHandler(adm_back_callback, pattern="^adm_back$"))
+
+    app.add_handler(CallbackQueryHandler(promo_prompt_callback, pattern="^promo_prompt$"))
+    app.add_handler(CallbackQueryHandler(promo_cancel_callback, pattern="^promo_cancel$"))
 
     app.add_handler(CallbackQueryHandler(how_it_works_callback, pattern="^how_it_works$"))
     app.add_handler(CallbackQueryHandler(trust_callback, pattern="^trust$"))
@@ -767,7 +937,7 @@ def main():
     app.add_handler(PreCheckoutQueryHandler(pre_checkout))
     app.add_handler(MessageHandler(filters.SUCCESSFUL_PAYMENT, successful_payment))
 
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, fallback_text))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, promo_text_handler))
 
     logger.info("Bot started")
     app.run_polling(allowed_updates=Update.ALL_TYPES)

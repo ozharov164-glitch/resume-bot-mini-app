@@ -77,6 +77,26 @@ async def notify_new_user(db: Any, *, telegram_id: int, first_name: str = "", us
     return await send_admin_message(text)
 
 
+async def notify_promo_activation(
+    db: Any,
+    *,
+    promo_code: str,
+    discount_percent: int,
+    telegram_id: int,
+    first_name: str = "",
+    username: str = "",
+    owner_tg_id: int | None = None,
+) -> bool:
+    owner_line = f"Траффер: <code>{owner_tg_id}</code>" if owner_tg_id else "Траффер: не указан"
+    text = (
+        "🎟 <b>Промокод активирован</b>\n\n"
+        f"Код: <code>{html.escape(promo_code)}</code> (−{discount_percent}%)\n"
+        f"Пользователь: {_user_line(telegram_id, first_name, username)}\n"
+        f"{owner_line}"
+    )
+    return await send_admin_message(text)
+
+
 async def notify_payment(
     db: Any,
     info: PaymentNotifyInfo,
@@ -90,6 +110,10 @@ async def notify_payment(
     except Exception:
         logger.exception("count_paid_resumes failed")
         paid_total = "?"
+
+    resume = db.find_resume(info.resume_id)
+    promo_code = (resume or {}).get("promo_code")
+    discount = (resume or {}).get("discount_applied")
 
     provider_labels = {
         "telegram_stars": "Telegram Stars",
@@ -115,6 +139,11 @@ async def notify_payment(
     ]
     if info.external_id:
         lines.append(f"Платёж: <code>{html.escape(info.external_id)}</code>")
+    if promo_code:
+        promo_line = f"Промокод: <code>{html.escape(str(promo_code))}</code>"
+        if discount:
+            promo_line += f" (−{discount}%)"
+        lines.append(promo_line)
     lines.extend(["", f"📈 Всего оплаченных резюме: <b>{paid_total}</b>"])
     text = "\n".join(lines)
     await send_admin_message(text)

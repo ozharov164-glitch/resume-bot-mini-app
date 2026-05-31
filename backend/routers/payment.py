@@ -11,10 +11,27 @@ from services.founder import is_founder
 from services.admin_notify import PaymentNotifyInfo
 from services.payment_fulfillment import fulfill_paid_resume
 from services.payment_service import create_stars_invoice_link, create_yookassa_payment
+from services.promo_service import RUB_PRICE_SINGLE_PDF, activate_promo, discounted_prices, resolve_payment_promo
 from services.yookassa_webhook import handle_yookassa_webhook
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/payment", tags=["payment"])
+
+
+def _prepare_resume_promo(db, resume_id: str, telegram_id: int) -> tuple[int, str]:
+    promo_code, discount, _promo = resolve_payment_promo(db, telegram_id)
+    stars, rub = discounted_prices(discount)
+    if promo_code and discount > 0:
+        db.update_resume(
+            resume_id,
+            {
+                "promo_code": promo_code,
+                "discount_applied": discount,
+                "final_price_stars": stars,
+                "final_price_rub": max(1, round(RUB_PRICE_SINGLE_PDF * (1 - discount / 100))),
+            },
+        )
+    return stars, rub
 
 
 @router.post("/create-invoice/{resume_id}")
@@ -30,8 +47,14 @@ async def create_invoice(resume_id: str, current_user: dict = Depends(get_curren
             "invoice_link": None,
         }
 
+    stars, _rub = _prepare_resume_promo(db, resume_id, current_user["telegram_id"])
+
     try:
-        invoice_link = await create_stars_invoice_link(resume_id, current_user["id"])
+        invoice_link = await create_stars_invoice_link(
+            resume_id,
+            current_user["id"],
+            stars_amount=stars,
+        )
     except Exception as exc:
         logger.exception("create_stars_invoice_link failed resume_id=%s", resume_id)
         raise HTTPException(
@@ -43,6 +66,7 @@ async def create_invoice(resume_id: str, current_user: dict = Depends(get_curren
         "status": "ready",
         "provider": "telegram_stars",
         "invoice_link": invoice_link,
+        "stars_amount": stars,
     }
 
 
@@ -60,8 +84,13 @@ async def create_yookassa_invoice(
             status_code=400,
             detail="Для founder PDF бесплатный — скачай из превью.",
         )
+    _stars, rub = _prepare_resume_promo(db, resume_id, current_user["telegram_id"])
     try:
-        payment = create_yookassa_payment(resume_id=resume_id, user_id=current_user["id"])
+        payment = create_yookassa_payment(
+            resume_id=resume_id,
+            user_id=current_user["id"],
+            amount_rub=rub,
+        )
         url = payment.get("confirmation_url")
         if not url:
             logger.error("yookassa: empty confirmation_url resume_id=%s", resume_id)
@@ -128,11 +157,13 @@ async def validate_promo(
     code = str(body.get("code", "")).strip()
     if not code:
         raise HTTPException(status_code=400, detail="Укажите промокод.")
-    promo = db.validate_promo_code(code, current_user["telegram_id"])
-    if not promo:
+    try:
+        result = activate_promo(db, code, current_user["telegram_id"])
+    except ValueError:
         raise HTTPException(status_code=404, detail="Промокод не найден или недействителен.")
     return {
         "valid": True,
-        "discount_percent": promo["discount_percent"],
-        "code": promo["code"],
+        "discount_percent": result["discount_percent"],
+        "code": result["code"],
+        "already_active": bool(result.get("already_active")),
     }

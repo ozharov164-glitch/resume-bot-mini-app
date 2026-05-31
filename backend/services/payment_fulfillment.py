@@ -69,13 +69,17 @@ async def fulfill_paid_resume(
 
     if first_payment:
         try:
-            from telegram import Bot
-
             buyer = db.find_user_by_telegram_id(telegram_id)
+            if buyer and buyer.get("active_promo_code"):
+                code = buyer["active_promo_code"]
+                db.use_promo_code(code, resume_id)
+                db.mark_promo_activation_paid(telegram_id, resume_id)
             referred_by = buyer.get("referred_by") if buyer else None
             if referred_by:
                 referrer_id = int(referred_by)
                 db.increment_referral_bonus(referrer_id)
+                from telegram import Bot
+
                 bot = Bot(token=settings.BOT_TOKEN)
                 await bot.send_message(
                     chat_id=referrer_id,
