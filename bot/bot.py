@@ -160,6 +160,32 @@ async def _reply_support_hub(update: Update, *, edit: bool = False) -> None:
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     referrer_id = None
     tg_user = update.message.from_user
+    if not update.message:
+        return
+
+    if context.args and context.args[0].startswith("pay_"):
+        resume_id = context.args[0][4:].strip()
+        if resume_id:
+            app_url = f"{MINI_APP_URL}#payment-return?resume_id={resume_id}"
+            keyboard = InlineKeyboardMarkup(
+                [
+                    [
+                        InlineKeyboardButton(
+                            "✅ Открыть приложение",
+                            web_app=WebAppInfo(url=app_url),
+                        )
+                    ],
+                ]
+            )
+            await update.message.reply_text(
+                "✅ <b>Оплата прошла!</b>\n\n"
+                "Нажми кнопку ниже — откроется приложение, и PDF придёт в этот чат с ботом.",
+                reply_markup=keyboard,
+                parse_mode="HTML",
+            )
+            asyncio.create_task(_register_bot_contact(tg_user, None))
+            return
+
     if context.args and context.args[0].startswith("ref_"):
         try:
             referrer_id = int(context.args[0][4:])

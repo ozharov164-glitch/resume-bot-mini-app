@@ -1,6 +1,8 @@
 import { useCallback, useState } from "react";
 
 import { createStarsInvoice, createYookassaInvoice, waitUntilPaid } from "../api";
+import { useYookassaReturnPoll } from "../hooks/useYookassaReturnPoll";
+import { markYookassaPending } from "../lib/paymentReturn";
 import { AppHeader } from "../components/ui/AppHeader";
 import { Button } from "../components/ui/Button";
 import { Icon } from "../components/ui/Icon";
@@ -26,6 +28,7 @@ export function PaymentPage() {
 
   const handleBack = useCallback(() => setPage("preview"), [setPage]);
   useTelegramBackButton(handleBack);
+  useYookassaReturnPoll(true);
 
   if (!authToken || !resumeId) return null;
 
@@ -105,6 +108,7 @@ export function PaymentPage() {
       if (!checkoutUrl) {
         throw new Error("Ссылка на оплату не получена");
       }
+      markYookassaPending(resumeId);
       openExternalUrl(checkoutUrl);
     } catch (err) {
       const message = err instanceof Error ? err.message : "ЮKassa недоступна";
@@ -171,7 +175,8 @@ export function PaymentPage() {
         </div>
 
         <p className="mt-auto text-center text-sm leading-relaxed" style={{ color: "var(--text-muted)" }}>
-          Оплата картой откроется в браузере. После оплаты вернись в Telegram — PDF придёт в чат с ботом.
+          Оплата откроется в браузере. После оплаты нажми «Вернуться в магазин» — откроется Telegram. Затем
+          кнопку «Открыть приложение» у бота или просто вернись в это окно — PDF придёт в чат.
         </p>
       </main>
     </Screen>

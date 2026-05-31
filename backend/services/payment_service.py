@@ -6,6 +6,7 @@ from telegram import Bot, LabeledPrice
 from yookassa import Configuration, Payment
 
 from config import settings
+from services.payment_return import yookassa_return_url
 
 _STARS_TITLE = "Резюме в PDF"
 _STARS_DESCRIPTION = "Профессионально оформленное резюме в формате PDF для отклика на вакансии."
@@ -17,11 +18,6 @@ def _invoice_payload(resume_id: str, user_id: str) -> str:
 
 def _stars_prices() -> list[LabeledPrice]:
     return [LabeledPrice(label="PDF-резюме", amount=settings.STARS_PRICE_SINGLE_PDF)]
-
-
-def yookassa_return_url(resume_id: str) -> str:
-    base = (settings.YOKASSA_RETURN_URL or settings.FRONTEND_URL).rstrip("/")
-    return f"{base}/#payment-return?resume_id={resume_id}"
 
 
 def create_yookassa_payment(resume_id: str, user_id: str, amount_rub: str = "149.00") -> dict:

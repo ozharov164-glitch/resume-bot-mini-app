@@ -1,9 +1,10 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
-import { authWithTelegram, getResume, waitUntilPaid } from "./api";
+import { authWithTelegram } from "./api";
 import { useFounderStatus } from "./hooks/useFounderStatus";
 import { isFounderTelegramId } from "./lib/founder";
-import { clearDeepLinkHash, parseDeepLink, parsePaymentReturnResumeId } from "./lib/deepLink";
+import { clearDeepLinkHash, parseDeepLink } from "./lib/deepLink";
+import { completePaymentReturn, discoverPaymentReturnResumeId } from "./lib/paymentReturn";
 import { HistoryPage } from "./pages/History";
 import { HomePage } from "./pages/Home";
 import { LoadingPage } from "./pages/Loading";
@@ -29,6 +30,7 @@ export default function App() {
     setResumeResult,
     setPaid,
   } = useAppStore();
+  const paymentReturnHandled = useRef(false);
   useFounderStatus();
 
   useEffect(() => {
@@ -44,8 +46,30 @@ export default function App() {
         if (!initData) return;
         const auth = await authWithTelegram(initData);
         setAuthToken(auth.access_token);
+
         if (auth.is_founder || auth.unlimited) {
           setFounder(true);
+        }
+
+        const returnResumeId = discoverPaymentReturnResumeId();
+        if (returnResumeId && !paymentReturnHandled.current) {
+          paymentReturnHandled.current = true;
+          clearDeepLinkHash();
+          const { outcome, data } = await completePaymentReturn(
+            auth.access_token,
+            returnResumeId,
+          );
+          if (outcome === "success" && data) {
+            setResumeResult(returnResumeId, data, true);
+            setPaid(true);
+            setPage("success");
+            getTg()?.HapticFeedback?.notificationOccurred("success");
+            return;
+          }
+          if (outcome === "pending") {
+            if (data) setResumeResult(returnResumeId, data, false);
+            setPage("payment");
+          }
         }
       } catch (error) {
         console.error(error);
@@ -54,39 +78,10 @@ export default function App() {
       }
     };
     void bootstrap();
-  }, [setAuthToken, setFounder, setLoading]);
+  }, [setAuthToken, setFounder, setLoading, setPage, setPaid, setResumeResult]);
 
   useEffect(() => {
     if (isLoading || !authToken) return;
-
-    const paymentResumeId = parsePaymentReturnResumeId(window.location.hash);
-    if (paymentResumeId) {
-      clearDeepLinkHash();
-      void (async () => {
-        try {
-          setLoading(true);
-          const resume = await getResume(authToken, paymentResumeId);
-          setResumeResult(paymentResumeId, resume.data, resume.is_paid);
-          const confirmed = resume.is_paid || (await waitUntilPaid(authToken, paymentResumeId, 40, 1000));
-          if (confirmed) {
-            setPaid(true);
-            setPage("success");
-          } else {
-            setPage("payment");
-            alert(
-              "Оплата ещё обрабатывается. PDF появится в чате с ботом через минуту — проверь сообщения.",
-            );
-          }
-        } catch (error) {
-          console.error(error);
-          setPage("home");
-          alert("Не удалось проверить оплату. Открой приложение из бота и проверь чат.");
-        } finally {
-          setLoading(false);
-        }
-      })();
-      return;
-    }
 
     const route = parseDeepLink(window.location.hash);
     if (route === "history") {
@@ -96,7 +91,7 @@ export default function App() {
       setHomeTab("examples");
     }
     if (route) clearDeepLinkHash();
-  }, [isLoading, authToken, setPage, setHomeTab, setLoading, setResumeResult, setPaid]);
+  }, [isLoading, authToken, setPage, setHomeTab]);
 
   if (isLoading) {
     return (
@@ -110,7 +105,9 @@ export default function App() {
           aria-hidden
         />
         <p className="text-base font-semibold" style={{ color: "var(--text-muted)" }}>
-          Загружаем приложение...
+          {discoverPaymentReturnResumeId()
+            ? "Проверяем оплату…"
+            : "Загружаем приложение…"}
         </p>
       </div>
     );
