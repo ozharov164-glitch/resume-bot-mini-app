@@ -17,6 +17,7 @@ from telegram import (
     Update,
     WebAppInfo,
 )
+from telegram.error import BadRequest
 from telegram.ext import (
     Application,
     CallbackQueryHandler,
@@ -137,6 +138,29 @@ def _admin_back_refresh(refresh_callback: str) -> InlineKeyboardMarkup:
     )
 
 
+async def _edit_callback_message(
+    query,
+    text: str,
+    *,
+    reply_markup=None,
+    parse_mode: str = "HTML",
+    disable_web_page_preview: bool | None = None,
+) -> None:
+    """Edit inline message; tolerate Telegram 'message is not modified' on refresh."""
+    kwargs: dict = {"reply_markup": reply_markup, "parse_mode": parse_mode}
+    if disable_web_page_preview is not None:
+        kwargs["disable_web_page_preview"] = disable_web_page_preview
+    try:
+        await query.edit_message_text(text, **kwargs)
+        await query.answer()
+    except BadRequest as exc:
+        if "Message is not modified" in str(exc):
+            await query.answer("Данные актуальны")
+            return
+        await query.answer("Ошибка отображения", show_alert=True)
+        raise
+
+
 def _admin_menu_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         [
@@ -211,12 +235,11 @@ async def newpromo_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 @admin_only
 async def adm_stats_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
-    await query.answer()
     try:
         async with httpx.AsyncClient(timeout=15.0) as client:
             resp = await client.get(f"{API_URL}/api/admin/stats", headers=_admin_headers())
         if resp.status_code != 200:
-            await query.edit_message_text(f"❌ Ошибка stats: {resp.status_code}")
+            await _edit_callback_message(query, f"❌ Ошибка stats: {resp.status_code}")
             return
         data = resp.json()
         text = (
@@ -228,21 +251,23 @@ async def adm_stats_callback(update: Update, context: ContextTypes.DEFAULT_TYPE)
             f"Пришли по реф-ссылкам: {data.get('referred', 0)}"
         )
         keyboard = _admin_back_refresh("adm_stats")
-        await query.edit_message_text(text, parse_mode="HTML", reply_markup=keyboard)
+        await _edit_callback_message(query, text, reply_markup=keyboard)
     except Exception as exc:
         logger.exception("adm_stats failed")
-        await query.edit_message_text(f"❌ {exc}")
+        try:
+            await _edit_callback_message(query, f"❌ {exc}")
+        except Exception:
+            await query.answer(f"❌ {exc}", show_alert=True)
 
 
 @admin_only
 async def adm_promos_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
-    await query.answer()
     try:
         async with httpx.AsyncClient(timeout=15.0) as client:
             resp = await client.get(f"{API_URL}/api/admin/promos/analytics", headers=_admin_headers())
         if resp.status_code != 200:
-            await query.edit_message_text(f"❌ Ошибка promos: {resp.status_code}")
+            await _edit_callback_message(query, f"❌ Ошибка promos: {resp.status_code}")
             return
         promos = resp.json().get("promos", [])
         if not promos:
@@ -265,10 +290,13 @@ async def adm_promos_callback(update: Update, context: ContextTypes.DEFAULT_TYPE
                 )
             text = "\n".join(lines)
         keyboard = _admin_back_refresh("adm_promos")
-        await query.edit_message_text(text, parse_mode="HTML", reply_markup=keyboard)
+        await _edit_callback_message(query, text, reply_markup=keyboard)
     except Exception as exc:
         logger.exception("adm_promos failed")
-        await query.edit_message_text(f"❌ {exc}")
+        try:
+            await _edit_callback_message(query, f"❌ {exc}")
+        except Exception:
+            await query.answer(f"❌ {exc}", show_alert=True)
 
 
 def _format_affiliate_name(stats: dict) -> str:
@@ -345,12 +373,12 @@ async def _notify_affiliate_revoked(context: ContextTypes.DEFAULT_TYPE, telegram
 @admin_only
 async def adm_affiliates_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
-    await query.answer()
     try:
         async with httpx.AsyncClient(timeout=15.0) as client:
             resp = await client.get(f"{API_URL}/api/admin/affiliates", headers=_admin_headers())
         if resp.status_code != 200:
-            await query.edit_message_text(
+            await _edit_callback_message(
+                query,
                 f"❌ Ошибка affiliates: {resp.status_code}",
                 reply_markup=_admin_back_refresh("adm_affiliates"),
             )
@@ -392,13 +420,17 @@ async def adm_affiliates_callback(update: Update, context: ContextTypes.DEFAULT_
             rows.append([InlineKeyboardButton("🔄 Обновить", callback_data="adm_affiliates")])
             rows.append([InlineKeyboardButton("◀️ Назад", callback_data="adm_back")])
             keyboard = InlineKeyboardMarkup(rows)
-        await query.edit_message_text(text, parse_mode="HTML", reply_markup=keyboard)
+        await _edit_callback_message(query, text, reply_markup=keyboard)
     except Exception as exc:
         logger.exception("adm_affiliates failed")
-        await query.edit_message_text(
-            f"❌ {exc}",
-            reply_markup=_admin_back_refresh("adm_affiliates"),
-        )
+        try:
+            await _edit_callback_message(
+                query,
+                f"❌ {exc}",
+                reply_markup=_admin_back_refresh("adm_affiliates"),
+            )
+        except Exception:
+            await query.answer(f"❌ {exc}", show_alert=True)
 
 
 @admin_only
@@ -505,20 +537,20 @@ async def adm_revoke_affiliate_confirm_callback(update: Update, context: Context
 @affiliate_only
 async def aff_panel_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
-    await query.answer()
     stats = await _fetch_affiliate_stats(query.from_user.id)
     if not stats:
-        await query.edit_message_text(
+        await _edit_callback_message(
+            query,
             "⛔ Доступ к панели траффера закрыт.",
             reply_markup=InlineKeyboardMarkup(
                 [[InlineKeyboardButton("◀️ В меню", callback_data="back_to_start")]]
             ),
         )
         return
-    await query.edit_message_text(
+    await _edit_callback_message(
+        query,
         _format_affiliate_panel_text(stats),
         reply_markup=_affiliate_panel_keyboard(),
-        parse_mode="HTML",
         disable_web_page_preview=True,
     )
 
@@ -526,20 +558,20 @@ async def aff_panel_callback(update: Update, context: ContextTypes.DEFAULT_TYPE)
 @affiliate_only
 async def aff_refresh_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
-    await query.answer("Обновлено")
     stats = await _fetch_affiliate_stats(query.from_user.id)
     if not stats:
-        await query.edit_message_text(
+        await _edit_callback_message(
+            query,
             "⛔ Доступ к панели траффера закрыт.",
             reply_markup=InlineKeyboardMarkup(
                 [[InlineKeyboardButton("◀️ В меню", callback_data="back_to_start")]]
             ),
         )
         return
-    await query.edit_message_text(
+    await _edit_callback_message(
+        query,
         _format_affiliate_panel_text(stats),
         reply_markup=_affiliate_panel_keyboard(),
-        parse_mode="HTML",
         disable_web_page_preview=True,
     )
 
