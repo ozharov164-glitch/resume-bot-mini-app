@@ -3,7 +3,7 @@
 import html
 from typing import Any
 
-from services.marketing_copy import AUDIENCE_LINE, TEMPLATE_LINE
+from services.marketing_copy import HEADLINE, HOOK_LINE, TEMPLATE_LINE, VALUE_LINE
 from services.stats_display import format_count
 
 
@@ -15,14 +15,14 @@ def start_text(count: int, greeting: str | None = None) -> str:
     intro = f"Здравствуйте, {greeting}! 👋\n\n" if greeting else ""
     n = format_count(count)
     return (
-        "🎯 <b>Профессиональное резюме за 5 минут</b>\n\n"
+        f"🎯 <b>{HEADLINE}</b>\n\n"
         f"{intro}"
-        f"{AUDIENCE_LINE}\n\n"
+        f"{HOOK_LINE}\n\n"
         "<b>Как это работает</b>\n"
-        "🎨 Выберите шаблон PDF (Classic / Modern / Compact)\n"
+        "🎨 Выберите шаблон PDF\n"
         "📝 Ответьте на простые вопросы\n"
-        "🤖 ИИ составит текст и соберёт макет по вашим фактам\n"
-        "📄 Готовый PDF придёт прямо в этот чат\n\n"
+        "🤖 ИИ составит текст и соберёт макет\n"
+        "📄 Готовый PDF придёт в этот чат\n\n"
         f"{TEMPLATE_LINE}\n"
         "✅ Формат hh.ru — привычен рекрутёрам\n"
         "🎤 Можно отвечать голосом\n"
@@ -45,7 +45,7 @@ def trust_text(count: int) -> str:
         "🎤 <b>Голосовой ввод</b>\n"
         "   Диктуйте ответы с телефона — без долгого набора текста.\n\n"
         f"{TEMPLATE_LINE}\n"
-        "   Три готовых макета — не нужно верстать в Word.\n\n"
+        "   Готовое оформление — не нужно верстать в Word.\n\n"
         "🤖 <b>Честный ИИ</b>\n"
         "   Только ваши факты: без выдуманного опыта и лишней «воды».\n\n"
         f"💳 <b>Удобная оплата</b>\n"
@@ -70,16 +70,16 @@ def how_it_works_text() -> str:
         "5️⃣ Оцените бесплатный предпросмотр\n"
         f"6️⃣ Оплатите: {PAYMENT_SHORT} — PDF придёт в этот чат\n\n"
         "⏱ Весь процесс занимает 3–5 минут.\n"
-        f"{AUDIENCE_LINE}\n"
-        "📄 Итог — готовый PDF под hh.ru в выбранном шаблоне."
+        f"{VALUE_LINE}\n"
+        "📄 Итог — готовый PDF в выбранном шаблоне."
     )
 
 
 def resume_command_text() -> str:
     return (
         "Нажмите кнопку ниже — откроется конструктор.\n\n"
-        "Сначала выберите шаблон PDF, затем ответьте на вопросы. "
-        "ИИ подготовит текст и оформление примерно за 5 минут."
+        "Выберите шаблон, ответьте на вопросы — "
+        "за 5 минут получите готовое резюме с PDF в Telegram."
     )
 
 
@@ -92,9 +92,8 @@ def my_resumes_text() -> str:
 
 def examples_text() -> str:
     return (
-        "Примеры резюме для разных профессий:\n\n"
-        "🚗 Водитель  ·  🔒 Охранник  ·  💊 Фармацевт  ·  ⚡ Электрик\n\n"
-        "Текст и вёрстка — в трёх шаблонах PDF под hh.ru."
+        "Посмотрите, как выглядит готовое резюме — до оплаты.\n\n"
+        "Три шаблона PDF в формате hh.ru: выберите стиль под себя."
     )
 
 

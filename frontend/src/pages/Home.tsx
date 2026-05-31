@@ -213,7 +213,7 @@ export function HomePage({ onStart, onHistory }: HomeProps) {
             ))}
           </div>
           <p className="home-trust-footnote">
-            Не понравилось? Напиши в поддержку бота — вернём Stars.
+            Не понравилось? Напишите в поддержку бота — вернём Stars.
           </p>
         </section>
       </main>

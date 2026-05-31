@@ -30,7 +30,7 @@ def test_start_text_payment_options():
     assert "Анна" in text
     assert PAYMENT_LINE in text
     assert "Classic" in text
-    assert "водителей" in text
+    assert "hh.ru" in text
 
 
 def test_how_it_works_mentions_template():
