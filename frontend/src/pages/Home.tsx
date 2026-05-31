@@ -90,8 +90,14 @@ export function HomePage({ onStart, onHistory }: HomeProps) {
   const isFounder = useFounderStatus();
 
   useEffect(() => {
-    void fetchStatsCount().then(setStatsCount);
     getTg()?.MainButton?.hide();
+    const loadStats = () => void fetchStatsCount().then(setStatsCount);
+    if ("requestIdleCallback" in window) {
+      const id = window.requestIdleCallback(loadStats, { timeout: 2500 });
+      return () => window.cancelIdleCallback(id);
+    }
+    const timer = window.setTimeout(loadStats, 300);
+    return () => window.clearTimeout(timer);
   }, []);
 
   const start = () => {

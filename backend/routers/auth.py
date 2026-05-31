@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, Header, HTTPException
@@ -10,6 +11,7 @@ from services.user_registration import register_telegram_user
 from services.founder import is_founder
 from services.telegram_service import verify_telegram_init_data
 
+logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 
@@ -45,14 +47,24 @@ async def auth_with_telegram(payload: TelegramAuthRequest, db=Depends(get_db)):
     telegram_id = user_data["id"]
     user = db.find_user_by_telegram_id(telegram_id)
     if not user:
-        await register_telegram_user(
-            db,
-            telegram_id=telegram_id,
-            first_name=user_data.get("first_name", ""),
-            last_name=user_data.get("last_name", ""),
-            username=user_data.get("username", ""),
-        )
-        user = db.find_user_by_telegram_id(telegram_id)
+        try:
+            await register_telegram_user(
+                db,
+                telegram_id=telegram_id,
+                first_name=user_data.get("first_name", ""),
+                last_name=user_data.get("last_name", ""),
+                username=user_data.get("username", ""),
+            )
+        except Exception as exc:
+            logger.exception("auth registration failed telegram_id=%s", telegram_id)
+            user = db.find_user_by_telegram_id(telegram_id)
+            if not user:
+                raise HTTPException(
+                    status_code=503,
+                    detail="Сервис временно недоступен. Попробуйте через минуту.",
+                ) from exc
+        else:
+            user = db.find_user_by_telegram_id(telegram_id)
 
     now = datetime.now(timezone.utc)
     expire = now + timedelta(hours=settings.JWT_EXPIRE_HOURS)

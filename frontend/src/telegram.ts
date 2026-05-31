@@ -67,13 +67,33 @@ export function getTelegramUserId(): number | undefined {
   return typeof id === "number" ? id : undefined;
 }
 
-export async function waitForInitData(timeoutMs = 4000): Promise<string> {
+/** Wait until telegram-web-app.js exposes WebApp (slow WebViews on older phones). */
+export async function waitForTelegramSdk(timeoutMs = 3500): Promise<TelegramWebApp | undefined> {
   const started = Date.now();
+  let delay = 40;
   while (Date.now() - started < timeoutMs) {
-    const data = getTg()?.initData;
+    const webApp = getTg();
+    if (webApp) {
+      webApp.ready();
+      return webApp;
+    }
+    await new Promise((r) => setTimeout(r, delay));
+    delay = Math.min(delay + 20, 120);
+  }
+  return getTg();
+}
+
+export async function waitForInitData(timeoutMs = 10_000): Promise<string> {
+  await waitForTelegramSdk(Math.min(timeoutMs, 4000));
+  const started = Date.now();
+  let delay = 50;
+  while (Date.now() - started < timeoutMs) {
+    const webApp = getTg();
+    const data = webApp?.initData;
     if (data) return data;
-    getTg()?.ready();
-    await new Promise((r) => setTimeout(r, 80));
+    webApp?.ready();
+    await new Promise((r) => setTimeout(r, delay));
+    delay = Math.min(delay + 15, 150);
   }
   return getTg()?.initData || "";
 }
