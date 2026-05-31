@@ -51,6 +51,34 @@ class PromoActivationTests(unittest.TestCase):
         self.assertEqual(analytics[0]["activations"], 1)
         self.assertEqual(analytics[0]["paid_count"], 0)
 
+    def test_count_paid_excludes_founder(self):
+        founder = self.db.create_user(telegram_id=9001, first_name="Founder")
+        buyer = self.db.find_user_by_telegram_id(1001)
+        assert buyer is not None
+        now = "2026-01-01T12:00:00"
+        self.db.create_resume(
+            {
+                "id": "founder-paid",
+                "user_id": founder["id"],
+                "data": {"full_name": "Test"},
+                "created_at": now,
+                "is_paid": True,
+                "paid_at": now,
+            }
+        )
+        self.db.create_resume(
+            {
+                "id": "buyer-paid",
+                "user_id": buyer["id"],
+                "data": {"full_name": "Real"},
+                "created_at": now,
+                "is_paid": True,
+                "paid_at": now,
+            }
+        )
+        self.assertEqual(self.db.count_paid_resumes(), 2)
+        self.assertEqual(self.db.count_paid_resumes(exclude_telegram_ids=[9001]), 1)
+
 
 class PromoPricingTests(unittest.TestCase):
     def test_discounted_prices(self):

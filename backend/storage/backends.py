@@ -229,19 +229,41 @@ class SQLiteBackend:
             row = conn.execute("SELECT COUNT(*) AS c FROM users").fetchone()
         return int(row["c"]) if row else 0
 
-    def count_paid_resumes(self) -> int:
+    def count_paid_resumes(self, exclude_telegram_ids: list[int] | None = None) -> int:
         with self._connect() as conn:
-            row = conn.execute("SELECT COUNT(*) AS c FROM resumes WHERE is_paid = 1").fetchone()
+            if exclude_telegram_ids:
+                placeholders = ",".join("?" * len(exclude_telegram_ids))
+                row = conn.execute(
+                    f"""
+                    SELECT COUNT(*) AS c FROM resumes r
+                    INNER JOIN users u ON u.id = r.user_id
+                    WHERE r.is_paid = 1 AND u.telegram_id NOT IN ({placeholders})
+                    """,
+                    exclude_telegram_ids,
+                ).fetchone()
+            else:
+                row = conn.execute("SELECT COUNT(*) AS c FROM resumes WHERE is_paid = 1").fetchone()
         return int(row["c"]) if row else 0
 
-    def count_resumes_today(self) -> int:
+    def count_resumes_today(self, exclude_telegram_ids: list[int] | None = None) -> int:
         today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
         try:
             with self._connect() as conn:
-                row = conn.execute(
-                    "SELECT COUNT(*) AS c FROM resumes WHERE created_at >= ?",
-                    (today_start,),
-                ).fetchone()
+                if exclude_telegram_ids:
+                    placeholders = ",".join("?" * len(exclude_telegram_ids))
+                    row = conn.execute(
+                        f"""
+                        SELECT COUNT(*) AS c FROM resumes r
+                        INNER JOIN users u ON u.id = r.user_id
+                        WHERE r.created_at >= ? AND u.telegram_id NOT IN ({placeholders})
+                        """,
+                        (today_start, *exclude_telegram_ids),
+                    ).fetchone()
+                else:
+                    row = conn.execute(
+                        "SELECT COUNT(*) AS c FROM resumes WHERE created_at >= ?",
+                        (today_start,),
+                    ).fetchone()
             return int(row["c"]) if row else 0
         except Exception as e:
             logger.warning("count_resumes_today failed: %s", e)
@@ -371,21 +393,42 @@ class SQLiteBackend:
             )
             conn.commit()
 
-    def get_promo_analytics(self) -> list[dict]:
+    def get_promo_analytics(self, exclude_telegram_ids: list[int] | None = None) -> list[dict]:
         with self._connect() as conn:
             rows = conn.execute("SELECT * FROM promo_codes ORDER BY created_at DESC").fetchall()
             out: list[dict] = []
             for row in rows:
                 promo = dict(row)
                 code = promo["code"]
-                act = conn.execute(
-                    "SELECT COUNT(*) AS c FROM promo_activations WHERE promo_code = ?",
-                    (code,),
-                ).fetchone()
-                paid = conn.execute(
-                    "SELECT COUNT(*) AS c FROM promo_activations WHERE promo_code = ? AND paid_at IS NOT NULL",
-                    (code,),
-                ).fetchone()
+                if exclude_telegram_ids:
+                    placeholders = ",".join("?" * len(exclude_telegram_ids))
+                    act = conn.execute(
+                        f"""
+                        SELECT COUNT(*) AS c FROM promo_activations
+                        WHERE promo_code = ? AND user_tg_id NOT IN ({placeholders})
+                        """,
+                        (code, *exclude_telegram_ids),
+                    ).fetchone()
+                    paid = conn.execute(
+                        f"""
+                        SELECT COUNT(*) AS c FROM promo_activations
+                        WHERE promo_code = ? AND paid_at IS NOT NULL
+                          AND user_tg_id NOT IN ({placeholders})
+                        """,
+                        (code, *exclude_telegram_ids),
+                    ).fetchone()
+                else:
+                    act = conn.execute(
+                        "SELECT COUNT(*) AS c FROM promo_activations WHERE promo_code = ?",
+                        (code,),
+                    ).fetchone()
+                    paid = conn.execute(
+                        """
+                        SELECT COUNT(*) AS c FROM promo_activations
+                        WHERE promo_code = ? AND paid_at IS NOT NULL
+                        """,
+                        (code,),
+                    ).fetchone()
                 promo["activations"] = int(act["c"]) if act else 0
                 promo["paid_count"] = int(paid["c"]) if paid else 0
                 out.append(promo)
@@ -562,16 +605,28 @@ class SupabaseBackend:
             return int(result.count)
         return len(result.data or [])
 
-    def count_paid_resumes(self) -> int:
-        result = (
+    def count_paid_resumes(self, exclude_telegram_ids: list[int] | None = None) -> int:
+        query = (
             self.client.table("resumes")
             .select("id", count="exact")
             .eq("is_paid", True)
-            .execute()
         )
+        if exclude_telegram_ids:
+            exclude_user_ids = self._user_ids_for_telegram_ids(exclude_telegram_ids)
+            if exclude_user_ids:
+                query = query.not_.in_("user_id", exclude_user_ids)
+        result = query.execute()
         if result.count is not None:
             return int(result.count)
         return len(result.data or [])
+
+    def _user_ids_for_telegram_ids(self, telegram_ids: list[int]) -> list[str]:
+        out: list[str] = []
+        for tg_id in telegram_ids:
+            user = self.find_user_by_telegram_id(tg_id)
+            if user and user.get("id"):
+                out.append(str(user["id"]))
+        return out
 
     def list_resumes_for_user(self, user_id: str, limit: int = 30) -> list[dict[str, Any]]:
         result = (
@@ -613,15 +668,19 @@ class SupabaseBackend:
         except Exception as e:
             logger.warning("save_referral failed: %s", e)
 
-    def count_resumes_today(self) -> int:
+    def count_resumes_today(self, exclude_telegram_ids: list[int] | None = None) -> int:
         today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
         try:
-            result = (
+            query = (
                 self.client.table("resumes")
                 .select("id", count="exact")
                 .gte("created_at", today_start)
-                .execute()
             )
+            if exclude_telegram_ids:
+                exclude_user_ids = self._user_ids_for_telegram_ids(exclude_telegram_ids)
+                if exclude_user_ids:
+                    query = query.not_.in_("user_id", exclude_user_ids)
+            result = query.execute()
             if result.count is not None:
                 return int(result.count)
             return len(result.data or [])
@@ -767,25 +826,28 @@ class SupabaseBackend:
         except Exception as e:
             logger.warning("mark_promo_activation_paid failed: %s", e)
 
-    def get_promo_analytics(self) -> list[dict]:
+    def get_promo_analytics(self, exclude_telegram_ids: list[int] | None = None) -> list[dict]:
         promos = self.list_promo_codes()
         out: list[dict] = []
         for promo in promos:
             code = promo["code"]
             try:
-                acts = (
+                acts_query = (
                     self.client.table("promo_activations")
                     .select("id", count="exact")
                     .eq("promo_code", code)
-                    .execute()
                 )
-                paid = (
+                paid_query = (
                     self.client.table("promo_activations")
                     .select("id", count="exact")
                     .eq("promo_code", code)
                     .not_.is_("paid_at", "null")
-                    .execute()
                 )
+                if exclude_telegram_ids:
+                    acts_query = acts_query.not_.in_("user_tg_id", exclude_telegram_ids)
+                    paid_query = paid_query.not_.in_("user_tg_id", exclude_telegram_ids)
+                acts = acts_query.execute()
+                paid = paid_query.execute()
                 promo["activations"] = int(acts.count or len(acts.data or []))
                 promo["paid_count"] = int(paid.count or len(paid.data or []))
             except Exception as e:

@@ -176,8 +176,8 @@ async def adm_stats_callback(update: Update, context: ContextTypes.DEFAULT_TYPE)
         text = (
             f"📊 <b>Статистика</b>\n\n"
             f"Всего резюме (витрина): {data.get('count', 0)}\n"
-            f"Оплачено: {data.get('paid_count', 0)}\n"
-            f"Сегодня: {data.get('today_count', 0)}\n"
+            f"Оплачено (без тестов): {data.get('paid_count', 0)}\n"
+            f"Сегодня (без тестов): {data.get('today_count', 0)}\n"
             f"Пользователей: {data.get('users', 0)}\n"
             f"Пришли по реф-ссылкам: {data.get('referred', 0)}"
         )

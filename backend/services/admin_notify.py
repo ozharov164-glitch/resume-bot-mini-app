@@ -9,7 +9,7 @@ from typing import Any
 
 from telegram import Bot
 
-from config import settings
+from services.admin_stats import count_paid_resumes_clean
 
 logger = logging.getLogger(__name__)
 
@@ -106,7 +106,7 @@ async def notify_payment(
     if not first_payment:
         return
     try:
-        paid_total = db.count_paid_resumes()
+        paid_total = count_paid_resumes_clean(db)
     except Exception:
         logger.exception("count_paid_resumes failed")
         paid_total = "?"

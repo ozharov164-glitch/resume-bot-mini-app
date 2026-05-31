@@ -2,6 +2,11 @@ from fastapi import APIRouter, Depends, Header, HTTPException
 
 from config import settings
 from database import get_db
+from services.admin_stats import (
+    count_paid_resumes_clean,
+    count_resumes_today_clean,
+    get_promo_analytics_clean,
+)
 from services.stats_display import public_resume_count
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
@@ -39,7 +44,7 @@ async def create_promo(body: dict, db=Depends(get_db)):
 @router.get("/promos/analytics", dependencies=[Depends(verify_admin_key)])
 async def promo_analytics(db=Depends(get_db)):
     try:
-        return {"promos": db.get_promo_analytics()}
+        return {"promos": get_promo_analytics_clean(db)}
     except Exception:
         return {"promos": []}
 
@@ -56,8 +61,8 @@ async def promo_activations(db=Depends(get_db), limit: int = 20):
 async def admin_stats(db=Depends(get_db)):
     try:
         count = public_resume_count(db)
-        paid_count = db.count_paid_resumes()
-        today_count = db.count_resumes_today()
+        paid_count = count_paid_resumes_clean(db)
+        today_count = count_resumes_today_clean(db)
     except Exception:
         count = paid_count = today_count = 0
     try:
