@@ -59,7 +59,7 @@ export function HistoryPage() {
       const data = record.data as ResumeData;
       openResumeFromHistory(record.id, data, record.is_paid, record.user_answers);
     } catch {
-      alert("Не удалось открыть резюме. Попробуй ещё раз.");
+      alert("Не удалось открыть резюме. Попробуйте ещё раз.");
     } finally {
       setOpeningId(null);
     }
@@ -80,7 +80,7 @@ export function HistoryPage() {
       setItems([]);
       getTg()?.HapticFeedback?.notificationOccurred("success");
     } catch {
-      alert("Не удалось очистить историю. Проверь интернет и попробуй снова.");
+      alert("Не удалось очистить историю. Проверьте интернет и попробуйте снова.");
     } finally {
       setClearing(false);
     }

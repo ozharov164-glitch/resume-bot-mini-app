@@ -211,13 +211,13 @@ export function SkillPickPage() {
             transition={{ duration: 0.35, ease: [0.25, 0.1, 0.25, 1] }}
           >
             <div className="text-center">
-              <h2 className="text-2xl font-bold leading-snug">Выбери свои навыки</h2>
+              <h2 className="text-2xl font-bold leading-snug">Выберите свои навыки</h2>
               <p className="mt-2 text-base" style={{ color: "var(--text-muted)" }}>
-                ИИ подобрал навыки для «{position}». Отметь те, что у тебя есть.
+                ИИ подобрал навыки для «{position}». Отметьте те, что у вас есть.
               </p>
               {phase === "error" && (
                 <p className="mt-2 text-sm" style={{ color: "var(--brand)" }}>
-                  Показан резервный список — выбери подходящие.
+                  Показан резервный список — выберите подходящие.
                 </p>
               )}
             </div>

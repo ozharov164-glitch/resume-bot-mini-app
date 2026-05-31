@@ -9,6 +9,7 @@ from typing import Any
 
 from telegram import Bot
 
+from config import settings
 from services.admin_stats import count_paid_resumes_clean
 
 logger = logging.getLogger(__name__)

@@ -7,6 +7,7 @@ os.environ.setdefault("SUPABASE_KEY", "test")
 os.environ.setdefault("JWT_SECRET", "test")
 os.environ.setdefault("APP_URL", "https://example.test")
 os.environ.setdefault("FRONTEND_URL", "https://example.test/app")
+os.environ.setdefault("BOT_USERNAME", "resumeez_bot")
 
 from services.bot_copy import PAYMENT_LINE, start_text, trust_text  # noqa: E402
 from services.stats_display import DISPLAY_COUNT_FLOOR, public_resume_count  # noqa: E402

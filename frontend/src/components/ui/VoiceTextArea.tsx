@@ -78,7 +78,7 @@ export function VoiceTextArea({
         }
       } catch {
         getTg()?.HapticFeedback?.notificationOccurred("error");
-        alert("Не удалось распознать речь. Проверь микрофон и попробуй ещё раз.");
+        alert("Не удалось распознать речь. Проверьте микрофон и попробуйте ещё раз.");
       } finally {
         setTranscribing(false);
       }
@@ -170,7 +170,7 @@ export function VoiceTextArea({
       }
     } catch {
       getTg()?.HapticFeedback?.notificationOccurred("error");
-      alert("Не удалось улучшить текст. Попробуй ещё раз через пару секунд.");
+      alert("Не удалось улучшить текст. Попробуйте ещё раз через пару секунд.");
     } finally {
       setPolishing(false);
     }

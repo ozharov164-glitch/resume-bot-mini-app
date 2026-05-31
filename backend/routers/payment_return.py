@@ -60,9 +60,9 @@ async def payment_return_bridge(resume_id: str = "") -> str:
 <body>
   <div class="card">
     <h1>Оплата прошла</h1>
-    <p>Сейчас откроется Telegram и бот @{bot_name}. Нажми кнопку «Открыть приложение» — PDF придёт в чат.</p>
+    <p>Сейчас откроется Telegram и бот @{bot_name}. Нажмите кнопку «Открыть приложение» — PDF придёт в чат.</p>
     <a class="btn" id="open-tg" href="{tg_https_esc}">Вернуться в Telegram</a>
-    <p class="hint">Если ничего не произошло — нажми кнопку выше.</p>
+    <p class="hint">Если ничего не произошло — нажмите кнопку выше.</p>
   </div>
   <script>
     (function () {{

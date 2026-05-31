@@ -47,7 +47,7 @@ export function TemplateSelectPage() {
 
   return (
     <Screen withBottomBar>
-      <AppHeader onBack={handleBack} showBack title="Подтверди шаблон" />
+      <AppHeader onBack={handleBack} showBack title="Подтвердите шаблон" />
       <main className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-4 py-3">
         <div className="template-pick-hero template-pick-hero--compact">
           <h2 className="template-pick-title">Перед оплатой</h2>

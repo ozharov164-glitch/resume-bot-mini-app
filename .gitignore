@@ -17,3 +17,7 @@ frontend/dist/
 .idea/
 .vscode/
 backend/data/*.db
+
+# graphify — keep graph.json + report, skip local-only artifacts
+graphify-out/manifest.json
+graphify-out/cost.json

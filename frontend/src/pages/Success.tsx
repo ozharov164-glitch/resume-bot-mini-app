@@ -35,9 +35,9 @@ export function SuccessPage() {
           <Icon name="check_circle" filled className="text-primary-container" size={64} />
         </div>
         <div className="flex flex-col gap-3">
-          <h2 className="text-2xl font-bold">Ура! Твое резюме готово</h2>
+          <h2 className="text-2xl font-bold">Ура! Ваше резюме готово</h2>
           <p className="px-2 text-base" style={{ color: "var(--text-muted)" }}>
-            PDF-файл отправлен в твой чат с ботом. Удачи в поиске работы!
+            PDF-файл отправлен в ваш чат с ботом. Удачи в поиске работы!
           </p>
         </div>
       </main>

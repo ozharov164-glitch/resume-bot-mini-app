@@ -97,7 +97,7 @@ export function PaymentPage() {
   const payStars = async () => {
     const tg = getTg();
     if (!tg?.openInvoice) {
-      alert("Оплата Stars доступна только внутри Telegram. Открой приложение через бота.");
+      alert("Оплата Stars доступна только внутри Telegram. Откройте приложение через бота.");
       return;
     }
 
@@ -144,12 +144,12 @@ export function PaymentPage() {
       if (message === "cancelled") return;
       if (message === "timeout") {
         alert(
-          "Оплата прошла, но PDF ещё готовится. Проверь чат с ботом — файл должен появиться через минуту.",
+          "Оплата прошла, но PDF ещё готовится. Проверьте чат с ботом — файл должен появиться через минуту.",
         );
         setPage("success");
         return;
       }
-      alert("Не удалось оплатить через Stars. Попробуй ещё раз.");
+      alert("Не удалось оплатить через Stars. Попробуйте ещё раз.");
     } finally {
       setPaying(false);
     }
@@ -170,7 +170,7 @@ export function PaymentPage() {
       const message = err instanceof Error ? err.message : "ЮKassa недоступна";
       alert(message.includes("ЮKassa") || message.includes("оплат")
         ? message
-        : `Не удалось открыть оплату картой: ${message}. Попробуй Stars.`);
+        : `Не удалось открыть оплату картой: ${message}. Попробуйте Stars.`);
     } finally {
       setCardPaying(false);
     }
@@ -189,7 +189,7 @@ export function PaymentPage() {
           >
             <Icon name="payments" filled size={32} style={{ color: "var(--brand)" }} />
           </div>
-          <h2 className="text-2xl font-bold">Выбери способ оплаты</h2>
+          <h2 className="text-2xl font-bold">Выберите способ оплаты</h2>
         </section>
 
         <section
@@ -274,8 +274,8 @@ export function PaymentPage() {
         </div>
 
         <p className="mt-auto text-center text-sm leading-relaxed" style={{ color: "var(--text-muted)" }}>
-          Оплата откроется в браузере. После оплаты нажми «Вернуться в магазин» — откроется Telegram. Затем
-          кнопку «Открыть приложение» у бота или просто вернись в это окно — PDF придёт в чат.
+          Оплата откроется в браузере. После оплаты нажмите «Вернуться в магазин» — откроется Telegram. Затем
+          кнопку «Открыть приложение» у бота или просто вернитесь в это окно — PDF придёт в чат.
         </p>
       </main>
     </Screen>

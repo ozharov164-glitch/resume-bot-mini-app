@@ -82,7 +82,7 @@ async def create_yookassa_invoice(
     if is_founder(current_user.get("telegram_id")):
         raise HTTPException(
             status_code=400,
-            detail="Для founder PDF бесплатный — скачай из превью.",
+            detail="Для founder PDF бесплатный — скачайте из предпросмотра.",
         )
     _stars, rub = _prepare_resume_promo(db, resume_id, current_user["telegram_id"])
     try:

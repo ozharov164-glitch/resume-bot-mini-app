@@ -77,7 +77,8 @@ async def test_start_referral_flow() -> None:
         assert "5 000" in text or "5000" in text
         markup = update.message.reply_text.call_args[1]["reply_markup"]
         rows = markup.inline_keyboard
-        assert len(rows) == 5
+        assert len(rows) >= 5
+        assert any("promo_prompt" in (btn.callback_data or "") for row in rows for btn in row)
 
 
 async def test_support_hub_callback() -> None:

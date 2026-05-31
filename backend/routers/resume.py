@@ -110,7 +110,7 @@ async def create_resume(
         return ResumeGenerationResponse(resume_id=resume_id, resume=resume_data, paid=is_paid)
     except Exception as exc:
         logger.exception("resume generate failed user_id=%s", current_user.get("id"))
-        raise HTTPException(status_code=500, detail="Не удалось сгенерировать резюме. Попробуйте еще раз.") from exc
+        raise HTTPException(status_code=500, detail="Не удалось сгенерировать резюме. Попробуйте ещё раз.") from exc
 
 
 @router.get("/list")
@@ -262,7 +262,7 @@ async def download_pdf(resume_id: str, current_user: dict = Depends(get_current_
         logger.exception("telegram send failed resume_id=%s telegram_id=%s", resume_id, current_user.get("telegram_id"))
         raise HTTPException(
             status_code=502,
-            detail="PDF готов, но не удалось отправить в Telegram. Напиши боту /start и попробуй снова.",
+            detail="PDF готов, но не удалось отправить в Telegram. Напишите боту /start и попробуйте снова.",
         ) from exc
     return {"status": "sent", "filename": filename}
 

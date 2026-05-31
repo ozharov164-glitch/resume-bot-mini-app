@@ -87,7 +87,7 @@ def founder_chat_hint_text(username: str) -> str:
     uname = html.escape(username.lstrip("@"))
     return (
         f"✉️ <b>Личное сообщение {who}</b>\n\n"
-        f"Нажми на ссылку — откроется чат в Telegram:\n"
+        f"Нажмите на ссылку — откроется чат в Telegram:\n"
         f'<a href="https://t.me/{uname}">@{uname}</a>\n\n'
         "В первом сообщении кратко опишите ситуацию — так я быстрее помогу."
     )

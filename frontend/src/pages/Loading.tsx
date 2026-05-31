@@ -60,7 +60,7 @@ export function LoadingPage() {
         <LoadingIllustration />
 
         <h2 className="mb-2 text-center text-2xl font-bold leading-snug">
-          Создаем твое идеальное резюме...
+          Создаём ваше идеальное резюме…
         </h2>
         <p className="mb-3 text-center text-sm" style={{ color: "var(--text-muted)" }}>
           Обычно 20–60 секунд — ИИ пишет текст и структуру

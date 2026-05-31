@@ -24,11 +24,11 @@ export function TemplatePickPage() {
 
   return (
     <Screen withBottomBar>
-      <AppHeader onBack={handleBack} showBack title="Выбери дизайн" />
+      <AppHeader onBack={handleBack} showBack title="Выберите дизайн" />
       <main className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-4 py-3">
         <div className="template-pick-hero">
           <Icon name="palette" filled size={28} style={{ color: "var(--brand)" }} />
-          <h2 className="template-pick-title">Как будет выглядеть твоё резюме?</h2>
+          <h2 className="template-pick-title">Как будет выглядеть ваше резюме?</h2>
           <p className="template-pick-sub">
             Три готовых шаблона — выберите стиль. Перед оплатой можно сменить.
           </p>

@@ -525,7 +525,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
             await update.message.reply_text(
                 "✅ <b>Оплата прошла!</b>\n\n"
-                "Нажми кнопку ниже — откроется приложение, и PDF придёт в этот чат с ботом.",
+                "Нажмите кнопку ниже — откроется приложение, и PDF придёт в этот чат с ботом.",
                 reply_markup=keyboard,
                 parse_mode="HTML",
             )

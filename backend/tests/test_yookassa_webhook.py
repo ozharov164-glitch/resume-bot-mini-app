@@ -22,10 +22,13 @@ from services.yookassa_webhook import handle_yookassa_webhook  # noqa: E402
 @pytest.mark.asyncio
 async def test_webhook_ignores_non_payment_succeeded():
     db = MagicMock()
-    result = await handle_yookassa_webhook(
-        db,
-        {"type": "notification", "event": "payment.canceled", "object": {"id": "pay-1"}},
-    )
+    with patch("services.yookassa_webhook.settings") as mock_settings:
+        mock_settings.YOKASSA_SHOP_ID = "1371148"
+        mock_settings.YOKASSA_SECRET_KEY = "live_test_key"
+        result = await handle_yookassa_webhook(
+            db,
+            {"type": "notification", "event": "payment.canceled", "object": {"id": "pay-1"}},
+        )
     assert result["ok"] is True
     assert result["status"] == "ignored"
 
@@ -57,9 +60,12 @@ async def test_webhook_fulfills_on_payment_succeeded():
     fake_fulfillment = types.ModuleType("services.payment_fulfillment")
     fake_fulfillment.fulfill_paid_resume = fulfill
 
-    with patch("services.yookassa_webhook.Payment.find_one", return_value=verified):
-        with patch.dict(sys.modules, {"services.payment_fulfillment": fake_fulfillment}):
-            result = await handle_yookassa_webhook(db, payload)
+    with patch("services.yookassa_webhook.settings") as mock_settings:
+        mock_settings.YOKASSA_SHOP_ID = "1371148"
+        mock_settings.YOKASSA_SECRET_KEY = "live_test_key"
+        with patch("services.yookassa_webhook.Payment.find_one", return_value=verified):
+            with patch.dict(sys.modules, {"services.payment_fulfillment": fake_fulfillment}):
+                result = await handle_yookassa_webhook(db, payload)
 
     assert result["ok"] is True
     assert result["status"] == "fulfilled"

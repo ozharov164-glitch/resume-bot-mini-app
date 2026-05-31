@@ -50,7 +50,7 @@ export const ONBOARDING_STEPS: OnboardingStep[] = [
       const hasSpace = value.trim().includes(" ");
       const longEnough = value.trim().length >= 4;
       if (!hasVowel || !hasSpace || !longEnough) {
-        return "Введи имя и фамилию (например: Иван Петров)";
+        return "Введите имя и фамилию (например: Иван Петров)";
       }
       return null;
     },
@@ -68,14 +68,14 @@ export const ONBOARDING_STEPS: OnboardingStep[] = [
       if (!trimmed) return null;
       const hasVowel = /[аеёиоуыьъэюяАЕЁИОУЫЬЪЭЮЯ]/.test(trimmed);
       if (trimmed.length < 3 || !hasVowel) {
-        return "Введи отчество полностью (например: Сергеевич)";
+        return "Введите отчество полностью (например: Сергеевич)";
       }
       return null;
     },
   },
   {
     id: "gender",
-    question: "Укажи пол",
+    question: "Укажите пол",
     type: "options",
     options: ["Мужской", "Женский"],
     hint: "Нужно для правильных формулировок в резюме",
@@ -91,8 +91,8 @@ export const ONBOARDING_STEPS: OnboardingStep[] = [
   },
   {
     id: "target_position",
-    question: "На какую должность ты ищешь работу?",
-    hint: "Выбери профессию из списка или напиши свой вариант.",
+    question: "На какую должность вы ищете работу?",
+    hint: "Выберите профессию из списка или напишите свой вариант.",
     type: "profession",
     placeholder: "Например: водитель-экспедитор",
   },
@@ -108,9 +108,9 @@ export const ONBOARDING_STEPS: OnboardingStep[] = [
   },
   {
     id: "work_history",
-    question: "Где ты работал?",
+    question: "Где вы работали?",
     type: "work_history",
-    hint: "Добавь до 3 мест работы — чем больше деталей, тем лучше резюме.",
+    hint: "Добавьте до 3 мест работы — чем больше деталей, тем лучше резюме.",
     skipText: "Нет опыта работы",
     required: false,
   },
@@ -145,13 +145,13 @@ export const ONBOARDING_STEPS: OnboardingStep[] = [
     question: "Сертификаты и лицензии",
     type: "textarea",
     placeholder: "Например: права кат. B, лицензия охранника, медкнижка, удостоверение сварщика",
-    hint: "Необязательно. Укажи документы, которые повышают шансы на должность.",
+    hint: "Необязательно. Укажите документы, которые повышают шансы на должность.",
     skipText: "Нет документов",
     optional: true,
   },
   {
     id: "languages",
-    question: "Знаешь иностранные языки?",
+    question: "Знаете иностранные языки?",
     type: "options",
     options: [
       "Нет",

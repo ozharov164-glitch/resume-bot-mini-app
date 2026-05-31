@@ -240,13 +240,13 @@ export function OnboardingPage() {
       setPage("onboarding");
       const message = error instanceof Error ? error.message : "";
       if (message === "OPEN_VIA_BOT") {
-        alert("Открой приложение через бота @resumeez_bot — без этого авторизация не работает.");
+        alert("Откройте приложение через бота @resumeez_bot — без этого авторизация не работает.");
       } else if (error instanceof HttpTimeoutError) {
-        alert("Генерация заняла слишком много времени. Проверь интернет и попробуй ещё раз.");
+        alert("Генерация заняла слишком много времени. Проверьте интернет и попробуйте ещё раз.");
       } else if (/401|авториза|токен|пользователь/i.test(message)) {
-        alert("Сессия истекла. Закрой Mini App и открой снова через бота.");
+        alert("Сессия истекла. Закройте Mini App и откройте снова через бота.");
       } else {
-        alert(message || "Не удалось составить резюме. Проверь соединение и попробуй ещё раз.");
+        alert(message || "Не удалось составить резюме. Проверьте соединение и попробуйте ещё раз.");
       }
       console.error(error);
     } finally {
@@ -302,7 +302,7 @@ export function OnboardingPage() {
             className="rounded-xl px-4 py-3 text-center text-sm"
             style={{ background: "var(--brand-muted)", color: "var(--brand)" }}
           >
-            Редактирование — измени нужные ответы и нажми «Пересобрать резюме»
+            Редактирование — измените нужные ответы и нажмите «Пересобрать резюме»
           </div>
         )}
 
