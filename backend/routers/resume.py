@@ -123,6 +123,20 @@ async def list_resumes(
     return {"items": items}
 
 
+@router.delete("/history")
+async def clear_resume_history(
+    current_user: dict = Depends(get_current_user),
+    db=Depends(get_db),
+):
+    deleted = db.delete_all_resumes_for_user(current_user["id"])
+    logger.info(
+        "resume history cleared user_id=%s deleted=%s",
+        current_user.get("id"),
+        deleted,
+    )
+    return {"ok": True, "deleted": deleted}
+
+
 @router.get("/{resume_id}")
 async def get_resume(resume_id: str, current_user: dict = Depends(get_current_user), db=Depends(get_db)):
     resume = db.find_resume(resume_id, current_user["id"])

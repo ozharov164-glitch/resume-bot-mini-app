@@ -150,6 +150,13 @@ export async function fetchResumeList(token: string) {
   });
 }
 
+export async function clearResumeHistory(token: string) {
+  return http<{ ok: boolean; deleted: number }>("/api/resume/history", {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
 export async function getResume(token: string, resumeId: string) {
   return http<ResumeRecord>(`/api/resume/${resumeId}`, {
     method: "GET",

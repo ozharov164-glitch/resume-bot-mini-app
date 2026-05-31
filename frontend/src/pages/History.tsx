@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
 
-import { ensureAuthToken, fetchResumeList, getResume, type ResumeListItem } from "../api";
+import { clearResumeHistory, ensureAuthToken, fetchResumeList, getResume, type ResumeListItem } from "../api";
 import { AppHeader } from "../components/ui/AppHeader";
 import { Icon } from "../components/ui/Icon";
+import { PaidBadge } from "../components/ui/PaidBadge";
 import { Screen } from "../components/ui/Screen";
 import { useTelegramBackButton } from "../hooks/useTelegramBackButton";
 import { useAppStore } from "../store";
@@ -26,23 +27,27 @@ export function HistoryPage() {
   const [items, setItems] = useState<ResumeListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [openingId, setOpeningId] = useState<string | null>(null);
+  const [clearing, setClearing] = useState(false);
 
   const handleBack = useCallback(() => setPage("home"), [setPage]);
   useTelegramBackButton(handleBack);
 
-  useEffect(() => {
-    void (async () => {
-      try {
-        const token = await ensureAuthToken();
-        const { items: list } = await fetchResumeList(token);
-        setItems(list);
-      } catch {
-        setItems([]);
-      } finally {
-        setLoading(false);
-      }
-    })();
+  const loadList = useCallback(async () => {
+    setLoading(true);
+    try {
+      const token = await ensureAuthToken();
+      const { items: list } = await fetchResumeList(token);
+      setItems(list);
+    } catch {
+      setItems([]);
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    void loadList();
+  }, [loadList]);
 
   const openItem = async (item: ResumeListItem) => {
     if (openingId) return;
@@ -60,10 +65,43 @@ export function HistoryPage() {
     }
   };
 
+  const clearHistory = async () => {
+    if (clearing || items.length === 0) return;
+    const ok = window.confirm(
+      "Удалить все резюме из истории?\n\nPDF в чате с ботом останутся — пропадёт только список здесь.",
+    );
+    if (!ok) return;
+
+    getTg()?.HapticFeedback?.impactOccurred("medium");
+    setClearing(true);
+    try {
+      const token = await ensureAuthToken();
+      await clearResumeHistory(token);
+      setItems([]);
+      getTg()?.HapticFeedback?.notificationOccurred("success");
+    } catch {
+      alert("Не удалось очистить историю. Проверь интернет и попробуй снова.");
+    } finally {
+      setClearing(false);
+    }
+  };
+
   return (
     <Screen className="px-4">
       <AppHeader onBack={handleBack} showBack title="Мои резюме" />
       <main className="flex flex-1 flex-col gap-3 py-4">
+        {!loading && items.length > 0 && (
+          <button
+            type="button"
+            onClick={() => void clearHistory()}
+            disabled={clearing}
+            className="history-clear-btn"
+          >
+            <Icon name="delete_sweep" size={18} />
+            {clearing ? "Удаляем…" : "Очистить историю"}
+          </button>
+        )}
+
         {loading && (
           <p className="text-center text-sm" style={{ color: "var(--text-muted)" }}>
             Загружаем историю…
@@ -86,29 +124,34 @@ export function HistoryPage() {
             type="button"
             disabled={openingId === item.id}
             onClick={() => void openItem(item)}
-            className="stitch-card flex w-full items-center gap-4 p-4 text-left active:scale-[0.99]"
+            className="history-card stitch-card flex w-full items-center gap-4 p-4 text-left active:scale-[0.99]"
           >
-            <div
-              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl"
-              style={{ background: "var(--brand-muted)" }}
-            >
-              <Icon name="description" style={{ color: "var(--brand)" }} />
+            <div className="history-card-icon-wrap">
+              <div
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl"
+                style={{ background: "var(--brand-muted)" }}
+              >
+                <Icon name="description" style={{ color: "var(--brand)" }} />
+              </div>
+              {item.is_paid ? (
+                <span className="history-card-paid-mark" aria-hidden>
+                  <Icon name="verified" filled size={12} />
+                </span>
+              ) : null}
             </div>
             <div className="min-w-0 flex-1">
-              <div className="truncate font-semibold">
-                {item.full_name || "Без имени"}
+              <div className="flex items-start justify-between gap-2">
+                <div className="truncate font-semibold">{item.full_name || "Без имени"}</div>
+                {item.is_paid ? <PaidBadge /> : null}
               </div>
               <div className="truncate text-sm" style={{ color: "var(--text-muted)" }}>
                 {item.target_position || "Должность не указана"}
               </div>
-              <div className="mt-1 flex items-center gap-2 text-xs" style={{ color: "var(--text-muted)" }}>
-                {item.created_at && <span>{formatDate(item.created_at)}</span>}
-                {item.is_paid && (
-                  <span className="font-semibold" style={{ color: "var(--brand)" }}>
-                    · PDF оплачен
-                  </span>
-                )}
-              </div>
+              {item.created_at ? (
+                <div className="mt-1 text-xs" style={{ color: "var(--text-muted)" }}>
+                  {formatDate(item.created_at)}
+                </div>
+              ) : null}
             </div>
             <Icon name="chevron_right" style={{ color: "var(--text-muted)" }} />
           </button>

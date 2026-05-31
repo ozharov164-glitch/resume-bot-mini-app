@@ -1568,6 +1568,72 @@ textarea::-moz-placeholder {
   color: var(--text-muted);
 }
 
+/* History — paid badge + clear */
+.paid-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  flex-shrink: 0;
+  padding: 0.2rem 0.45rem;
+  border-radius: 9999px;
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: #047857;
+  background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  box-shadow: 0 1px 3px rgba(16, 185, 129, 0.12);
+}
+
+.history-clear-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  align-self: flex-end;
+  padding: 0.45rem 0.75rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: 9999px;
+  background: var(--surface-elevated);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.history-clear-btn:active:not(:disabled) {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.history-clear-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.history-card-icon-wrap {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.history-card-paid-mark {
+  position: absolute;
+  right: -4px;
+  bottom: -4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.125rem;
+  height: 1.125rem;
+  border-radius: 9999px;
+  color: #fff;
+  background: linear-gradient(145deg, #10b981 0%, #059669 100%);
+  border: 2px solid #fff;
+  box-shadow: 0 1px 4px rgba(5, 150, 105, 0.35);
+}
+
 /* Onboarding template pick (first step + pre-payment confirm) */
 .template-pick-hero {
   display: flex;

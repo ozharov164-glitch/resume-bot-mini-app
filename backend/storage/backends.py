@@ -494,6 +494,12 @@ class SQLiteBackend:
             )
         return items
 
+    def delete_all_resumes_for_user(self, user_id: str) -> int:
+        with self._connect() as conn:
+            cur = conn.execute("DELETE FROM resumes WHERE user_id = ?", (user_id,))
+            conn.commit()
+            return int(cur.rowcount or 0)
+
 
 class SupabaseBackend:
     def __init__(self, client: Any) -> None:
@@ -594,6 +600,10 @@ class SupabaseBackend:
                 }
             )
         return items
+
+    def delete_all_resumes_for_user(self, user_id: str) -> int:
+        result = self.client.table("resumes").delete().eq("user_id", user_id).execute()
+        return len(result.data or [])
 
     def save_referral(self, referrer_tg_id: int, referee_tg_id: int) -> None:
         try:
