@@ -93,6 +93,14 @@ class SQLiteBackend:
             ).fetchone()
         return self._row_to_dict(row)
 
+    def find_user_by_id(self, user_id: str) -> dict | None:
+        with self._connect() as conn:
+            row = conn.execute(
+                "SELECT * FROM users WHERE id = ? LIMIT 1",
+                (user_id,),
+            ).fetchone()
+        return self._row_to_dict(row)
+
     def create_user(
         self,
         *,
@@ -223,6 +231,10 @@ class SupabaseBackend:
         result = (
             self.client.table("users").select("*").eq("telegram_id", telegram_id).limit(1).execute()
         )
+        return result.data[0] if result.data else None
+
+    def find_user_by_id(self, user_id: str) -> dict | None:
+        result = self.client.table("users").select("*").eq("id", user_id).limit(1).execute()
         return result.data[0] if result.data else None
 
     def create_user(

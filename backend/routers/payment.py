@@ -11,6 +11,7 @@ from services.founder import is_founder
 from services.admin_notify import PaymentNotifyInfo
 from services.payment_fulfillment import fulfill_paid_resume
 from services.payment_service import create_stars_invoice_link, create_yookassa_payment
+from services.yookassa_webhook import handle_yookassa_webhook
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/payment", tags=["payment"])
@@ -52,6 +53,17 @@ async def create_yookassa_invoice(resume_id: str, current_user: dict = Depends(g
         return {"status": "created", "provider": "yookassa", **payment}
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.post("/yookassa-webhook")
+async def yookassa_webhook(request: Request, db=Depends(get_db)):
+    payload = await request.json()
+    result = await handle_yookassa_webhook(db, payload)
+    if result.get("ok") is False and result.get("error") == "not_configured":
+        raise HTTPException(status_code=503, detail="YooKassa is not configured.")
+    if result.get("ok") is False:
+        raise HTTPException(status_code=502, detail="Webhook processing failed.")
+    return result
 
 
 @router.post("/telegram-webhook")
