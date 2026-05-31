@@ -30,6 +30,8 @@ export function CompanyAutocomplete({
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [open, setOpen] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+  /** После выбора из списка не дергаем DaData повторно — иначе dropdown открывается снова. */
+  const pickedValueRef = useRef<string | null>(null);
 
   const endpoint = kind === "institution" ? "/api/enrich/institution" : "/api/enrich/company";
 
@@ -47,8 +49,9 @@ export function CompanyAutocomplete({
         });
         if (!r.ok) return;
         const data = await r.json();
-        setSuggestions(data.suggestions || []);
-        setOpen((data.suggestions || []).length > 0);
+        const next = data.suggestions || [];
+        setSuggestions(next);
+        setOpen(next.length > 0);
       } catch {
         /* silent */
       }
@@ -57,20 +60,37 @@ export function CompanyAutocomplete({
   );
 
   useEffect(() => {
+    if (value === pickedValueRef.current) {
+      setOpen(false);
+      setSuggestions([]);
+      return;
+    }
     clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => fetchSuggestions(value), 300);
     return () => clearTimeout(debounceRef.current);
   }, [value, fetchSuggestions]);
+
+  const handleInputChange = (next: string) => {
+    pickedValueRef.current = null;
+    onChange(next);
+  };
+
+  const pickSuggestion = (name: string) => {
+    pickedValueRef.current = name;
+    onChange(name);
+    setOpen(false);
+    setSuggestions([]);
+  };
 
   return (
     <div className="relative">
       <TextInput
         id={id}
         value={value}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={(e) => handleInputChange(e.target.value)}
         onBlur={() => setTimeout(() => setOpen(false), 150)}
         placeholder={placeholder}
-        autoComplete="organization"
+        autoComplete="off"
       />
       {open && suggestions.length > 0 && (
         <div
@@ -84,10 +104,9 @@ export function CompanyAutocomplete({
             <button
               key={i}
               type="button"
-              onMouseDown={() => {
-                onChange(s.name);
-                setOpen(false);
-                setSuggestions([]);
+              onMouseDown={(e) => {
+                e.preventDefault();
+                pickSuggestion(s.name);
               }}
               className="flex w-full flex-col px-4 py-2.5 text-left transition-colors hover:opacity-90"
               style={{ color: "var(--tg-text)" }}
