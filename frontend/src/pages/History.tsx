@@ -89,7 +89,7 @@ export function HistoryPage() {
   return (
     <Screen className="px-4">
       <AppHeader onBack={handleBack} showBack title="Мои резюме" />
-      <main className="flex flex-1 flex-col gap-3 py-4">
+      <main className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto overscroll-y-contain py-4">
         {!loading && items.length > 0 && (
           <button
             type="button"
