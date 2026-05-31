@@ -63,7 +63,6 @@ export function OnboardingPage() {
   );
   const [contactPhone, setContactPhone] = useState(() => readStringAnswer(answers, "phone"));
   const [contactEmail, setContactEmail] = useState(() => readStringAnswer(answers, "email"));
-  const [patronymic, setPatronymic] = useState(() => readStringAnswer(answers, "patronymic"));
   const [salaryCustomDigits, setSalaryCustomDigits] = useState("");
   const [otherProfession, setOtherProfession] = useState(() =>
     professionOtherSelected(String(answers.target_position ?? "")),
@@ -75,7 +74,6 @@ export function OnboardingPage() {
   const current = visibleSteps[step];
   const isLast = step === visibleSteps.length - 1;
   const isContactsStep = current.type === "contacts_dual";
-  const isNameStep = current.type === "name_with_patronymic";
   const isSalaryStep = current.type === "options_with_input";
   const isWorkHistoryStep = current.type === "work_history";
   const salaryCustomMode = isSalaryStep && value === SALARY_CUSTOM_OPTION;
@@ -90,11 +88,6 @@ export function OnboardingPage() {
     if (current.type === "contacts_dual") {
       setAnswer("phone", contactPhone.trim());
       setAnswer("email", contactEmail.trim());
-      return;
-    }
-    if (current.type === "name_with_patronymic") {
-      setAnswer("name", value.trim());
-      setAnswer("patronymic", patronymic.trim());
       return;
     }
     if (current.type === "work_history") {
@@ -118,7 +111,6 @@ export function OnboardingPage() {
   }, [
     contactEmail,
     contactPhone,
-    patronymic,
     current.id,
     current.type,
     salaryCustomDigits,
@@ -130,7 +122,6 @@ export function OnboardingPage() {
   const canContinue = useMemo(() => {
     if (current.required === false || current.optional) return true;
     if (current.type === "contacts_dual") return true;
-    if (current.type === "name_with_patronymic") return value.trim().length > 0;
     if (current.type === "options_with_input") return true;
     if (current.type === "work_history") return true;
     return value.trim().length > 0;
@@ -147,9 +138,6 @@ export function OnboardingPage() {
         setContactPhone(readStringAnswer(answers, "phone"));
         setContactEmail(readStringAnswer(answers, "email"));
         setValue("");
-      } else if (next.type === "name_with_patronymic") {
-        setValue(readStringAnswer(answers, "name"));
-        setPatronymic(readStringAnswer(answers, "patronymic"));
       } else if (next.type === "work_history") {
         const saved = useAppStore.getState().answers.work_history;
         setWorkHistory(
@@ -208,13 +196,6 @@ export function OnboardingPage() {
     if (error) {
       setFieldError(error);
       return;
-    }
-    if (isNameStep && current.validatePatronymic) {
-      const patronymicError = current.validatePatronymic(patronymic);
-      if (patronymicError) {
-        setFieldError(patronymicError);
-        return;
-      }
     }
     setFieldError(null);
 
@@ -379,42 +360,6 @@ export function OnboardingPage() {
               </>
             )}
 
-            {isNameStep && (
-              <div className="flex flex-col gap-3">
-                <label className="text-sm font-medium" style={{ color: "var(--text-muted)" }}>
-                  Имя и фамилия
-                </label>
-                <TextInput
-                  value={value}
-                  onChange={(e) => {
-                    setFieldError(null);
-                    setValue(e.target.value);
-                  }}
-                  placeholder={current.placeholder}
-                  inputMode="text"
-                  autoComplete="name"
-                />
-                <label className="text-sm font-medium" style={{ color: "var(--text-muted)" }}>
-                  Отчество
-                </label>
-                <TextInput
-                  value={patronymic}
-                  onChange={(e) => {
-                    setFieldError(null);
-                    setPatronymic(e.target.value);
-                  }}
-                  placeholder={current.patronymicPlaceholder ?? "Сергеевич"}
-                  inputMode="text"
-                  autoComplete="additional-name"
-                />
-                {fieldError && (
-                  <p className="text-sm" style={{ color: "#dc2626" }}>
-                    {fieldError}
-                  </p>
-                )}
-              </div>
-            )}
-
             {current.type === "contacts_dual" && (
               <div className="flex flex-col gap-3">
                 <TextInput
@@ -471,7 +416,7 @@ export function OnboardingPage() {
               />
             )}
 
-            {showTextInput && current.type !== "profession" && current.id !== "education_place" && !isNameStep && (
+            {showTextInput && current.type !== "profession" && current.id !== "education_place" && (
               <>
                 <TextInput
                   value={value}
@@ -480,8 +425,10 @@ export function OnboardingPage() {
                     setValue(e.target.value);
                   }}
                   placeholder={current.placeholder}
-                  inputMode={current.id === "name" ? "text" : "text"}
-                  autoComplete={current.id === "name" ? "name" : "off"}
+                  inputMode="text"
+                  autoComplete={
+                    current.id === "name" ? "name" : current.id === "patronymic" ? "additional-name" : "off"
+                  }
                 />
                 {fieldError && (
                   <p className="text-sm" style={{ color: "#dc2626" }}>

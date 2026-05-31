@@ -13,7 +13,6 @@ import {
   applyDiscount,
   RUB_PRICE,
   STARS_PRICE,
-  STARS_SUBSCRIPTION_PRICE,
 } from "../lib/pricing";
 import { useAppStore } from "../store";
 import { getTg, openExternalUrl } from "../telegram";
@@ -271,10 +270,6 @@ export function PaymentPage() {
           >
             <Icon name="credit_card" size={20} />
             {cardPaying ? "Открываем оплату…" : `Оплатить картой — ${rubPrice} ₽`}
-          </Button>
-
-          <Button variant="outline" disabled className="!min-h-[48px] opacity-70">
-            🔄 Подписка — {STARS_SUBSCRIPTION_PRICE} ⭐/мес (неограниченно) · Скоро
           </Button>
         </div>
 

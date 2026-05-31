@@ -6,7 +6,6 @@ export type StepType =
   | "options"
   | "profession"
   | "contacts_dual"
-  | "name_with_patronymic"
   | "options_with_input"
   | "multi_select"
   | "work_history";
@@ -16,7 +15,6 @@ export interface OnboardingStep {
   question: string;
   type: StepType;
   placeholder?: string;
-  patronymicPlaceholder?: string;
   options?: readonly string[];
   hint?: string;
   skipText?: string;
@@ -28,7 +26,6 @@ export interface OnboardingStep {
   customInputPlaceholder?: string;
   rows?: number;
   validate?: (value: string) => string | null;
-  validatePatronymic?: (value: string) => string | null;
 }
 
 export const PROFESSION_PRESETS = [
@@ -44,11 +41,10 @@ export const SALARY_CUSTOM_OPTION = "Укажу сам";
 export const ONBOARDING_STEPS: OnboardingStep[] = [
   {
     id: "name",
-    question: "Как тебя зовут?",
-    type: "name_with_patronymic",
+    question: "Имя и фамилия",
+    type: "text",
     placeholder: "Иван Петров",
-    patronymicPlaceholder: "Сергеевич",
-    hint: "Имя, фамилия и отчество — как в резюме",
+    hint: "Как в резюме — без отчества",
     validate: (value: string) => {
       const hasVowel = /[аеёиоуыьъэюяАЕЁИОУЫЬЪЭЮЯaeiouyAEIOUY]/.test(value);
       const hasSpace = value.trim().includes(" ");
@@ -58,7 +54,16 @@ export const ONBOARDING_STEPS: OnboardingStep[] = [
       }
       return null;
     },
-    validatePatronymic: (value: string) => {
+  },
+  {
+    id: "patronymic",
+    question: "Отчество",
+    type: "text",
+    placeholder: "Сергеевич",
+    hint: "Необязательно — можно пропустить",
+    skipText: "Пропустить",
+    optional: true,
+    validate: (value: string) => {
       const trimmed = value.trim();
       if (!trimmed) return null;
       const hasVowel = /[аеёиоуыьъэюяАЕЁИОУЫЬЪЭЮЯ]/.test(trimmed);
