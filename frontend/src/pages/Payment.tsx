@@ -1,14 +1,20 @@
 import { useCallback, useState } from "react";
 
-import { createStarsInvoice, createYookassaInvoice, waitUntilPaid } from "../api";
+import { createStarsInvoice, createYookassaInvoice, validatePromo, waitUntilPaid } from "../api";
 import { useYookassaReturnPoll } from "../hooks/useYookassaReturnPoll";
 import { markYookassaPending } from "../lib/paymentReturn";
 import { AppHeader } from "../components/ui/AppHeader";
 import { Button } from "../components/ui/Button";
 import { Icon } from "../components/ui/Icon";
 import { Screen } from "../components/ui/Screen";
+import { TextInput } from "../components/ui/TextField";
 import { useTelegramBackButton } from "../hooks/useTelegramBackButton";
-import { RUB_PRICE, STARS_PRICE } from "../lib/pricing";
+import {
+  applyDiscount,
+  RUB_PRICE,
+  STARS_PRICE,
+  STARS_SUBSCRIPTION_PRICE,
+} from "../lib/pricing";
 import { useAppStore } from "../store";
 import { getTg, openExternalUrl } from "../telegram";
 
@@ -25,8 +31,13 @@ export function PaymentPage() {
   const { authToken, resumeId, resumeData, answers, setPage, setPaid } = useAppStore();
   const [paying, setPaying] = useState(false);
   const [cardPaying, setCardPaying] = useState(false);
+  const [showPromo, setShowPromo] = useState(false);
+  const [promoCode, setPromoCode] = useState("");
+  const [promoDiscount, setPromoDiscount] = useState(0);
+  const [promoLoading, setPromoLoading] = useState(false);
+  const [promoError, setPromoError] = useState<string | null>(null);
 
-  const handleBack = useCallback(() => setPage("preview"), [setPage]);
+  const handleBack = useCallback(() => setPage("template_select"), [setPage]);
   useTelegramBackButton(handleBack);
   useYookassaReturnPoll(true);
 
@@ -37,6 +48,27 @@ export function PaymentPage() {
   const orderLabel = position
     ? `Резюме для ${fullName} (${position})`
     : `Резюме для ${fullName}`;
+
+  const starsPrice = applyDiscount(STARS_PRICE, promoDiscount);
+  const rubPrice = applyDiscount(RUB_PRICE, promoDiscount);
+
+  const applyPromo = async () => {
+    const code = promoCode.trim();
+    if (!code) return;
+    setPromoLoading(true);
+    setPromoError(null);
+    try {
+      const result = await validatePromo(code, authToken);
+      setPromoDiscount(result.discount_percent);
+      setPromoCode(result.code);
+      getTg()?.HapticFeedback?.notificationOccurred("success");
+    } catch (err) {
+      setPromoDiscount(0);
+      setPromoError(err instanceof Error ? err.message : "Промокод недействителен");
+    } finally {
+      setPromoLoading(false);
+    }
+  };
 
   const payStars = async () => {
     const tg = getTg();
@@ -148,9 +180,52 @@ export function PaymentPage() {
             <span className="text-sm" style={{ color: "var(--text-muted)" }}>
               К оплате
             </span>
-            <span className="text-lg font-bold">{STARS_PRICE} ⭐</span>
+            <span className="text-lg font-bold">
+              {starsPrice} ⭐
+              {promoDiscount > 0 && starsPrice !== STARS_PRICE ? (
+                <span className="ml-2 text-sm line-through opacity-50">{STARS_PRICE}</span>
+              ) : null}
+            </span>
           </div>
+          {promoDiscount > 0 ? (
+            <p className="mt-2 text-sm font-medium" style={{ color: "var(--brand)" }}>
+              Скидка {promoDiscount}% применена!
+            </p>
+          ) : null}
         </section>
+
+        {!showPromo ? (
+          <button
+            type="button"
+            className="text-sm underline"
+            style={{ color: "var(--brand)" }}
+            onClick={() => setShowPromo(true)}
+          >
+            У меня есть промокод
+          </button>
+        ) : (
+          <div className="flex flex-col gap-2">
+            <div className="flex gap-2">
+              <TextInput
+                value={promoCode}
+                onChange={(e) => {
+                  setPromoCode(e.target.value);
+                  setPromoError(null);
+                }}
+                placeholder="Промокод"
+                className="flex-1"
+              />
+              <Button variant="outline" onClick={applyPromo} disabled={promoLoading || !promoCode.trim()}>
+                {promoLoading ? "…" : "Применить"}
+              </Button>
+            </div>
+            {promoError ? (
+              <p className="text-sm" style={{ color: "#dc2626" }}>
+                {promoError}
+              </p>
+            ) : null}
+          </div>
+        )}
 
         <div className="flex flex-col gap-3">
           <Button
@@ -160,7 +235,7 @@ export function PaymentPage() {
             className="!min-h-[52px] flex items-center justify-center gap-2"
           >
             <Icon name="star" filled size={20} />
-            {paying ? "Ожидаем оплату…" : `Оплатить Telegram Stars (${STARS_PRICE})`}
+            {paying ? "Ожидаем оплату…" : `Оплатить Telegram Stars (${starsPrice})`}
           </Button>
 
           <Button
@@ -170,7 +245,11 @@ export function PaymentPage() {
             className="!min-h-[52px] flex items-center justify-center gap-2"
           >
             <Icon name="credit_card" size={20} />
-            {cardPaying ? "Открываем оплату…" : `Оплатить картой — ${RUB_PRICE} ₽`}
+            {cardPaying ? "Открываем оплату…" : `Оплатить картой — ${rubPrice} ₽`}
+          </Button>
+
+          <Button variant="outline" disabled className="!min-h-[48px] opacity-70">
+            🔄 Подписка — {STARS_SUBSCRIPTION_PRICE} ⭐/мес (неограниченно) · Скоро
           </Button>
         </div>
 

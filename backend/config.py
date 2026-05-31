@@ -37,6 +37,8 @@ class Settings(BaseSettings):
     # Telegram user IDs with free unlimited generate + PDF (comma-separated).
     FOUNDER_TELEGRAM_IDS: str = "7595981350"
 
+    ADMIN_SECRET_KEY: str = "change-me-in-production"
+
     # Supergroup for admin alerts (bare id 100… or full -100…).
     ADMIN_GROUP_CHAT_ID: str = "1003959501619"
 

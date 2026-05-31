@@ -224,6 +224,11 @@ def _build_user_payload(user_data: dict) -> str:
         blocks.append(f"Email: {email}")
     if user_data.get("gender"):
         blocks.append(f"Пол кандидата: {user_data['gender']}")
+    achievements = (user_data.get("achievements") or "").strip()
+    if achievements:
+        blocks.append(
+            f"Достижения в цифрах (ОБЯЗАТЕЛЬНО в experience descriptions): {_truncate(achievements, 500)}"
+        )
     return "\n\n".join(blocks)
 
 

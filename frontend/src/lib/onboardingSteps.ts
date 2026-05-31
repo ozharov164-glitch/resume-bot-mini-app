@@ -24,6 +24,7 @@ export interface OnboardingStep {
   optionsByPosition?: Record<string, readonly string[]>;
   allowCustomInput?: boolean;
   customInputPlaceholder?: string;
+  rows?: number;
   validate?: (value: string) => string | null;
 }
 
@@ -94,6 +95,16 @@ export const ONBOARDING_STEPS: OnboardingStep[] = [
     hint: "Добавь до 3 мест работы — чем больше деталей, тем лучше резюме.",
     skipText: "Нет опыта работы",
     required: false,
+  },
+  {
+    id: "achievements",
+    question: "Достижения в цифрах",
+    type: "textarea",
+    placeholder: "доставлял 40 заказов в день, 0 аварий за 3 года, план 120%",
+    hint: "Необязательно — конкретные цифры усиливают резюме.",
+    skipText: "Пропустить",
+    optional: true,
+    rows: 3,
   },
   {
     id: "education",

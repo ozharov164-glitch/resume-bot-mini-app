@@ -44,11 +44,28 @@ class SQLiteBackend:
                     created_at TEXT NOT NULL,
                     FOREIGN KEY (user_id) REFERENCES users(id)
                 );
+                CREATE TABLE IF NOT EXISTS promo_codes (
+                    id TEXT PRIMARY KEY,
+                    code TEXT UNIQUE NOT NULL,
+                    owner_tg_id INTEGER DEFAULT NULL,
+                    discount_percent INTEGER DEFAULT 10,
+                    commission_percent INTEGER DEFAULT 20,
+                    max_uses INTEGER DEFAULT 100,
+                    uses_count INTEGER DEFAULT 0,
+                    is_active INTEGER DEFAULT 1,
+                    created_at TEXT NOT NULL,
+                    expires_at TEXT DEFAULT NULL
+                );
                 """
             )
             for col_sql in [
                 "ALTER TABLE users ADD COLUMN referred_by INTEGER DEFAULT NULL",
                 "ALTER TABLE users ADD COLUMN referral_bonus INTEGER DEFAULT 0",
+                "ALTER TABLE resumes ADD COLUMN promo_code TEXT DEFAULT NULL",
+                "ALTER TABLE resumes ADD COLUMN discount_applied INTEGER DEFAULT 0",
+                "ALTER TABLE resumes ADD COLUMN final_price_stars INTEGER DEFAULT NULL",
+                "ALTER TABLE resumes ADD COLUMN final_price_rub INTEGER DEFAULT NULL",
+                "ALTER TABLE resumes ADD COLUMN template_id TEXT DEFAULT 'classic'",
             ]:
                 try:
                     conn.execute(col_sql)
@@ -159,7 +176,22 @@ class SQLiteBackend:
             )
 
     def update_resume(self, resume_id: str, fields: dict[str, Any]) -> None:
-        allowed = {k: v for k, v in fields.items() if k in {"is_paid", "paid_at", "data", "user_answers"}}
+        allowed = {
+            k: v
+            for k, v in fields.items()
+            if k
+            in {
+                "is_paid",
+                "paid_at",
+                "data",
+                "user_answers",
+                "promo_code",
+                "discount_applied",
+                "final_price_stars",
+                "final_price_rub",
+                "template_id",
+            }
+        }
         if not allowed:
             return
         if "data" in allowed and not isinstance(allowed["data"], str):
@@ -187,6 +219,113 @@ class SQLiteBackend:
         with self._connect() as conn:
             row = conn.execute("SELECT COUNT(*) AS c FROM resumes WHERE is_paid = 1").fetchone()
         return int(row["c"]) if row else 0
+
+    def count_resumes_today(self) -> int:
+        today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
+        try:
+            with self._connect() as conn:
+                row = conn.execute(
+                    "SELECT COUNT(*) AS c FROM resumes WHERE created_at >= ?",
+                    (today_start,),
+                ).fetchone()
+            return int(row["c"]) if row else 0
+        except Exception as e:
+            logger.warning("count_resumes_today failed: %s", e)
+            return 0
+
+    def validate_promo_code(self, code: str, user_tg_id: int) -> dict | None:
+        del user_tg_id  # reserved for future per-user limits
+        try:
+            with self._connect() as conn:
+                row = conn.execute(
+                    "SELECT * FROM promo_codes WHERE UPPER(code) = UPPER(?) AND is_active = 1 LIMIT 1",
+                    (code.strip(),),
+                ).fetchone()
+            if not row:
+                return None
+            promo = dict(row)
+            max_uses = promo.get("max_uses")
+            uses_count = promo.get("uses_count") or 0
+            if max_uses and uses_count >= max_uses:
+                return None
+            expires_at = promo.get("expires_at")
+            if expires_at and expires_at < datetime.utcnow().isoformat():
+                return None
+            return promo
+        except Exception as e:
+            logger.warning("validate_promo_code failed: %s", e)
+            return None
+
+    def use_promo_code(self, code: str, resume_id: str) -> None:
+        upper = code.strip().upper()
+        with self._connect() as conn:
+            conn.execute(
+                "UPDATE promo_codes SET uses_count = uses_count + 1 WHERE UPPER(code) = ?",
+                (upper,),
+            )
+            conn.execute(
+                "UPDATE resumes SET promo_code = ? WHERE id = ?",
+                (upper, resume_id),
+            )
+            conn.commit()
+
+    def create_promo_code(
+        self,
+        code: str,
+        owner_tg_id: int | None = None,
+        discount: int = 10,
+        commission: int = 20,
+        max_uses: int = 100,
+    ) -> dict:
+        promo_id = str(uuid.uuid4())
+        now = datetime.utcnow().isoformat()
+        with self._connect() as conn:
+            conn.execute(
+                """
+                INSERT INTO promo_codes
+                (id, code, owner_tg_id, discount_percent, commission_percent, max_uses, uses_count, is_active, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, 0, 1, ?)
+                """,
+                (promo_id, code.strip().upper(), owner_tg_id, discount, commission, max_uses, now),
+            )
+            conn.commit()
+        return {"id": promo_id, "code": code.strip().upper(), "discount_percent": discount}
+
+    def list_promo_codes(self) -> list[dict]:
+        with self._connect() as conn:
+            rows = conn.execute(
+                "SELECT * FROM promo_codes ORDER BY created_at DESC"
+            ).fetchall()
+        return [dict(r) for r in rows]
+
+    def increment_referral_bonus(self, telegram_id: int) -> None:
+        with self._connect() as conn:
+            conn.execute(
+                "UPDATE users SET referral_bonus = referral_bonus + 1 WHERE telegram_id = ?",
+                (telegram_id,),
+            )
+            conn.commit()
+
+    def get_referral_bonus(self, telegram_id: int) -> int:
+        with self._connect() as conn:
+            row = conn.execute(
+                "SELECT referral_bonus FROM users WHERE telegram_id = ? LIMIT 1",
+                (telegram_id,),
+            ).fetchone()
+        if not row:
+            return 0
+        return int(row["referral_bonus"] or 0)
+
+    def use_referral_bonus(self, telegram_id: int) -> bool:
+        if self.get_referral_bonus(telegram_id) <= 0:
+            return False
+        with self._connect() as conn:
+            conn.execute(
+                "UPDATE users SET referral_bonus = referral_bonus - 1 WHERE telegram_id = ?",
+                (telegram_id,),
+            )
+            conn.commit()
+        return True
 
     def list_resumes_for_user(self, user_id: str, limit: int = 30) -> list[dict[str, Any]]:
         with self._connect() as conn:
@@ -330,3 +469,123 @@ class SupabaseBackend:
             ).execute()
         except Exception as e:
             logger.warning("save_referral failed: %s", e)
+
+    def count_resumes_today(self) -> int:
+        today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
+        try:
+            result = (
+                self.client.table("resumes")
+                .select("id", count="exact")
+                .gte("created_at", today_start)
+                .execute()
+            )
+            if result.count is not None:
+                return int(result.count)
+            return len(result.data or [])
+        except Exception as e:
+            logger.warning("count_resumes_today failed: %s", e)
+            return 0
+
+    def validate_promo_code(self, code: str, user_tg_id: int) -> dict | None:
+        del user_tg_id
+        try:
+            result = (
+                self.client.table("promo_codes")
+                .select("*")
+                .ilike("code", code.strip())
+                .eq("is_active", True)
+                .limit(1)
+                .execute()
+            )
+            if not result.data:
+                return None
+            promo = result.data[0]
+            max_uses = promo.get("max_uses")
+            uses_count = promo.get("uses_count") or 0
+            if max_uses and uses_count >= max_uses:
+                return None
+            expires_at = promo.get("expires_at")
+            if expires_at and expires_at < datetime.utcnow().isoformat():
+                return None
+            return promo
+        except Exception as e:
+            logger.warning("validate_promo_code failed: %s", e)
+            return None
+
+    def use_promo_code(self, code: str, resume_id: str) -> None:
+        upper = code.strip().upper()
+        row = (
+            self.client.table("promo_codes")
+            .select("uses_count")
+            .ilike("code", code.strip())
+            .limit(1)
+            .execute()
+        )
+        if row.data:
+            current = row.data[0].get("uses_count") or 0
+            self.client.table("promo_codes").update({"uses_count": current + 1}).ilike(
+                "code", code.strip()
+            ).execute()
+        self.client.table("resumes").update({"promo_code": upper}).eq("id", resume_id).execute()
+
+    def create_promo_code(
+        self,
+        code: str,
+        owner_tg_id: int | None = None,
+        discount: int = 10,
+        commission: int = 20,
+        max_uses: int = 100,
+    ) -> dict:
+        promo_id = str(uuid.uuid4())
+        now = datetime.utcnow().isoformat()
+        upper = code.strip().upper()
+        self.client.table("promo_codes").insert(
+            {
+                "id": promo_id,
+                "code": upper,
+                "owner_tg_id": owner_tg_id,
+                "discount_percent": discount,
+                "commission_percent": commission,
+                "max_uses": max_uses,
+                "uses_count": 0,
+                "is_active": True,
+                "created_at": now,
+            }
+        ).execute()
+        return {"id": promo_id, "code": upper, "discount_percent": discount}
+
+    def list_promo_codes(self) -> list[dict]:
+        result = (
+            self.client.table("promo_codes")
+            .select("*")
+            .order("created_at", desc=True)
+            .execute()
+        )
+        return result.data or []
+
+    def increment_referral_bonus(self, telegram_id: int) -> None:
+        user = self.find_user_by_telegram_id(telegram_id)
+        if not user:
+            return
+        current = int(user.get("referral_bonus") or 0)
+        self.client.table("users").update({"referral_bonus": current + 1}).eq(
+            "telegram_id", telegram_id
+        ).execute()
+
+    def get_referral_bonus(self, telegram_id: int) -> int:
+        user = self.find_user_by_telegram_id(telegram_id)
+        if not user:
+            return 0
+        return int(user.get("referral_bonus") or 0)
+
+    def use_referral_bonus(self, telegram_id: int) -> bool:
+        if self.get_referral_bonus(telegram_id) <= 0:
+            return False
+        user = self.find_user_by_telegram_id(telegram_id)
+        if not user:
+            return False
+        current = int(user.get("referral_bonus") or 0)
+        self.client.table("users").update({"referral_bonus": current - 1}).eq(
+            "telegram_id", telegram_id
+        ).execute()
+        return True

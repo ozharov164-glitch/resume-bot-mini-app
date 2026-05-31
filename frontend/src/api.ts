@@ -1,11 +1,14 @@
 import type { ResumeData, UserAnswers } from "./types";
+import { clearCachedAuthToken, readCachedAuthToken, writeCachedAuthToken } from "./lib/authSession";
+import { fetchWithTimeout, HttpTimeoutError, withRetries } from "./lib/http";
 import { useAppStore } from "./store";
 import { waitForInitData } from "./telegram";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
+const DEFAULT_TIMEOUT_MS = 12_000;
 
-async function http<T>(path: string, init: RequestInit): Promise<T> {
-  const response = await fetch(`${API_URL}${path}`, init);
+async function http<T>(path: string, init: RequestInit, timeoutMs = DEFAULT_TIMEOUT_MS): Promise<T> {
+  const response = await fetchWithTimeout(`${API_URL}${path}`, init, timeoutMs);
   const text = await response.text();
   if (!response.ok) {
     let detail = text || "Сервис временно недоступен";
@@ -14,6 +17,9 @@ async function http<T>(path: string, init: RequestInit): Promise<T> {
       if (parsed.detail) detail = parsed.detail;
     } catch {
       /* plain text error */
+    }
+    if (response.status === 401) {
+      clearCachedAuthToken();
     }
     throw new Error(detail);
   }
@@ -24,12 +30,25 @@ export async function ensureAuthToken(): Promise<string> {
   const { authToken, setAuthToken, setFounder } = useAppStore.getState();
   if (authToken) return authToken;
 
-  const initData = await waitForInitData(6000);
+  const cached = readCachedAuthToken();
+  if (cached) {
+    try {
+      const me = await fetchMe(cached);
+      setAuthToken(cached);
+      if (me.is_founder || me.unlimited) setFounder(true);
+      return cached;
+    } catch {
+      clearCachedAuthToken();
+    }
+  }
+
+  const initData = await waitForInitData(10_000);
   if (!initData) {
     throw new Error("OPEN_VIA_BOT");
   }
 
   const auth = await authWithTelegram(initData);
+  writeCachedAuthToken(auth.access_token);
   setAuthToken(auth.access_token);
   if (auth.is_founder || auth.unlimited) {
     setFounder(true);
@@ -38,15 +57,23 @@ export async function ensureAuthToken(): Promise<string> {
 }
 
 export async function authWithTelegram(initData: string) {
-  return http<{ access_token: string; token_type: string; is_founder?: boolean; unlimited?: boolean }>(
-    "/api/auth/telegram",
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ init_data: initData }),
-    },
+  return withRetries(
+    () =>
+      http<{ access_token: string; token_type: string; is_founder?: boolean; unlimited?: boolean }>(
+        "/api/auth/telegram",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ init_data: initData }),
+        },
+        15_000,
+      ),
+    2,
+    500,
   );
 }
+
+export { HttpTimeoutError };
 
 export async function fetchMe(token: string) {
   return http<{ telegram_id: number; is_founder: boolean; unlimited: boolean }>("/api/auth/me", {
@@ -140,9 +167,47 @@ export async function requestPdf(token: string, resumeId: string) {
   });
 }
 
+export async function validatePromo(code: string, token: string) {
+  const response = await fetchWithTimeout(
+    `${API_URL}/api/payment/validate-promo`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ code }),
+    },
+    DEFAULT_TIMEOUT_MS,
+  );
+  if (!response.ok) {
+    const text = await response.text();
+    let detail = text || "Промокод недействителен";
+    try {
+      const parsed = JSON.parse(text) as { detail?: string };
+      if (parsed.detail) detail = parsed.detail;
+    } catch {
+      /* plain text */
+    }
+    throw new Error(detail);
+  }
+  return JSON.parse(await response.text()) as {
+    valid: boolean;
+    discount_percent: number;
+    code: string;
+  };
+}
+
+export type TemplateId = "classic" | "modern" | "compact";
+
+export async function setResumeTemplate(token: string, resumeId: string, templateId: TemplateId) {
+  return http<{ ok: boolean; template_id: string }>(`/api/resume/${resumeId}/template`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ template_id: templateId }),
+  });
+}
+
 export async function fetchStatsCount(): Promise<number> {
   try {
-    const response = await fetch(`${API_URL}/api/stats/count`);
+    const response = await fetchWithTimeout(`${API_URL}/api/stats/count`, {}, 8_000);
     if (!response.ok) throw new Error("stats unavailable");
     const data = (await response.json()) as { count?: number };
     if (typeof data.count === "number" && data.count > 0) return data.count;

@@ -1,2 +1,8 @@
 export const STARS_PRICE = 99;
 export const RUB_PRICE = 149;
+export const STARS_SUBSCRIPTION_PRICE = 199;
+
+export function applyDiscount(price: number, discountPercent: number): number {
+  if (discountPercent <= 0) return price;
+  return Math.max(1, Math.round(price * (1 - discountPercent / 100)));
+}

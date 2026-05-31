@@ -4,7 +4,7 @@ import { PreviewImageFrame } from "../components/preview/PreviewImageFrame";
 import { PreviewLoadingSkeleton } from "../components/preview/PreviewLoadingSkeleton";
 import { PreviewResumeCard } from "../components/preview/PreviewResumeCard";
 import { PreviewStatusHero } from "../components/preview/PreviewStatusHero";
-import { ensureAuthToken, requestPdf } from "../api";
+import { ensureAuthToken } from "../api";
 import { AppHeader } from "../components/ui/AppHeader";
 import { Button } from "../components/ui/Button";
 import { FixedBottomBar } from "../components/ui/FixedBottomBar";
@@ -22,8 +22,6 @@ export function PreviewPage() {
   const { resumeData, resumeId, authToken, setPage, setPaid, startEditResume, previewReturnPage, isPaid } =
     useAppStore();
   const founderActive = useFounderStatus();
-  const [sending, setSending] = useState(false);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewError, setPreviewError] = useState(false);
   const previewLocked = !isPaid && !founderActive;
 
@@ -76,24 +74,7 @@ export function PreviewPage() {
       return;
     }
 
-    if (founderActive) {
-      setSending(true);
-      try {
-        const token = authToken || (await ensureAuthToken());
-        await requestPdf(token, resumeId);
-        setPaid(true);
-        getTg()?.HapticFeedback?.notificationOccurred("success");
-        setPage("success");
-      } catch (err) {
-        const message = err instanceof Error ? err.message : "Не удалось отправить PDF. Попробуй ещё раз.";
-        alert(message);
-      } finally {
-        setSending(false);
-      }
-      return;
-    }
-
-    setPage("payment");
+    setPage("template_select");
   };
 
   return (
@@ -143,12 +124,11 @@ export function PreviewPage() {
           <Button
             variant="brand"
             onClick={handlePdf}
-            disabled={sending}
             className="preview-pdf-btn relative flex items-center justify-center gap-2 overflow-hidden"
           >
             <span className="preview-btn-shimmer pointer-events-none absolute inset-0" aria-hidden />
             <Icon name="picture_as_pdf" size={20} />
-            {sending ? "Отправляем PDF…" : "Получить PDF в Telegram"}
+            Получить PDF в Telegram
           </Button>
         </div>
       </FixedBottomBar>

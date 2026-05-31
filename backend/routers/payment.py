@@ -117,3 +117,22 @@ async def telegram_payment_webhook(request: Request, db=Depends(get_db)):
             logger.exception("telegram-webhook fulfill failed")
 
     return {"ok": True}
+
+
+@router.post("/validate-promo")
+async def validate_promo(
+    body: dict,
+    current_user: dict = Depends(get_current_user),
+    db=Depends(get_db),
+):
+    code = str(body.get("code", "")).strip()
+    if not code:
+        raise HTTPException(status_code=400, detail="Укажите промокод.")
+    promo = db.validate_promo_code(code, current_user["telegram_id"])
+    if not promo:
+        raise HTTPException(status_code=404, detail="Промокод не найден или недействителен.")
+    return {
+        "valid": True,
+        "discount_percent": promo["discount_percent"],
+        "code": promo["code"],
+    }

@@ -4,7 +4,10 @@ import json
 import logging
 import sys
 import time
+from functools import wraps
 from pathlib import Path
+
+import httpx
 
 from telegram import (
     BotCommand,
@@ -59,8 +62,187 @@ logging.getLogger("httpx").setLevel(logging.WARNING)
 logger = logging.getLogger(__name__)
 
 MINI_APP_URL = settings.FRONTEND_URL.rstrip("/")
+API_URL = settings.APP_URL.rstrip("/")
+_ADMIN_KEY = settings.ADMIN_SECRET_KEY
 _STATS_TTL_SEC = 60.0
 _stats_cache: tuple[int, float] | None = None
+
+
+def _founder_ids() -> list[int]:
+    return [int(x) for x in settings.FOUNDER_TELEGRAM_IDS.split(",") if x.strip()]
+
+
+def admin_only(func):
+    @wraps(func)
+    async def wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
+        user = update.effective_user
+        if not user or user.id not in _founder_ids():
+            if update.callback_query:
+                await update.callback_query.answer("⛔ Нет доступа", show_alert=True)
+            elif update.message:
+                await update.message.reply_text("⛔ Нет доступа")
+            return
+        return await func(update, context)
+
+    return wrapper
+
+
+def _admin_headers() -> dict[str, str]:
+    return {"X-Admin-Key": _ADMIN_KEY}
+
+
+def _admin_menu_keyboard() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        [
+            [
+                InlineKeyboardButton("📊 Статистика", callback_data="adm_stats"),
+                InlineKeyboardButton("🎟 Промокоды", callback_data="adm_promos"),
+            ],
+            [
+                InlineKeyboardButton("➕ /newpromo КОД", callback_data="adm_create_promo"),
+                InlineKeyboardButton("👥 Топ рефереры", callback_data="adm_refs"),
+            ],
+        ]
+    )
+
+
+@admin_only
+async def admin_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text(
+        "🔧 Админ-панель ResumeBot",
+        reply_markup=_admin_menu_keyboard(),
+    )
+
+
+@admin_only
+async def newpromo_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    args = context.args or []
+    if not args:
+        await update.message.reply_text(
+            "Использование: /newpromo КОД [скидка%] [лимит]\n"
+            "Пример: /newpromo BLOG10 10 200"
+        )
+        return
+    code = args[0].strip()
+    discount = int(args[1]) if len(args) > 1 else 10
+    max_uses = int(args[2]) if len(args) > 2 else 100
+    try:
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            resp = await client.post(
+                f"{API_URL}/api/admin/promos",
+                headers=_admin_headers(),
+                json={"code": code, "discount": discount, "max_uses": max_uses},
+            )
+        if resp.status_code == 200:
+            data = resp.json()
+            promo = data.get("promo", {})
+            await update.message.reply_text(
+                f"✅ Промокод создан: <b>{html.escape(promo.get('code', code))}</b>\n"
+                f"Скидка: {promo.get('discount_percent', discount)}%\n"
+                f"Лимит: {max_uses}",
+                parse_mode="HTML",
+            )
+        else:
+            await update.message.reply_text(f"❌ Ошибка: {resp.status_code} {resp.text[:200]}")
+    except Exception as exc:
+        logger.exception("newpromo failed")
+        await update.message.reply_text(f"❌ Не удалось создать промокод: {exc}")
+
+
+@admin_only
+async def adm_stats_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    try:
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            resp = await client.get(f"{API_URL}/api/admin/stats", headers=_admin_headers())
+        if resp.status_code != 200:
+            await query.edit_message_text(f"❌ Ошибка stats: {resp.status_code}")
+            return
+        data = resp.json()
+        text = (
+            f"📊 <b>Статистика</b>\n\n"
+            f"Всего резюме (витрина): {data.get('count', 0)}\n"
+            f"Оплачено: {data.get('paid_count', 0)}\n"
+            f"Сегодня: {data.get('today_count', 0)}\n"
+            f"Пользователей: {data.get('users', 0)}"
+        )
+        keyboard = InlineKeyboardMarkup(
+            [[InlineKeyboardButton("◀️ Назад", callback_data="adm_back")]]
+        )
+        await query.edit_message_text(text, parse_mode="HTML", reply_markup=keyboard)
+    except Exception as exc:
+        logger.exception("adm_stats failed")
+        await query.edit_message_text(f"❌ {exc}")
+
+
+@admin_only
+async def adm_promos_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    try:
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            resp = await client.get(f"{API_URL}/api/admin/promos", headers=_admin_headers())
+        if resp.status_code != 200:
+            await query.edit_message_text(f"❌ Ошибка promos: {resp.status_code}")
+            return
+        promos = resp.json().get("promos", [])
+        if not promos:
+            text = "🎟 Промокодов пока нет.\n\nСоздай: /newpromo КОД 10 100"
+        else:
+            lines = ["🎟 <b>Промокоды</b>\n"]
+            for p in promos[:15]:
+                status = "✅" if p.get("is_active") else "❌"
+                code = html.escape(str(p.get("code", "")))
+                uses = p.get("uses_count", 0)
+                max_u = p.get("max_uses", "∞")
+                disc = p.get("discount_percent", 0)
+                lines.append(f"{status} <code>{code}</code> — {uses}/{max_u}, -{disc}%")
+            text = "\n".join(lines)
+        keyboard = InlineKeyboardMarkup(
+            [[InlineKeyboardButton("◀️ Назад", callback_data="adm_back")]]
+        )
+        await query.edit_message_text(text, parse_mode="HTML", reply_markup=keyboard)
+    except Exception as exc:
+        logger.exception("adm_promos failed")
+        await query.edit_message_text(f"❌ {exc}")
+
+
+@admin_only
+async def adm_refs_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    keyboard = InlineKeyboardMarkup(
+        [[InlineKeyboardButton("◀️ Назад", callback_data="adm_back")]]
+    )
+    await query.edit_message_text(
+        "👥 Топ рефереров — скоро.\n\nБонусы начисляются автоматически при оплате друга.",
+        reply_markup=keyboard,
+    )
+
+
+@admin_only
+async def adm_create_promo_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    keyboard = InlineKeyboardMarkup(
+        [[InlineKeyboardButton("◀️ Назад", callback_data="adm_back")]]
+    )
+    await query.edit_message_text(
+        "➕ Создание промокода:\n\n/newpromo КОД [скидка%] [лимит]\n"
+        "Пример: /newpromo BLOG10 10 200",
+        reply_markup=keyboard,
+    )
+
+
+@admin_only
+async def adm_back_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    await query.edit_message_text(
+        "🔧 Админ-панель ResumeBot",
+        reply_markup=_admin_menu_keyboard(),
+    )
 
 
 def _start_keyboard() -> InlineKeyboardMarkup:
@@ -519,6 +701,14 @@ def main():
     app.add_handler(CommandHandler("invite", invite_command))
     app.add_handler(CommandHandler("support", support_command))
     app.add_handler(CommandHandler("founder", founder_command))
+    app.add_handler(CommandHandler("admin", admin_command))
+    app.add_handler(CommandHandler("newpromo", newpromo_command))
+
+    app.add_handler(CallbackQueryHandler(adm_stats_callback, pattern="^adm_stats$"))
+    app.add_handler(CallbackQueryHandler(adm_promos_callback, pattern="^adm_promos$"))
+    app.add_handler(CallbackQueryHandler(adm_refs_callback, pattern="^adm_refs$"))
+    app.add_handler(CallbackQueryHandler(adm_create_promo_callback, pattern="^adm_create_promo$"))
+    app.add_handler(CallbackQueryHandler(adm_back_callback, pattern="^adm_back$"))
 
     app.add_handler(CallbackQueryHandler(how_it_works_callback, pattern="^how_it_works$"))
     app.add_handler(CallbackQueryHandler(trust_callback, pattern="^trust$"))

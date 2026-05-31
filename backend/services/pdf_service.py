@@ -311,6 +311,276 @@ def get_pdf_styles() -> str:
     """
 
 
+def get_modern_pdf_styles() -> str:
+    font_face = _font_face_css()
+    font_stack = "'NunitoSans', 'DejaVu Sans', 'Liberation Sans', Arial, sans-serif"
+    accent = "#2563EB"
+
+    return font_face + f"""
+    @page {{ size: A4; margin: 14mm 16mm 18mm 16mm; }}
+    * {{ box-sizing: border-box; margin: 0; padding: 0; }}
+    body {{
+        font-family: {font_stack};
+        font-size: 9pt;
+        line-height: 1.4;
+        color: #1f2937;
+        background: #ffffff;
+    }}
+    .modern-header {{
+        margin-bottom: 14pt;
+        padding-bottom: 8pt;
+        border-bottom: 2pt solid {accent};
+    }}
+    .modern-name {{
+        font-size: 24pt;
+        font-weight: 700;
+        color: #111827;
+        line-height: 1.1;
+        letter-spacing: -0.5px;
+    }}
+    .modern-meta {{
+        margin-top: 6pt;
+        font-size: 8.5pt;
+        color: #4b5563;
+    }}
+    .modern-meta .sep {{ color: {accent}; margin: 0 4pt; }}
+    .section-block {{ margin-bottom: 12pt; }}
+    .section-title {{
+        font-size: 7.5pt;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        color: #111827;
+        padding-bottom: 3pt;
+        margin-bottom: 6pt;
+        border-bottom: 1.5pt solid {accent};
+    }}
+    .summary-text {{
+        font-size: 8.5pt;
+        color: #374151;
+        line-height: 1.5;
+    }}
+    .skills-inline {{
+        font-size: 8.5pt;
+        color: #374151;
+        line-height: 1.45;
+    }}
+    .experience-entry {{
+        margin-bottom: 8pt;
+        padding-bottom: 6pt;
+        border-bottom: 0.5pt solid #e5e7eb;
+    }}
+    .experience-entry:last-child {{ border-bottom: none; }}
+    .exp-header {{
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        gap: 6pt;
+    }}
+    .exp-company {{ font-size: 9pt; font-weight: 700; color: #111827; flex: 1; }}
+    .exp-period {{ font-size: 7pt; color: #6b7280; white-space: nowrap; }}
+    .exp-position {{ font-size: 8pt; color: {accent}; font-weight: 600; margin: 2pt 0 3pt; }}
+    .exp-bullets {{ list-style: none; padding: 0; }}
+    .exp-bullets li {{
+        font-size: 8pt;
+        color: #374151;
+        padding-left: 9pt;
+        position: relative;
+        margin-bottom: 1pt;
+        line-height: 1.4;
+    }}
+    .exp-bullets li::before {{
+        content: '•';
+        position: absolute;
+        left: 0;
+        color: {accent};
+        font-weight: 700;
+    }}
+    .edu-entry {{ margin-bottom: 5pt; }}
+    .edu-institution {{ font-size: 8.5pt; font-weight: 700; color: #111827; }}
+    .edu-details {{ font-size: 7.5pt; color: #6b7280; }}
+    .lang-item, .cert-item {{
+        font-size: 8pt;
+        color: #374151;
+        margin-bottom: 2pt;
+    }}
+    .page-footer {{
+        position: fixed;
+        bottom: 0; left: 0; right: 0;
+        text-align: center;
+        font-size: 6pt;
+        color: #9ca3af;
+        padding: 4pt 0;
+    }}
+    """
+
+
+def get_compact_pdf_styles() -> str:
+    font_face = _font_face_css()
+    font_stack = "'NunitoSans', 'DejaVu Sans', 'Liberation Sans', Arial, sans-serif"
+    accent = "#7C3AED"
+
+    return font_face + f"""
+    @page {{ size: A4; margin: 0; }}
+    * {{ box-sizing: border-box; margin: 0; padding: 0; }}
+    body {{
+        font-family: {font_stack};
+        font-size: 9pt;
+        line-height: 1.4;
+        color: #1f2937;
+        background: #ffffff;
+    }}
+    .page-layout {{ display: flex; width: 100%; min-height: 297mm; }}
+    .sidebar {{
+        width: 32%;
+        min-width: 32%;
+        background: #f8f8f8;
+        color: #1f2937;
+        padding: 20px 14px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+    }}
+    .main-content {{
+        flex: 1;
+        padding: 20px 18px;
+        background: #ffffff;
+    }}
+    .sidebar .section-title {{
+        font-size: 6pt;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        color: {accent};
+        margin-bottom: 5px;
+        padding-bottom: 2px;
+        border-bottom: 1pt solid #e5e7eb;
+    }}
+    .contact-item {{
+        font-size: 7.5pt;
+        color: #374151;
+        margin-bottom: 4px;
+        line-height: 1.3;
+        word-break: break-all;
+    }}
+    .contact-label {{
+        font-size: 6pt;
+        color: #9ca3af;
+        text-transform: uppercase;
+        display: block;
+        margin-bottom: 1px;
+    }}
+    .salary-block {{
+        background: #f3e8ff;
+        border-left: 2pt solid {accent};
+        padding: 6px 8px;
+    }}
+    .salary-value {{ font-size: 10pt; font-weight: 700; color: {accent}; }}
+    .salary-label {{ font-size: 6pt; color: #6b7280; margin-top: 1px; }}
+    .skills-list {{ display: flex; flex-wrap: wrap; gap: 2px; }}
+    .skill-chip {{
+        background: #ede9fe;
+        border: 0.5pt solid #ddd6fe;
+        border-radius: 2px;
+        padding: 1px 4px;
+        font-size: 6.5pt;
+        color: #4c1d95;
+    }}
+    .lang-item, .cert-item {{
+        font-size: 7pt;
+        color: #374151;
+        margin-bottom: 2px;
+        padding-left: 8px;
+        position: relative;
+    }}
+    .lang-item::before, .cert-item::before {{
+        content: '·';
+        position: absolute;
+        left: 0;
+        color: {accent};
+        font-weight: 700;
+    }}
+    .hero-section {{
+        border-bottom: 1.5pt solid {accent};
+        padding-bottom: 8px;
+        margin-bottom: 12px;
+    }}
+    .main-name {{
+        font-size: 15pt;
+        font-weight: 700;
+        color: #111827;
+        line-height: 1.15;
+    }}
+    .main-position {{
+        font-size: 9pt;
+        color: {accent};
+        font-weight: 600;
+        margin-top: 2px;
+    }}
+    .main-content .section-title {{
+        font-size: 7pt;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.8px;
+        color: #111827;
+        margin-bottom: 6px;
+        padding-bottom: 2px;
+        border-bottom: 1pt solid {accent};
+    }}
+    .section-block {{ margin-bottom: 11pt; }}
+    .summary-text {{
+        font-size: 8pt;
+        color: #374151;
+        line-height: 1.45;
+    }}
+    .experience-entry {{
+        margin-bottom: 8px;
+        padding-bottom: 6px;
+        border-bottom: 0.5pt solid #f0f0f0;
+    }}
+    .experience-entry:last-child {{ border-bottom: none; }}
+    .exp-header {{
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        gap: 4px;
+    }}
+    .exp-company {{ font-size: 8.5pt; font-weight: 700; color: #111827; flex: 1; }}
+    .exp-period {{ font-size: 6.5pt; color: #6b7280; white-space: nowrap; }}
+    .exp-position {{ font-size: 7.5pt; color: {accent}; font-weight: 600; margin-bottom: 3px; }}
+    .exp-bullets {{ list-style: none; padding: 0; }}
+    .exp-bullets li {{
+        font-size: 7.5pt;
+        color: #374151;
+        padding-left: 9px;
+        position: relative;
+        margin-bottom: 1px;
+        line-height: 1.35;
+    }}
+    .exp-bullets li::before {{
+        content: '·';
+        position: absolute;
+        left: 0;
+        color: {accent};
+        font-weight: 700;
+    }}
+    .edu-entry {{ margin-bottom: 5px; }}
+    .edu-institution {{ font-size: 8pt; font-weight: 700; color: #111827; }}
+    .edu-details {{ font-size: 7pt; color: #6b7280; }}
+    .page-footer {{
+        position: fixed;
+        bottom: 0; left: 0; right: 0;
+        height: 14px;
+        background: #f8f8f8;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-top: 0.5pt solid #e5e7eb;
+    }}
+    .footer-text {{ font-size: 5.5pt; color: #9ca3af; letter-spacing: 0.5px; }}
+    """
+
+
 def get_preview_watermark_styles() -> str:
     return """
     .preview-watermark-layer {
@@ -384,11 +654,19 @@ def _normalize_salary(resume_data: dict) -> dict:
 
 def _render_document(resume_data: dict, template_name: str = "classic", *, preview: bool = False):
     data = _normalize_salary(resume_data)
+    valid_templates = {"classic", "modern", "compact"}
+    if template_name not in valid_templates:
+        template_name = "classic"
     env = Environment(loader=FileSystemLoader(str(TEMPLATES_DIR)))
     env.filters["split_bullets"] = _split_bullets
     template = env.get_template(f"resume_{template_name}.html")
     html_content = template.render(resume=data, preview=preview)
-    styles = get_pdf_styles()
+    if template_name == "modern":
+        styles = get_modern_pdf_styles()
+    elif template_name == "compact":
+        styles = get_compact_pdf_styles()
+    else:
+        styles = get_pdf_styles()
     if preview:
         styles += get_preview_watermark_styles()
 

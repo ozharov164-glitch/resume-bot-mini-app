@@ -1,20 +1,29 @@
-import { useEffect, useRef } from "react";
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 
-import { authWithTelegram } from "./api";
+import { BootstrapScreen } from "./components/BootstrapScreen";
 import { useFounderStatus } from "./hooks/useFounderStatus";
 import { isFounderTelegramId } from "./lib/founder";
+import { runAppBootstrap } from "./lib/bootstrap";
 import { clearDeepLinkHash, parseDeepLink } from "./lib/deepLink";
 import { completePaymentReturn, discoverPaymentReturnResumeId } from "./lib/paymentReturn";
-import { HistoryPage } from "./pages/History";
-import { HomePage } from "./pages/Home";
-import { LoadingPage } from "./pages/Loading";
-import { OnboardingPage } from "./pages/Onboarding";
-import { PaymentPage } from "./pages/Payment";
-import { PreviewPage } from "./pages/Preview";
-import { SkillPickPage } from "./pages/SkillPick";
-import { SuccessPage } from "./pages/Success";
 import { useAppStore } from "./store";
-import { getTelegramUserId, initTelegramTheme, waitForInitData } from "./telegram";
+import { getTelegramUserId, getTg, initTelegramTheme } from "./telegram";
+
+const HomePage = lazy(() => import("./pages/Home").then((m) => ({ default: m.HomePage })));
+const HistoryPage = lazy(() => import("./pages/History").then((m) => ({ default: m.HistoryPage })));
+const OnboardingPage = lazy(() => import("./pages/Onboarding").then((m) => ({ default: m.OnboardingPage })));
+const LoadingPage = lazy(() => import("./pages/Loading").then((m) => ({ default: m.LoadingPage })));
+const PreviewPage = lazy(() => import("./pages/Preview").then((m) => ({ default: m.PreviewPage })));
+const PaymentPage = lazy(() => import("./pages/Payment").then((m) => ({ default: m.PaymentPage })));
+const SuccessPage = lazy(() => import("./pages/Success").then((m) => ({ default: m.SuccessPage })));
+const SkillPickPage = lazy(() => import("./pages/SkillPick").then((m) => ({ default: m.SkillPickPage })));
+const TemplateSelectPage = lazy(() =>
+  import("./pages/TemplateSelect").then((m) => ({ default: m.TemplateSelectPage })),
+);
+
+function PageFallback() {
+  return <BootstrapScreen message="Загружаем экран…" />;
+}
 
 export default function App() {
   const {
@@ -31,54 +40,59 @@ export default function App() {
     setPaid,
   } = useAppStore();
   const paymentReturnHandled = useRef(false);
+  const [bootstrapError, setBootstrapError] = useState<string | null>(null);
+  const [bootstrapAttempt, setBootstrapAttempt] = useState(0);
   useFounderStatus();
+
+  const runBootstrap = useCallback(async () => {
+    setBootstrapError(null);
+    setLoading(true);
+    try {
+      const tgId = getTelegramUserId();
+      if (isFounderTelegramId(tgId)) {
+        setFounder(true);
+      }
+
+      const result = await runAppBootstrap();
+      if (!result.ok) {
+        setBootstrapError(result.message);
+        return;
+      }
+
+      setAuthToken(result.accessToken);
+      if (result.isFounder) {
+        setFounder(true);
+      }
+
+      const returnResumeId = discoverPaymentReturnResumeId();
+      if (returnResumeId && !paymentReturnHandled.current) {
+        paymentReturnHandled.current = true;
+        clearDeepLinkHash();
+        const { outcome, data } = await completePaymentReturn(result.accessToken, returnResumeId);
+        if (outcome === "success" && data) {
+          setResumeResult(returnResumeId, data, true);
+          setPaid(true);
+          setPage("success");
+          getTg()?.HapticFeedback?.notificationOccurred("success");
+          return;
+        }
+        if (outcome === "pending") {
+          if (data) setResumeResult(returnResumeId, data, false);
+          setPage("payment");
+        }
+      }
+    } catch (error) {
+      console.error(error);
+      setBootstrapError("Не удалось запустить приложение. Проверьте интернет и нажмите «Повторить».");
+    } finally {
+      setLoading(false);
+    }
+  }, [setAuthToken, setFounder, setLoading, setPage, setPaid, setResumeResult]);
 
   useEffect(() => {
     initTelegramTheme();
-    const bootstrap = async () => {
-      try {
-        setLoading(true);
-        const tgId = getTelegramUserId();
-        if (isFounderTelegramId(tgId)) {
-          setFounder(true);
-        }
-        const initData = await waitForInitData();
-        if (!initData) return;
-        const auth = await authWithTelegram(initData);
-        setAuthToken(auth.access_token);
-
-        if (auth.is_founder || auth.unlimited) {
-          setFounder(true);
-        }
-
-        const returnResumeId = discoverPaymentReturnResumeId();
-        if (returnResumeId && !paymentReturnHandled.current) {
-          paymentReturnHandled.current = true;
-          clearDeepLinkHash();
-          const { outcome, data } = await completePaymentReturn(
-            auth.access_token,
-            returnResumeId,
-          );
-          if (outcome === "success" && data) {
-            setResumeResult(returnResumeId, data, true);
-            setPaid(true);
-            setPage("success");
-            getTg()?.HapticFeedback?.notificationOccurred("success");
-            return;
-          }
-          if (outcome === "pending") {
-            if (data) setResumeResult(returnResumeId, data, false);
-            setPage("payment");
-          }
-        }
-      } catch (error) {
-        console.error(error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    void bootstrap();
-  }, [setAuthToken, setFounder, setLoading, setPage, setPaid, setResumeResult]);
+    void runBootstrap();
+  }, [runBootstrap, bootstrapAttempt]);
 
   useEffect(() => {
     if (isLoading || !authToken) return;
@@ -95,37 +109,46 @@ export default function App() {
 
   if (isLoading) {
     return (
-      <div
-        className="flex h-full flex-col items-center justify-center gap-4 px-6"
-        style={{ background: "var(--tg-bg)", color: "var(--tg-text)" }}
-      >
-        <div
-          className="w-10 h-10 rounded-full border-2 border-t-transparent animate-spin"
-          style={{ borderColor: "var(--brand-bright)", borderTopColor: "transparent" }}
-          aria-hidden
-        />
-        <p className="text-base font-semibold" style={{ color: "var(--text-muted)" }}>
-          {discoverPaymentReturnResumeId()
-            ? "Проверяем оплату…"
-            : "Загружаем приложение…"}
-        </p>
-      </div>
-    );
-  }
-
-  if (page === "home") {
-    return (
-      <HomePage
-        onStart={startNewResume}
-        onHistory={() => setPage("history")}
+      <BootstrapScreen
+        message={
+          discoverPaymentReturnResumeId() ? "Проверяем оплату…" : "Загружаем приложение…"
+        }
       />
     );
   }
-  if (page === "history") return <HistoryPage />;
-  if (page === "skill_pick") return <SkillPickPage />;
-  if (page === "loading") return <LoadingPage />;
-  if (page === "preview") return <PreviewPage />;
-  if (page === "payment") return <PaymentPage />;
-  if (page === "success") return <SuccessPage />;
-  return <OnboardingPage />;
+
+  if (bootstrapError || !authToken) {
+    return (
+      <BootstrapScreen
+        message="Загружаем приложение…"
+        error={bootstrapError || "Не удалось войти. Откройте приложение через @resumeez_bot."}
+        onRetry={() => setBootstrapAttempt((n) => n + 1)}
+      />
+    );
+  }
+
+  return (
+    <Suspense fallback={<PageFallback />}>
+      {page === "home" ? (
+        <HomePage onStart={startNewResume} onHistory={() => setPage("history")} />
+      ) : null}
+      {page === "history" ? <HistoryPage /> : null}
+      {page === "skill_pick" ? <SkillPickPage /> : null}
+      {page === "loading" ? <LoadingPage /> : null}
+      {page === "preview" ? <PreviewPage /> : null}
+      {page === "template_select" ? <TemplateSelectPage /> : null}
+      {page === "payment" ? <PaymentPage /> : null}
+      {page === "success" ? <SuccessPage /> : null}
+      {page !== "home" &&
+      page !== "history" &&
+      page !== "skill_pick" &&
+      page !== "loading" &&
+      page !== "preview" &&
+      page !== "template_select" &&
+      page !== "payment" &&
+      page !== "success" ? (
+        <OnboardingPage />
+      ) : null}
+    </Suspense>
+  );
 }

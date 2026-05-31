@@ -7,7 +7,7 @@ from fastapi.responses import Response
 
 from database import get_db
 from dependencies import get_current_user
-from models.schemas import GenerateResumeRequest, ResumeGenerationResponse
+from models.schemas import GenerateResumeRequest, ResumeGenerationResponse, SetTemplateRequest
 from services.ai_service import generate_resume
 from services.founder import is_founder
 from services.payment_fulfillment import parse_resume_data
@@ -53,13 +53,16 @@ async def create_resume(
             ]
         resume_id = str(uuid.uuid4())
         founder = is_founder(current_user.get("telegram_id"))
+        bonus = db.get_referral_bonus(current_user["telegram_id"])
+        is_paid_by_bonus = bonus > 0 and db.use_referral_bonus(current_user["telegram_id"])
+        is_paid = founder or is_paid_by_bonus
         db.create_resume(
             {
                 "id": resume_id,
                 "user_id": current_user["id"],
                 "data": resume_data,
                 "user_answers": user_data.model_dump(),
-                "is_paid": founder,
+                "is_paid": is_paid,
                 "created_at": datetime.utcnow().isoformat(),
             }
         )
@@ -69,7 +72,24 @@ async def create_resume(
                 current_user.get("telegram_id"),
                 resume_id,
             )
-        return ResumeGenerationResponse(resume_id=resume_id, resume=resume_data, paid=founder)
+        if is_paid_by_bonus:
+            tmpl = "classic"
+            pdf_bytes = generate_pdf(resume_data, tmpl)
+            safe_name = resume_data.get("full_name", "resume").replace(" ", "_")[:80]
+            filename = f"resume_{safe_name}.pdf"
+            name = (resume_data.get("full_name") or "").strip()
+            caption = f"Готово! Ваше резюме в PDF уже в чате. Удачи в поиске работы{f', {name}' if name else ''}!"
+            await send_document_to_user(
+                user_telegram_id=current_user["telegram_id"],
+                document=pdf_bytes,
+                filename=filename,
+                caption=caption.strip(),
+            )
+            db.update_resume(
+                resume_id,
+                {"is_paid": True, "paid_at": datetime.utcnow().isoformat()},
+            )
+        return ResumeGenerationResponse(resume_id=resume_id, resume=resume_data, paid=is_paid)
     except Exception as exc:
         logger.exception("resume generate failed user_id=%s", current_user.get("id"))
         raise HTTPException(status_code=500, detail="Не удалось сгенерировать резюме. Попробуйте еще раз.") from exc
@@ -107,9 +127,11 @@ async def preview_resume_image(
     founder = is_founder(current_user.get("telegram_id"))
     paid = bool(resume.get("is_paid") or founder)
     resume_data = parse_resume_data(resume["data"])
+    tmpl = resume.get("template_id") or "classic"
     try:
         png_bytes = generate_preview_png(
             resume_data,
+            tmpl,
             watermark=not paid,
             resolution=130 if paid else 72,
         )
@@ -149,8 +171,9 @@ async def preview_resume_pdf(
         )
 
     resume_data = parse_resume_data(resume["data"])
+    tmpl = resume.get("template_id") or "classic"
     try:
-        pdf_bytes = generate_pdf(resume_data)
+        pdf_bytes = generate_pdf(resume_data, tmpl)
     except Exception as exc:
         logger.exception("pdf preview failed resume_id=%s", resume_id)
         raise HTTPException(
@@ -184,8 +207,9 @@ async def download_pdf(resume_id: str, current_user: dict = Depends(get_current_
         )
 
     resume_data = parse_resume_data(resume["data"])
+    tmpl = resume.get("template_id") or "classic"
     try:
-        pdf_bytes = generate_pdf(resume_data)
+        pdf_bytes = generate_pdf(resume_data, tmpl)
     except Exception as exc:
         logger.exception("pdf generation failed resume_id=%s", resume_id)
         raise HTTPException(
@@ -209,3 +233,23 @@ async def download_pdf(resume_id: str, current_user: dict = Depends(get_current_
             detail="PDF готов, но не удалось отправить в Telegram. Напиши боту /start и попробуй снова.",
         ) from exc
     return {"status": "sent", "filename": filename}
+
+
+VALID_TEMPLATES = frozenset({"classic", "modern", "compact"})
+
+
+@router.patch("/{resume_id}/template")
+async def set_resume_template(
+    resume_id: str,
+    body: SetTemplateRequest,
+    current_user: dict = Depends(get_current_user),
+    db=Depends(get_db),
+):
+    resume = db.find_resume(resume_id, current_user["id"])
+    if not resume:
+        raise HTTPException(status_code=404, detail="Резюме не найдено.")
+    template_id = body.template_id.strip().lower()
+    if template_id not in VALID_TEMPLATES:
+        raise HTTPException(status_code=400, detail="Недопустимый шаблон.")
+    db.update_resume(resume_id, {"template_id": template_id})
+    return {"ok": True, "template_id": template_id}

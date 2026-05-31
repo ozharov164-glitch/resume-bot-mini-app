@@ -14,6 +14,13 @@ import { skillsOptionsForPosition, SKILLS_FALLBACK_BY_POSITION } from "../lib/on
 import { useAppStore } from "../store";
 import { getTg } from "../telegram";
 
+const SKILL_GROUPS: Array<{ key: string; title: string }> = [
+  { key: "hard", title: "💪 Профессиональные" },
+  { key: "tools", title: "🔧 Инструменты" },
+  { key: "soft", title: "🤝 Личные качества" },
+  { key: "documents", title: "📋 Документы" },
+];
+
 const PHRASES = [
   "Анализируем профессию...",
   "Изучаем требования рынка...",
@@ -32,6 +39,7 @@ export function SkillPickPage() {
   const [phraseIndex, setPhraseIndex] = useState(0);
   const [progress, setProgress] = useState(8);
   const [skillOptions, setSkillOptions] = useState<string[]>([]);
+  const [skillGroups, setSkillGroups] = useState<Record<string, string[]>>({});
   const [selectedSkills, setSelectedSkills] = useState<string[]>(() =>
     Array.isArray(answers.skills) ? [...answers.skills] : [],
   );
@@ -66,6 +74,7 @@ export function SkillPickPage() {
     const load = async () => {
       if (!position) {
         setSkillOptions(fallback);
+        setSkillGroups({});
         setPhase("ready");
         setProgress(100);
         return;
@@ -77,11 +86,13 @@ export function SkillPickPage() {
         if (cancelled) return;
         const skills = result.skills?.length ? result.skills : fallback;
         setSkillOptions(skills);
+        setSkillGroups(result.groups ?? {});
         setPhase("ready");
         setProgress(100);
       } catch {
         if (cancelled) return;
         setSkillOptions(fallback);
+        setSkillGroups({});
         setPhase("error");
         setProgress(100);
       }
@@ -124,6 +135,28 @@ export function SkillPickPage() {
     setAnswer("skills", selectedSkills);
     setPage("onboarding");
   };
+
+  const groupedEntries = SKILL_GROUPS.map(({ key, title }) => ({
+    key,
+    title,
+    skills: (skillGroups[key] ?? []).filter(Boolean),
+  })).filter((g) => g.skills.length > 0);
+  const useGrouped = groupedEntries.length > 0;
+
+  const renderSkillChip = (skill: string, index: number) => (
+    <motion.div
+      key={skill}
+      initial={{ opacity: 0, scale: 0.92, y: 8 }}
+      animate={{ opacity: 1, scale: 1, y: 0 }}
+      transition={{ delay: index * 0.03, duration: 0.22 }}
+    >
+      <OptionButton
+        label={skill}
+        selected={selectedSkills.includes(skill)}
+        onSelect={() => toggleSkill(skill)}
+      />
+    </motion.div>
+  );
 
   const showSkills = phase === "ready" || phase === "error";
 
@@ -189,22 +222,22 @@ export function SkillPickPage() {
               )}
             </div>
 
-            <div className="flex flex-wrap gap-2.5" role="group" aria-label="Навыки">
-              {skillOptions.map((skill, index) => (
-                <motion.div
-                  key={skill}
-                  initial={{ opacity: 0, scale: 0.92, y: 8 }}
-                  animate={{ opacity: 1, scale: 1, y: 0 }}
-                  transition={{ delay: index * 0.03, duration: 0.22 }}
-                >
-                  <OptionButton
-                    label={skill}
-                    selected={selectedSkills.includes(skill)}
-                    onSelect={() => toggleSkill(skill)}
-                  />
-                </motion.div>
-              ))}
-            </div>
+            {useGrouped ? (
+              groupedEntries.map((group) => (
+                <div key={group.key} className="flex flex-col gap-2.5">
+                  <h3 className="text-sm font-semibold" style={{ color: "var(--text-secondary)" }}>
+                    {group.title}
+                  </h3>
+                  <div className="flex flex-wrap gap-2.5" role="group" aria-label={group.title}>
+                    {group.skills.map((skill, index) => renderSkillChip(skill, index))}
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="flex flex-wrap gap-2.5" role="group" aria-label="Навыки">
+                {skillOptions.map((skill, index) => renderSkillChip(skill, index))}
+              </div>
+            )}
 
             <div className="relative w-full">
               <TextInput

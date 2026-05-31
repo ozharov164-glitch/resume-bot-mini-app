@@ -2,9 +2,19 @@ import { create } from "zustand";
 
 import type { ResumeData, UserAnswers, WorkEntry } from "./types";
 
-type Page = "home" | "onboarding" | "skill_pick" | "loading" | "preview" | "payment" | "success" | "history";
+type Page =
+  | "home"
+  | "onboarding"
+  | "skill_pick"
+  | "loading"
+  | "preview"
+  | "template_select"
+  | "payment"
+  | "success"
+  | "history";
 type OnboardingMode = "create" | "edit";
 type HomeTab = "main" | "examples";
+export type TemplateId = "classic" | "modern" | "compact";
 
 interface AppState {
   page: Page;
@@ -29,6 +39,8 @@ interface AppState {
   setOnboardingStep: (step: number) => void;
   homeTab: HomeTab;
   setHomeTab: (tab: HomeTab) => void;
+  selectedTemplate: TemplateId;
+  setSelectedTemplate: (template: TemplateId) => void;
   startNewResume: () => void;
   startEditResume: () => void;
   cancelEditResume: () => void;
@@ -64,6 +76,8 @@ export const useAppStore = create<AppState>((set, get) => ({
   setOnboardingStep: (onboardingStep) => set({ onboardingStep }),
   homeTab: "main",
   setHomeTab: (homeTab) => set({ homeTab }),
+  selectedTemplate: "classic" as TemplateId,
+  setSelectedTemplate: (selectedTemplate) => set({ selectedTemplate }),
   startNewResume: () =>
     set({
       page: "onboarding",
@@ -74,6 +88,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       resumeId: null,
       resumeData: null,
       isPaid: false,
+      selectedTemplate: "classic",
     }),
   startEditResume: () => set({ page: "onboarding", onboardingMode: "edit" }),
   cancelEditResume: () => {

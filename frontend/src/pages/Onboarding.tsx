@@ -460,7 +460,7 @@ export function OnboardingPage() {
                     setValue(v);
                   }}
                   placeholder={current.placeholder}
-                  rows={5}
+                  rows={"rows" in current && current.rows ? current.rows : 5}
                 />
                 {fieldError && (
                   <p className="text-sm" style={{ color: "#dc2626" }}>

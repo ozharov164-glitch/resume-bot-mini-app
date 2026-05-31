@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Резюме — {{ resume.full_name }}</title>
+</head>
+<body>
+
+  <header class="modern-header">
+    <div class="modern-name">{{ resume.full_name }}</div>
+    <div class="modern-meta">
+      {% if resume.target_position %}{{ resume.target_position | capitalize }}{% endif %}{% if resume.city %} · {{ resume.city }}{% endif %}{% if resume.phone %} · {{ resume.phone }}{% endif %}{% if resume.email %} · {{ resume.email }}{% endif %}
+    </div>
+    {% if resume.salary %}
+    <div class="modern-meta" style="margin-top: 4pt;">
+      Зарплата: <strong>{{ resume.salary }}</strong>
+    </div>
+    {% endif %}
+  </header>
+
+  {% if resume.summary %}
+  <div class="section-block">
+    <div class="section-title">О себе</div>
+    <div class="summary-text">{{ resume.summary }}</div>
+  </div>
+  {% endif %}
+
+  {% if resume.skills %}
+  <div class="section-block">
+    <div class="section-title">Навыки</div>
+    <div class="skills-inline">{{ resume.skills | join(', ') }}</div>
+  </div>
+  {% endif %}
+
+  {% if resume.experience %}
+  <div class="section-block">
+    <div class="section-title">Опыт работы</div>
+    {% for job in resume.experience %}
+    <div class="experience-entry">
+      <div class="exp-header">
+        <span class="exp-company">{{ job.company }}</span>
+        <span class="exp-period">{{ job.period }}</span>
+      </div>
+      <div class="exp-position">{{ job.position }}</div>
+      {% if job.description %}
+      <ul class="exp-bullets">
+        {% for bullet in job.description | split_bullets %}
+        {% if bullet %}<li>{{ bullet }}</li>{% endif %}
+        {% endfor %}
+      </ul>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% if resume.education %}
+  <div class="section-block">
+    <div class="section-title">Образование</div>
+    {% for edu in resume.education %}
+    {% if edu.institution or edu.degree %}
+    <div class="edu-entry">
+      {% if edu.institution %}<div class="edu-institution">{{ edu.institution }}</div>{% endif %}
+      <div class="edu-details">
+        {{ edu.degree }}{% if edu.year and edu.year != '0' %} · {{ edu.year }}{% endif %}
+      </div>
+    </div>
+    {% endif %}
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% set non_native_langs = resume.languages | reject('equalto', 'Русский — родной') | list %}
+  {% if non_native_langs | length > 0 %}
+  <div class="section-block">
+    <div class="section-title">Языки</div>
+    {% for lang in resume.languages %}
+    <div class="lang-item">{{ lang }}</div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% if resume.certificates %}
+  <div class="section-block">
+    <div class="section-title">Документы</div>
+    {% for cert in resume.certificates %}
+    <div class="cert-item">{{ cert }}</div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <div class="page-footer">ResumeBot · Создано для hh.ru</div>
+
+{% if preview %}
+<div class="preview-watermark-layer" aria-hidden="true"></div>
+<div class="preview-watermark-stripes" aria-hidden="true"></div>
+<div class="preview-center-watermark" aria-hidden="true">ПРЕДПРОСМОТР</div>
+<div class="preview-fade-layer" aria-hidden="true"></div>
+{% endif %}
+</body>
+</html>

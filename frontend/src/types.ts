@@ -22,6 +22,7 @@ export interface UserAnswers {
   email: string;
   languages: string;
   certificates: string;
+  achievements?: string;
 }
 
 export interface ResumeData {

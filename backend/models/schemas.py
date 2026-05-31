@@ -3,6 +3,10 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 
+class SetTemplateRequest(BaseModel):
+    template_id: str
+
+
 class WorkEntry(BaseModel):
     company: str = ""
     position: str = ""
@@ -27,6 +31,7 @@ class GenerateResumeRequest(BaseModel):
     languages: str = ""
     certificates: str = ""
     gender: str = ""
+    achievements: str = ""
 
 
 class SuggestSkillsRequest(BaseModel):
