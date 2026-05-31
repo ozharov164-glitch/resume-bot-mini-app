@@ -23,6 +23,7 @@ class PaymentNotifyInfo:
     telegram_id: int
     username: str = ""
     first_name: str = ""
+    external_id: str = ""
 
 
 def parse_admin_group_chat_id(raw: str | None) -> int | None:
@@ -96,14 +97,24 @@ async def notify_payment(
         "yookassa": "ЮKassa",
     }
     provider_label = provider_labels.get(info.provider.lower(), info.provider)
-    amount_display = f"{info.amount} {info.currency}".strip()
+    currency = (info.currency or "").strip().upper()
+    if currency == "RUB":
+        amount_display = f"{info.amount} ₽"
+    elif currency == "XTR":
+        amount_display = f"{info.amount} ⭐"
+    else:
+        amount_display = f"{info.amount} {info.currency}".strip()
 
-    text = (
-        "💰 <b>Оплата получена</b>\n\n"
-        f"Способ: {html.escape(provider_label)}\n"
-        f"Сумма: <b>{html.escape(amount_display)}</b>\n"
-        f"Пользователь: {_user_line(info.telegram_id, info.first_name, info.username)}\n"
-        f"Резюме: <code>{html.escape(info.resume_id)}</code>\n\n"
-        f"📈 Всего оплаченных резюме: <b>{paid_total}</b>"
-    )
+    lines = [
+        "💰 <b>Оплата получена</b>",
+        "",
+        f"Способ: {html.escape(provider_label)}",
+        f"Сумма: <b>{html.escape(amount_display)}</b>",
+        f"Пользователь: {_user_line(info.telegram_id, info.first_name, info.username)}",
+        f"Резюме: <code>{html.escape(info.resume_id)}</code>",
+    ]
+    if info.external_id:
+        lines.append(f"Платёж: <code>{html.escape(info.external_id)}</code>")
+    lines.extend(["", f"📈 Всего оплаченных резюме: <b>{paid_total}</b>"])
+    text = "\n".join(lines)
     await send_admin_message(text)

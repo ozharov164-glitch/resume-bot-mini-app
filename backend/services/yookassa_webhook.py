@@ -89,6 +89,7 @@ async def handle_yookassa_webhook(db: Any, payload: dict) -> dict:
         telegram_id=telegram_id,
         username=user.get("username") or "",
         first_name=user.get("first_name") or "",
+        external_id=payment_id,
     )
     from services.payment_fulfillment import fulfill_paid_resume
 

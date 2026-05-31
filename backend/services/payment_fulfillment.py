@@ -39,6 +39,8 @@ async def fulfill_paid_resume(
             resume_id,
             {"is_paid": True, "paid_at": datetime.utcnow().isoformat()},
         )
+        if payment:
+            await notify_payment(db, payment, first_payment=True)
 
     try:
         resume_data = parse_resume_data(resume["data"])
@@ -62,8 +64,5 @@ async def fulfill_paid_resume(
         caption=caption.strip(),
     )
     logger.info("fulfill: PDF sent for resume %s to telegram_id=%s", resume_id, telegram_id)
-
-    if payment and first_payment:
-        await notify_payment(db, payment, first_payment=True)
 
     return True
