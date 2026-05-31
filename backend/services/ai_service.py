@@ -14,6 +14,14 @@ SYSTEM_PROMPT = """Ты — старший HR-редактор резюме дл
 ЗАДАЧА: превратить факты кандидата в сильное, живое, РАЗВЁРНУТОЕ резюме без канцелярита.
 Резюме должно выглядеть профессионально и занимать ПОЛНУЮ страницу A4.
 
+⚠️ ГЛАВНОЕ ПРАВИЛО — РОД (проверь ПЕРЕД ответом):
+• «Пол кандидата: Женский» → ВСЕ глаголы и прилагательные ТОЛЬКО в женском роде:
+  работала, организовывала, обеспечивала, выполняла, контролировала, внедряла, вела,
+  участвовала; ответственная, пунктуальная, внимательная, опытная, коммуникабельная.
+  Summary начинай с женского прилагательного: «Ответственная …», «Опытная …».
+• «Пол кандидата: Мужской» (или поле отсутствует) → мужской род.
+• НИ ОДНОГО глагола/прилагательного в неправильном роде. Это критично.
+
 ═══ ПРАВИЛА ═══
 
 ОПЫТ РАБОТЫ:
@@ -197,7 +205,12 @@ def _build_user_payload(user_data: dict) -> str:
     if education_place:
         education_line += f"\nУчебное заведение: {education_place}"
 
-    blocks = [
+    blocks = []
+    if user_data.get("gender"):
+        blocks.append(
+            f"❗Пол кандидата: {user_data['gender']} — пиши ВСЁ резюме строго в этом роде."
+        )
+    blocks += [
         f"Целевая должность: {_truncate(user_data.get('target_position', ''), MAX_FIELD_LEN['target_position'])}",
         f"Уровень опыта: {user_data.get('experience_level', 'нет опыта')}",
         last_job_block,
@@ -222,8 +235,6 @@ def _build_user_payload(user_data: dict) -> str:
     email = (user_data.get("email") or "").strip()
     if email:
         blocks.append(f"Email: {email}")
-    if user_data.get("gender"):
-        blocks.append(f"Пол кандидата: {user_data['gender']}")
     achievements = (user_data.get("achievements") or "").strip()
     if achievements:
         blocks.append(
@@ -233,13 +244,20 @@ def _build_user_payload(user_data: dict) -> str:
 
 
 def _provider_routing() -> dict[str, Any]:
+    """OpenRouter provider routing.
+
+    Если OPENROUTER_PROVIDER_ONLY пуст — не передаём `only` вовсе, чтобы OpenRouter
+    выбрал любого работающего провайдера. Жёсткий whitelist приводил к тому, что
+    провайдер запускал модель в reasoning-режиме и отдавал пустой content.
+    """
     only = [p.strip() for p in settings.OPENROUTER_PROVIDER_ONLY.split(",") if p.strip()]
-    return {
-        "only": only,
+    routing: dict[str, Any] = {
         "allow_fallbacks": True,
-        "sort": {"by": "latency", "partition": "model"},
-        "preferred_max_latency": {"p50": 2.5, "p90": 6},
+        "sort": {"by": "latency"},
     }
+    if only:
+        routing["only"] = only
+    return routing
 
 
 def _clean_json_content(content: str) -> str:
@@ -557,7 +575,7 @@ async def suggest_skills(position: str) -> dict[str, Any]:
         {"role": "user", "content": f"Должность: {position}"},
     ]
     try:
-        raw = await _call_openrouter(messages, temperature=0.35, max_tokens=500)
+        raw = await _call_openrouter(messages, temperature=0.35, max_tokens=900)
         result = _normalize_skills_response(raw)
         fake_user = {"target_position": position, "skills": [], "certificates": "", "education_place": ""}
         result["skills"] = [s for s in result["skills"] if _skill_is_allowed(s, fake_user)]

@@ -31,6 +31,20 @@ else
   echo 'SQLITE_PATH=/opt/resumebot/data/resumebot.db' >> backend/.env
 fi
 cd backend && ./venv/bin/pip install -q -r requirements.txt
+# Enforce reliable non-reasoning model + free provider routing.
+# v4-flash через Parasail уходил в reasoning-режим и возвращал пустой ответ
+# (ломались навыки по профессии и род в резюме).
+set_env() {
+  local key="$1" val="$2"
+  if grep -q "^${key}=" .env 2>/dev/null; then
+    sed -i "s|^${key}=.*|${key}=${val}|" .env
+  else
+    echo "${key}=${val}" >> .env
+  fi
+}
+set_env OPENROUTER_MODEL deepseek/deepseek-chat-v3.1
+set_env OPENROUTER_MODEL_FALLBACK deepseek/deepseek-v3.2
+set_env OPENROUTER_PROVIDER_ONLY ''
 if grep -q '^FOUNDER_TELEGRAM_IDS=' .env 2>/dev/null; then
   sed -i 's/^FOUNDER_TELEGRAM_IDS=.*/FOUNDER_TELEGRAM_IDS=7595981350/' .env
 else

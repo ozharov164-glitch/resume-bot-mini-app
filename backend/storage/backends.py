@@ -327,6 +327,32 @@ class SQLiteBackend:
             conn.commit()
         return True
 
+    def count_referred_users(self) -> int:
+        with self._connect() as conn:
+            row = conn.execute(
+                "SELECT COUNT(*) AS c FROM users WHERE referred_by IS NOT NULL"
+            ).fetchone()
+        return int(row["c"]) if row else 0
+
+    def top_referrers(self, limit: int = 10) -> list[dict[str, Any]]:
+        with self._connect() as conn:
+            rows = conn.execute(
+                """
+                SELECT u.referred_by AS referrer_id,
+                       COUNT(*) AS invited,
+                       COALESCE(ref.first_name, '') AS first_name,
+                       COALESCE(ref.username, '') AS username
+                FROM users u
+                LEFT JOIN users ref ON ref.telegram_id = u.referred_by
+                WHERE u.referred_by IS NOT NULL
+                GROUP BY u.referred_by
+                ORDER BY invited DESC
+                LIMIT ?
+                """,
+                (limit,),
+            ).fetchall()
+        return [dict(r) for r in rows]
+
     def list_resumes_for_user(self, user_id: str, limit: int = 30) -> list[dict[str, Any]]:
         with self._connect() as conn:
             rows = conn.execute(
@@ -562,6 +588,50 @@ class SupabaseBackend:
             .execute()
         )
         return result.data or []
+
+    def count_referred_users(self) -> int:
+        try:
+            result = (
+                self.client.table("users")
+                .select("id", count="exact")
+                .not_.is_("referred_by", "null")
+                .execute()
+            )
+            if result.count is not None:
+                return int(result.count)
+            return len(result.data or [])
+        except Exception as e:
+            logger.warning("count_referred_users failed: %s", e)
+            return 0
+
+    def top_referrers(self, limit: int = 10) -> list[dict[str, Any]]:
+        from collections import Counter
+
+        try:
+            result = (
+                self.client.table("users")
+                .select("referred_by")
+                .not_.is_("referred_by", "null")
+                .execute()
+            )
+        except Exception as e:
+            logger.warning("top_referrers failed: %s", e)
+            return []
+        counts = Counter(
+            r["referred_by"] for r in (result.data or []) if r.get("referred_by")
+        )
+        out: list[dict[str, Any]] = []
+        for referrer_id, invited in counts.most_common(limit):
+            ref = self.find_user_by_telegram_id(referrer_id) or {}
+            out.append(
+                {
+                    "referrer_id": referrer_id,
+                    "invited": invited,
+                    "first_name": ref.get("first_name", ""),
+                    "username": ref.get("username", ""),
+                }
+            )
+        return out
 
     def increment_referral_bonus(self, telegram_id: int) -> None:
         user = self.find_user_by_telegram_id(telegram_id)

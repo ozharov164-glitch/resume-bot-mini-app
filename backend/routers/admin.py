@@ -44,9 +44,22 @@ async def admin_stats(db=Depends(get_db)):
         today_count = db.count_resumes_today()
     except Exception:
         count = paid_count = today_count = 0
+    try:
+        referred = db.count_referred_users()
+    except Exception:
+        referred = 0
     return {
         "count": count,
         "paid_count": paid_count,
         "today_count": today_count,
         "users": db.count_users(),
+        "referred": referred,
     }
+
+
+@router.get("/referrers", dependencies=[Depends(verify_admin_key)])
+async def admin_referrers(db=Depends(get_db), limit: int = 10):
+    try:
+        return {"referrers": db.top_referrers(min(limit, 50))}
+    except Exception:
+        return {"referrers": []}

@@ -9,10 +9,14 @@ class Settings(BaseSettings):
 
     OPENROUTER_API_KEY: str
     OPENROUTER_APP_URL: str = "https://yourdomain.ru"
-    OPENROUTER_MODEL: str = "deepseek/deepseek-v4-flash"
+    # Non-reasoning instruct model: следует инструкциям (род, навыки по профессии),
+    # не сжигает бюджет токенов на скрытые рассуждения. НЕ использовать reasoning-модели
+    # (v4-flash у провайдера Parasail отдаёт пустой content — съедает лимит на reasoning).
+    OPENROUTER_MODEL: str = "deepseek/deepseek-chat-v3.1"
     OPENROUTER_MODEL_FALLBACK: str = "deepseek/deepseek-v3.2"
-    # Fastest providers for v4-flash (OpenRouter latency p50, auto-updated via deploy script).
-    OPENROUTER_PROVIDER_ONLY: str = "parasail,alibaba,deepseek,morph"
+    # Пусто = OpenRouter сам выбирает рабочего провайдера. Жёсткий whitelist опасен:
+    # некоторые провайдеры запускают модель в reasoning-режиме и возвращают пустой ответ.
+    OPENROUTER_PROVIDER_ONLY: str = ""
     # Достаточно для полноценного резюме; меньше 2000 — без лишнего запаса.
     OPENROUTER_MAX_TOKENS: int = 2500
 

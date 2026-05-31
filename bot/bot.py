@@ -165,7 +165,8 @@ async def adm_stats_callback(update: Update, context: ContextTypes.DEFAULT_TYPE)
             f"Всего резюме (витрина): {data.get('count', 0)}\n"
             f"Оплачено: {data.get('paid_count', 0)}\n"
             f"Сегодня: {data.get('today_count', 0)}\n"
-            f"Пользователей: {data.get('users', 0)}"
+            f"Пользователей: {data.get('users', 0)}\n"
+            f"Пришли по реф-ссылкам: {data.get('referred', 0)}"
         )
         keyboard = InlineKeyboardMarkup(
             [[InlineKeyboardButton("◀️ Назад", callback_data="adm_back")]]
@@ -215,10 +216,38 @@ async def adm_refs_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = InlineKeyboardMarkup(
         [[InlineKeyboardButton("◀️ Назад", callback_data="adm_back")]]
     )
-    await query.edit_message_text(
-        "👥 Топ рефереров — скоро.\n\nБонусы начисляются автоматически при оплате друга.",
-        reply_markup=keyboard,
-    )
+    try:
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            resp = await client.get(
+                f"{API_URL}/api/admin/referrers", headers=_admin_headers()
+            )
+        if resp.status_code != 200:
+            await query.edit_message_text(
+                f"❌ Ошибка referrers: {resp.status_code}", reply_markup=keyboard
+            )
+            return
+        referrers = resp.json().get("referrers", [])
+        if not referrers:
+            text = (
+                "👥 <b>Топ рефереров</b>\n\n"
+                "Пока никто не пришёл по реф-ссылкам.\n\n"
+                "Реф-ссылка формируется в кнопке «🎁 Пригласить друга», "
+                "а трафик можно метить промокодами (/newpromo)."
+            )
+        else:
+            lines = ["👥 <b>Топ рефереров</b>\n"]
+            for i, r in enumerate(referrers, 1):
+                name = html.escape(str(r.get("first_name") or "")) or "—"
+                uname = r.get("username")
+                handle = f" @{html.escape(str(uname))}" if uname else ""
+                rid = r.get("referrer_id")
+                invited = r.get("invited", 0)
+                lines.append(f"{i}. {name}{handle} (<code>{rid}</code>) — {invited} 👤")
+            text = "\n".join(lines)
+        await query.edit_message_text(text, parse_mode="HTML", reply_markup=keyboard)
+    except Exception as exc:
+        logger.exception("adm_refs failed")
+        await query.edit_message_text(f"❌ {exc}", reply_markup=keyboard)
 
 
 @admin_only
@@ -245,26 +274,39 @@ async def adm_back_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 
-def _start_keyboard() -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(
-        [
-            [InlineKeyboardButton("📝 Создать резюме", web_app=WebAppInfo(url=MINI_APP_URL))],
-            [
-                InlineKeyboardButton(
-                    "📋 Мои резюме", web_app=WebAppInfo(url=f"{MINI_APP_URL}#history")
-                ),
-                InlineKeyboardButton(
-                    "🖼 Примеры", web_app=WebAppInfo(url=f"{MINI_APP_URL}#examples")
-                ),
-            ],
-            [InlineKeyboardButton("❓ Как это работает", callback_data="how_it_works")],
-            [
-                InlineKeyboardButton("🛡️ Почему мы", callback_data="trust"),
-                InlineKeyboardButton("💬 Поддержка", callback_data="support_hub"),
-            ],
-            [InlineKeyboardButton("🎁 Пригласить друга", callback_data="invite_prompt")],
-        ]
+@admin_only
+async def adm_open_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    await query.edit_message_text(
+        "🔧 Админ-панель ResumeBot",
+        reply_markup=_admin_menu_keyboard(),
     )
+
+
+def _start_keyboard(is_admin: bool = False) -> InlineKeyboardMarkup:
+    rows = [
+        [InlineKeyboardButton("📝 Создать резюме", web_app=WebAppInfo(url=MINI_APP_URL))],
+        [
+            InlineKeyboardButton(
+                "📋 Мои резюме", web_app=WebAppInfo(url=f"{MINI_APP_URL}#history")
+            ),
+            InlineKeyboardButton(
+                "🖼 Примеры", web_app=WebAppInfo(url=f"{MINI_APP_URL}#examples")
+            ),
+        ],
+        [InlineKeyboardButton("❓ Как это работает", callback_data="how_it_works")],
+        [
+            InlineKeyboardButton("🛡️ Почему мы", callback_data="trust"),
+            InlineKeyboardButton("💬 Поддержка", callback_data="support_hub"),
+        ],
+        [InlineKeyboardButton("🎁 Пригласить друга", callback_data="invite_prompt")],
+    ]
+    if is_admin:
+        rows.append(
+            [InlineKeyboardButton("🔧 Админ-панель", callback_data="adm_open")]
+        )
+    return InlineKeyboardMarkup(rows)
 
 
 def _display_name(user) -> str:
@@ -340,10 +382,10 @@ async def _reply_support_hub(update: Update, *, edit: bool = False) -> None:
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    referrer_id = None
-    tg_user = update.message.from_user
     if not update.message:
         return
+    referrer_id = None
+    tg_user = update.message.from_user
 
     if context.args and context.args[0].startswith("pay_"):
         resume_id = context.args[0][4:].strip()
@@ -376,7 +418,10 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     count = get_resume_count()
     text = start_text(count, _display_name(tg_user))
-    await update.message.reply_text(text, reply_markup=_start_keyboard(), parse_mode="HTML")
+    is_admin = bool(tg_user and tg_user.id in _founder_ids())
+    await update.message.reply_text(
+        text, reply_markup=_start_keyboard(is_admin), parse_mode="HTML"
+    )
 
     asyncio.create_task(_register_bot_contact(tg_user, referrer_id))
 
@@ -566,9 +611,10 @@ async def back_to_start_callback(update: Update, context: ContextTypes.DEFAULT_T
     query = update.callback_query
     await query.answer()
     count = get_resume_count()
+    is_admin = bool(query.from_user and query.from_user.id in _founder_ids())
     await query.edit_message_text(
         start_text(count),
-        reply_markup=_start_keyboard(),
+        reply_markup=_start_keyboard(is_admin),
         parse_mode="HTML",
     )
 
@@ -704,6 +750,7 @@ def main():
     app.add_handler(CommandHandler("admin", admin_command))
     app.add_handler(CommandHandler("newpromo", newpromo_command))
 
+    app.add_handler(CallbackQueryHandler(adm_open_callback, pattern="^adm_open$"))
     app.add_handler(CallbackQueryHandler(adm_stats_callback, pattern="^adm_stats$"))
     app.add_handler(CallbackQueryHandler(adm_promos_callback, pattern="^adm_promos$"))
     app.add_handler(CallbackQueryHandler(adm_refs_callback, pattern="^adm_refs$"))
