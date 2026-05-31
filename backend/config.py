@@ -1,5 +1,6 @@
 from typing import Optional
 
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -36,7 +37,8 @@ class Settings(BaseSettings):
     YOKASSA_RETURN_URL: Optional[str] = None
 
     STARS_PRICE_SINGLE_PDF: int = 99
-    STARS_PRICE_SUBSCRIPTION: int = 199
+    RUB_PRICE_SUBSCRIPTION: int = 199
+    STARS_PRICE_SUBSCRIPTION: int = 199  # must match RUB_PRICE_SUBSCRIPTION
 
     # Telegram user IDs with free unlimited generate + PDF (comma-separated).
     FOUNDER_TELEGRAM_IDS: str = "7595981350"
@@ -63,6 +65,12 @@ class Settings(BaseSettings):
     GROQ_PROXY_URL: str = ""
 
     DADATA_API_KEY: str = ""
+
+    @model_validator(mode="after")
+    def subscription_prices_match(self) -> "Settings":
+        if self.STARS_PRICE_SUBSCRIPTION != self.RUB_PRICE_SUBSCRIPTION:
+            self.STARS_PRICE_SUBSCRIPTION = self.RUB_PRICE_SUBSCRIPTION
+        return self
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 

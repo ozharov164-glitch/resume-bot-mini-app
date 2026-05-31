@@ -83,6 +83,7 @@ def main() -> None:
         YOKASSA_SECRET_KEY=
         YOKASSA_RETURN_URL={FRONTEND_URL}/
         STARS_PRICE_SINGLE_PDF=99
+        RUB_PRICE_SUBSCRIPTION=199
         STARS_PRICE_SUBSCRIPTION=199
         """
     ).strip()
