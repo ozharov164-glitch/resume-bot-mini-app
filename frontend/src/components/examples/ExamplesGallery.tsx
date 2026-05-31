@@ -7,6 +7,7 @@ import {
   RESUME_EXAMPLES,
   type ResumeExample,
 } from "../../data/resumeExamples";
+import { EXAMPLES_GALLERY_SUB } from "../../lib/marketingCopy";
 import type { TemplateId } from "../../store";
 import { Icon } from "../ui/Icon";
 import { getTg } from "../../telegram";
@@ -289,7 +290,7 @@ export function ExamplesGallery({
         <div className="examples-gallery-header">
           <h2 className="examples-gallery-title">Примеры готовых резюме</h2>
           <p className="examples-gallery-sub">
-            Один и тот же контент — три профессиональных шаблона PDF под hh.ru
+            {EXAMPLES_GALLERY_SUB}
           </p>
           <TemplatePicker
             value={galleryTemplate}

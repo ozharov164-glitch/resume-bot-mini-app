@@ -1,5 +1,6 @@
 import { motion } from "motion/react";
 
+import { PREVIEW_FOOTNOTE } from "../../lib/marketingCopy";
 import { Icon } from "../ui/Icon";
 import { PreviewWatermarkOverlay } from "./PreviewWatermarkOverlay";
 
@@ -76,7 +77,7 @@ export function PreviewImageFrame({ src, locked }: PreviewImageFrameProps) {
       {locked && (
         <p className="preview-image-footnote">
           <Icon name="shield" size={15} style={{ color: "var(--brand-bright)" }} />
-          <span>Так выглядит финальный дизайн — скачивание доступно после оплаты</span>
+          <span>{PREVIEW_FOOTNOTE}</span>
         </p>
       )}
     </motion.section>

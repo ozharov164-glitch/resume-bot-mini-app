@@ -1,6 +1,7 @@
 import { motion } from "motion/react";
 
 import type { ResumeData } from "../../types";
+import { HH_RU_BADGE } from "../../lib/marketingCopy";
 import { Icon } from "../ui/Icon";
 import { PreviewWatermarkOverlay } from "./PreviewWatermarkOverlay";
 
@@ -132,7 +133,7 @@ export function PreviewResumeCard({ resume }: PreviewResumeCardProps) {
         <div className="relative mt-4 flex items-center justify-center gap-1.5 pt-2">
           <Icon name="verified" filled size={14} style={{ color: "var(--brand)" }} />
           <span className="text-[11px] font-medium uppercase tracking-wide" style={{ color: "var(--text-muted)" }}>
-            Соответствует стандартам hh.ru
+            {HH_RU_BADGE}
           </span>
         </div>
       </div>

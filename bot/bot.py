@@ -667,7 +667,7 @@ async def invite_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     InlineKeyboardButton(
                         "📤 Поделиться с другом",
                         switch_inline_query=(
-                            f"Создай профессиональное резюме за 5 минут → {invite_link}"
+                            f"Резюме за 5 минут: шаблон PDF, вопросы голосом, файл в Telegram → {invite_link}"
                         ),
                     )
                 ],
@@ -725,7 +725,7 @@ async def invite_prompt_callback(update: Update, context: ContextTypes.DEFAULT_T
                 [
                     InlineKeyboardButton(
                         "📤 Поделиться",
-                        switch_inline_query=f"Создай резюме за 5 минут! {invite_link}",
+                        switch_inline_query=f"Резюме за 5 минут — шаблон PDF и файл в Telegram! {invite_link}",
                     )
                 ],
                 [InlineKeyboardButton("◀️ Назад", callback_data="back_to_start")],

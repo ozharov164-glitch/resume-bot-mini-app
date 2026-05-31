@@ -30,7 +30,7 @@ export function TemplatePickPage() {
           <Icon name="palette" filled size={28} style={{ color: "var(--brand)" }} />
           <h2 className="template-pick-title">Как будет выглядеть твоё резюме?</h2>
           <p className="template-pick-sub">
-            Выбери шаблон PDF сейчас — перед оплатой можно будет сменить на другой.
+            Три готовых шаблона PDF — Classic, Modern и Compact. Перед оплатой можно сменить на другой.
           </p>
         </div>
 

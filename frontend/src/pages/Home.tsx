@@ -12,6 +12,12 @@ import { Icon } from "../components/ui/Icon";
 import { Screen } from "../components/ui/Screen";
 import { useFounderStatus } from "../hooks/useFounderStatus";
 import { useTelegramBackButton } from "../hooks/useTelegramBackButton";
+import {
+  HOME_BENEFITS,
+  HOME_HEADLINE,
+  HOME_TAGLINE,
+  HOME_TRUST_POINTS,
+} from "../lib/marketingCopy";
 import { useAppStore } from "../store";
 import { getTg } from "../telegram";
 
@@ -19,42 +25,6 @@ interface HomeProps {
   onStart: () => void;
   onHistory: () => void;
 }
-
-const BENEFITS = [
-  {
-    icon: "smart_toy" as const,
-    title: "ИИ напишет текст за тебя",
-    subtitle: "Ответь на пару вопросов, остальное сделает бот.",
-  },
-  {
-    icon: "send" as const,
-    title: "Готовый PDF в чат сразу",
-    subtitle: "Скачивай и отправляй работодателю без долгих регистраций.",
-  },
-] as const;
-
-const TRUST_POINTS = [
-  {
-    icon: "visibility" as const,
-    title: "Сначала смотри — потом плати",
-    subtitle: "Бесплатный предпросмотр до оплаты. Риска нет.",
-  },
-  {
-    icon: "verified" as const,
-    title: "Формат hh.ru",
-    subtitle: "HR привык к такому виду — не откладывают в стопку.",
-  },
-  {
-    icon: "savings" as const,
-    title: "149 ₽ вместо 500–1000 ₽",
-    subtitle: "Дешевле конкурентов, качество — как у дорогих сервисов.",
-  },
-  {
-    icon: "lock" as const,
-    title: "Данные только для резюме",
-    subtitle: "Не продаём и не передаём третьим лицам.",
-  },
-] as const;
 
 function useCountUp(target: number, durationMs = 1400) {
   const [value, setValue] = useState(0);
@@ -175,10 +145,10 @@ export function HomePage({ onStart, onHistory }: HomeProps) {
 
         <div className="flex w-full flex-col gap-2 px-2 text-center">
           <h2 className="text-[22px] font-bold leading-tight tracking-tight">
-            Ваше профессиональное резюме за 5 минут
+            {HOME_HEADLINE}
           </h2>
           <p className="text-[15px] leading-relaxed" style={{ color: "var(--text-muted)" }}>
-            Помогаем водителям, строителям и мастерам получить работу мечты.
+            {HOME_TAGLINE}
           </p>
         </div>
 
@@ -196,7 +166,7 @@ export function HomePage({ onStart, onHistory }: HomeProps) {
         </div>
 
         <div className="flex w-full flex-col gap-3 pb-1">
-          {BENEFITS.map((item, i) => (
+          {HOME_BENEFITS.map((item, i) => (
             <motion.div
               key={item.title}
               className="stitch-card flex items-start gap-4 p-4"
@@ -226,7 +196,7 @@ export function HomePage({ onStart, onHistory }: HomeProps) {
             <h3 className="home-trust-title">Почему нам доверяют</h3>
           </div>
           <div className="home-trust-grid">
-            {TRUST_POINTS.map((item, i) => (
+            {HOME_TRUST_POINTS.map((item, i) => (
               <motion.div
                 key={item.title}
                 className="home-trust-card"

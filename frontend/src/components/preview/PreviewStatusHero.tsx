@@ -18,7 +18,7 @@ export function PreviewStatusHero() {
       </div>
       <h2 className="text-2xl font-bold leading-tight">Готово к скачиванию</h2>
       <p className="max-w-[280px] text-[15px] leading-relaxed" style={{ color: "var(--text-muted)" }}>
-        Твоё резюме успешно создано. Проверь данные перед получением PDF.
+        Текст и оформление готовы. Проверь данные и подтверди шаблон перед получением PDF.
       </p>
     </motion.section>
   );

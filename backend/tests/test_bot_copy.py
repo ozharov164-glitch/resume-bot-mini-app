@@ -29,3 +29,13 @@ def test_start_text_payment_options():
     text = start_text(5000, "Анна")
     assert "Анна" in text
     assert PAYMENT_LINE in text
+    assert "Classic" in text
+    assert "водителей" in text
+
+
+def test_how_it_works_mentions_template():
+    from services.bot_copy import how_it_works_text
+
+    text = how_it_works_text()
+    assert "шаблон PDF" in text
+    assert "11 вопросов" not in text

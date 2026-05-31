@@ -13,6 +13,7 @@ import { Icon } from "../components/ui/Icon";
 import { Screen } from "../components/ui/Screen";
 import { useFounderStatus } from "../hooks/useFounderStatus";
 import { useTelegramBackButton } from "../hooks/useTelegramBackButton";
+import { PREVIEW_CHECKLIST } from "../lib/marketingCopy";
 import { useAppStore } from "../store";
 import { getTg } from "../telegram";
 
@@ -96,11 +97,7 @@ export function PreviewPage() {
       <FixedBottomBar>
         <div className="flex flex-col gap-2">
           <div className="flex flex-col gap-1.5 mb-3">
-            {[
-              "Резюме готово к отправке",
-              "Оптимизировано под формат hh.ru",
-              "Профессиональное оформление",
-            ].map((text) => (
+            {PREVIEW_CHECKLIST.map((text) => (
               <div
                 key={text}
                 className="flex items-center gap-2 text-sm"

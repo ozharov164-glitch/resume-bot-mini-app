@@ -9,7 +9,7 @@ from config import settings
 from services.payment_return import yookassa_return_url
 
 _STARS_TITLE = "Резюме в PDF"
-_STARS_DESCRIPTION = "Профессионально оформленное резюме в формате PDF для отклика на вакансии."
+_STARS_DESCRIPTION = "Резюме в выбранном PDF-шаблоне для отклика на вакансии hh.ru."
 
 
 def _invoice_payload(resume_id: str, user_id: str) -> str:
