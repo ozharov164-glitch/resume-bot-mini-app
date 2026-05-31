@@ -291,23 +291,6 @@ def get_pdf_styles() -> str:
     .edu-entry { margin-bottom: 7px; }
     .edu-institution { font-size: 9pt; font-weight: 700; color: #0d1f14; }
     .edu-details { font-size: 8pt; color: #6b7280; margin-top: 1px; }
-
-    /* Footer */
-    .page-footer {
-        position: fixed;
-        bottom: 0; left: 0; right: 0;
-        height: 18px;
-        background: #0d1f14;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-    .footer-text {
-        font-size: 6pt;
-        color: rgba(255,255,255,0.3);
-        letter-spacing: 1px;
-        text-transform: uppercase;
-    }
     """
 
 
@@ -403,14 +386,6 @@ def get_modern_pdf_styles() -> str:
         font-size: 8pt;
         color: #374151;
         margin-bottom: 2pt;
-    }}
-    .page-footer {{
-        position: fixed;
-        bottom: 0; left: 0; right: 0;
-        text-align: center;
-        font-size: 6pt;
-        color: #9ca3af;
-        padding: 4pt 0;
     }}
     """
 
@@ -567,17 +542,6 @@ def get_compact_pdf_styles() -> str:
     .edu-entry {{ margin-bottom: 5px; }}
     .edu-institution {{ font-size: 8pt; font-weight: 700; color: #111827; }}
     .edu-details {{ font-size: 7pt; color: #6b7280; }}
-    .page-footer {{
-        position: fixed;
-        bottom: 0; left: 0; right: 0;
-        height: 14px;
-        background: #f8f8f8;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        border-top: 0.5pt solid #e5e7eb;
-    }}
-    .footer-text {{ font-size: 5.5pt; color: #9ca3af; letter-spacing: 0.5px; }}
     """
 
 
