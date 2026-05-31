@@ -4,6 +4,7 @@ import { AppShell } from "./components/ui/AppShell";
 import { BootstrapScreen } from "./components/BootstrapScreen";
 import { useFounderStatus } from "./hooks/useFounderStatus";
 import { isFounderTelegramId } from "./lib/founder";
+import { readCachedAuthToken } from "./lib/authSession";
 import { runAppBootstrap } from "./lib/bootstrap";
 import { clearDeepLinkHash, parseDeepLink } from "./lib/deepLink";
 import { completePaymentReturn, discoverPaymentReturnResumeId } from "./lib/paymentReturn";
@@ -50,7 +51,11 @@ export default function App() {
 
   const runBootstrap = useCallback(async () => {
     setBootstrapError(null);
-    setLoading(true);
+    const cached = readCachedAuthToken();
+    if (!cached) {
+      setLoading(true);
+    }
+
     try {
       const tgId = getTelegramUserId();
       if (isFounderTelegramId(tgId)) {
@@ -60,6 +65,9 @@ export default function App() {
       const result = await runAppBootstrap();
       if (!result.ok) {
         setBootstrapError(result.message);
+        if (cached) {
+          setAuthToken(null);
+        }
         return;
       }
 
@@ -111,7 +119,7 @@ export default function App() {
     if (route) clearDeepLinkHash();
   }, [isLoading, authToken, setPage, setHomeTab]);
 
-  if (isLoading) {
+  if (isLoading && !authToken) {
     return (
       <AppShell>
         <BootstrapScreen

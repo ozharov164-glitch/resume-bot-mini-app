@@ -6,6 +6,7 @@ import { waitForInitData } from "./telegram";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 const DEFAULT_TIMEOUT_MS = 12_000;
+const AUTH_TIMEOUT_MS = 8_000;
 
 export type TemplateId = "classic" | "modern" | "compact";
 
@@ -68,20 +69,24 @@ export async function authWithTelegram(initData: string) {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ init_data: initData }),
         },
-        15_000,
+        AUTH_TIMEOUT_MS,
       ),
     2,
-    500,
+    350,
   );
 }
 
 export { HttpTimeoutError };
 
-export async function fetchMe(token: string) {
-  return http<{ telegram_id: number; is_founder: boolean; unlimited: boolean }>("/api/auth/me", {
-    method: "GET",
-    headers: { Authorization: `Bearer ${token}` },
-  });
+export async function fetchMe(token: string, timeoutMs = AUTH_TIMEOUT_MS) {
+  return http<{ telegram_id: number; is_founder: boolean; unlimited: boolean }>(
+    "/api/auth/me",
+    {
+      method: "GET",
+      headers: { Authorization: `Bearer ${token}` },
+    },
+    timeoutMs,
+  );
 }
 
 export async function suggestSkills(token: string, position: string) {

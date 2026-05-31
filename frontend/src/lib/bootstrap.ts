@@ -1,7 +1,9 @@
 import { authWithTelegram, fetchMe } from "../api";
 import { clearCachedAuthToken, readCachedAuthToken, writeCachedAuthToken } from "./authSession";
+import { isFounderTelegramId } from "./founder";
 import { HttpTimeoutError } from "./http";
-import { waitForInitData, waitForTelegramSdk } from "../telegram";
+import { isFounderJwt } from "./jwtClient";
+import { getTelegramUserId, waitForInitData, waitForTelegramSdk } from "../telegram";
 
 export type BootstrapResult =
   | {
@@ -54,13 +56,16 @@ function mapBootstrapError(error: unknown): BootstrapResult {
   };
 }
 
-async function tryCachedSession(): Promise<BootstrapResult | null> {
-  const cached = readCachedAuthToken();
-  if (!cached) return null;
+function founderFromToken(token: string): boolean {
+  return isFounderJwt(token) || isFounderTelegramId(getTelegramUserId());
+}
+
+/** Validate cached JWT with server — non-blocking after fast path. */
+export async function refreshCachedSession(token: string): Promise<BootstrapResult | null> {
   try {
-    const me = await fetchMe(cached);
-    const founder = Boolean(me.is_founder || me.unlimited);
-    return { ok: true, accessToken: cached, isFounder: founder };
+    const me = await fetchMe(token, 6_000);
+    const founder = Boolean(me.is_founder || me.unlimited || isFounderTelegramId(me.telegram_id));
+    return { ok: true, accessToken: token, isFounder: founder };
   } catch {
     clearCachedAuthToken();
     return null;
@@ -68,12 +73,25 @@ async function tryCachedSession(): Promise<BootstrapResult | null> {
 }
 
 export async function runAppBootstrap(): Promise<BootstrapResult> {
-  await waitForTelegramSdk(3500);
+  const cached = readCachedAuthToken();
+  if (cached) {
+    void waitForTelegramSdk(1_200).then((webApp) => {
+      webApp?.ready();
+      webApp?.expand();
+    });
+    void refreshCachedSession(cached);
+    return { ok: true, accessToken: cached, isFounder: founderFromToken(cached) };
+  }
 
-  const cached = await tryCachedSession();
-  if (cached) return cached;
+  const sdkReady = waitForTelegramSdk(2_000);
+  const initDataReady = (async () => {
+    await waitForTelegramSdk(800);
+    return waitForInitData(6_000);
+  })();
 
-  const initData = await waitForInitData(10_000);
+  await sdkReady;
+
+  const initData = await initDataReady;
   if (!initData) {
     return {
       ok: false,
@@ -85,7 +103,7 @@ export async function runAppBootstrap(): Promise<BootstrapResult> {
   try {
     const auth = await authWithTelegram(initData);
     writeCachedAuthToken(auth.access_token);
-    const founder = Boolean(auth.is_founder || auth.unlimited);
+    const founder = Boolean(auth.is_founder || auth.unlimited || isFounderTelegramId(getTelegramUserId()));
     return { ok: true, accessToken: auth.access_token, isFounder: founder };
   } catch (error) {
     return mapBootstrapError(error);

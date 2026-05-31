@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 
 import { fetchMe } from "../api";
+import { isFounderJwt } from "../lib/jwtClient";
 import { isFounderTelegramId } from "../lib/founder";
 import { useAppStore } from "../store";
 import { getTelegramUserId } from "../telegram";
@@ -17,8 +18,12 @@ export function useFounderStatus() {
   }, [setFounder]);
 
   useEffect(() => {
-    if (!authToken) return;
-    void fetchMe(authToken)
+    if (!authToken || isFounder) return;
+    if (isFounderJwt(authToken)) {
+      setFounder(true);
+      return;
+    }
+    void fetchMe(authToken, 6_000)
       .then((me) => {
         if (me.is_founder || me.unlimited || isFounderTelegramId(me.telegram_id)) {
           setFounder(true);
@@ -27,7 +32,7 @@ export function useFounderStatus() {
       .catch(() => {
         /* keep client-side founder hint if /me fails */
       });
-  }, [authToken, setFounder]);
+  }, [authToken, isFounder, setFounder]);
 
   return isFounder;
 }

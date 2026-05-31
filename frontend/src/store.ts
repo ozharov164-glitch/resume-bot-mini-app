@@ -1,5 +1,6 @@
 import { create } from "zustand";
 
+import { readCachedAuthToken } from "./lib/authSession";
 import type { ResumeData, UserAnswers, WorkEntry } from "./types";
 
 type Page =
@@ -59,13 +60,13 @@ export const useAppStore = create<AppState>((set, get) => ({
   answers: {},
   setAnswer: (key, value) => set((state) => ({ answers: { ...state.answers, [key]: value } })),
   setAnswers: (answers) => set({ answers }),
-  authToken: null,
+  authToken: readCachedAuthToken(),
   setAuthToken: (token) => set({ authToken: token }),
   resumeId: null,
   resumeData: null,
   setResumeResult: (resumeId, resumeData, isPaid) =>
     set({ resumeId, resumeData, ...(isPaid !== undefined ? { isPaid } : {}) }),
-  isLoading: false,
+  isLoading: !readCachedAuthToken(),
   setLoading: (value) => set({ isLoading: value }),
   isPaid: false,
   setPaid: (value) => set({ isPaid: value }),

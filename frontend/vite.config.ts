@@ -9,14 +9,18 @@ export default defineConfig({
   base: isPages ? `/${repoName}/` : "/",
   server: {
     host: "0.0.0.0",
-    port: 5173
+    port: 5173,
   },
   build: {
+    target: "es2020",
+    cssCodeSplit: true,
+    modulePreload: { polyfill: true },
     rollupOptions: {
       output: {
         manualChunks(id) {
           if (id.includes("node_modules/motion")) return "motion";
-          if (id.includes("node_modules/react-dom") || id.includes("node_modules/react/")) return "react";
+          if (id.includes("node_modules/react-dom")) return "react-dom";
+          if (id.includes("node_modules/react/")) return "react";
           if (id.includes("node_modules/zustand")) return "zustand";
         },
       },
