@@ -50,8 +50,8 @@ async def send_admin_message(text: str, *, parse_mode: str = "HTML") -> bool:
         bot = Bot(token=settings.BOT_TOKEN)
         await bot.send_message(chat_id=chat_id, text=text, parse_mode=parse_mode)
         return True
-    except Exception:
-        logger.exception("admin notify failed chat_id=%s", chat_id)
+    except Exception as exc:
+        logger.error("admin notify failed chat_id=%s: %s", chat_id, exc)
         return False
 
 
@@ -63,7 +63,7 @@ def _user_line(telegram_id: int, first_name: str = "", username: str = "") -> st
     return f"{name} (id <code>{telegram_id}</code>)"
 
 
-async def notify_new_user(db: Any, *, telegram_id: int, first_name: str = "", username: str = "") -> None:
+async def notify_new_user(db: Any, *, telegram_id: int, first_name: str = "", username: str = "") -> bool:
     try:
         total = db.count_users()
     except Exception:
@@ -74,7 +74,7 @@ async def notify_new_user(db: Any, *, telegram_id: int, first_name: str = "", us
         f"{_user_line(telegram_id, first_name, username)}\n\n"
         f"📊 Всего пользователей: <b>{total}</b>"
     )
-    await send_admin_message(text)
+    return await send_admin_message(text)
 
 
 async def notify_payment(

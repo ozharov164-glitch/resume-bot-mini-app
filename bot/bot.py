@@ -29,7 +29,8 @@ sys.path.insert(0, str(ROOT / "backend"))
 
 from config import settings  # noqa: E402
 from database import get_db  # noqa: E402
-from services.admin_notify import PaymentNotifyInfo, notify_new_user  # noqa: E402
+from services.admin_notify import PaymentNotifyInfo  # noqa: E402
+from services.user_registration import register_telegram_user  # noqa: E402
 from services.founder_contact import (  # noqa: E402
     ensure_founder_username,
     founder_chat_hint_text,
@@ -89,16 +90,23 @@ def _display_name(user) -> str:
     return html.escape(str(raw), quote=False)
 
 
-def _ensure_user_row(db, tg_user) -> bool:
-    if db.find_user_by_telegram_id(tg_user.id):
-        return False
-    db.create_user(
-        telegram_id=tg_user.id,
-        first_name=tg_user.first_name or "",
-        last_name=tg_user.last_name or "",
-        username=tg_user.username or "",
-    )
-    return True
+async def _register_bot_contact(tg_user, referrer_id: int | None = None) -> None:
+    """First /start (or ref link): persist user + admin ping; optional referral."""
+    if not tg_user:
+        return
+    try:
+        db = get_db()
+        await register_telegram_user(
+            db,
+            telegram_id=tg_user.id,
+            first_name=tg_user.first_name or "",
+            last_name=tg_user.last_name or "",
+            username=tg_user.username or "",
+        )
+        if referrer_id and referrer_id != tg_user.id:
+            await asyncio.to_thread(db.save_referral, referrer_id, tg_user.id)
+    except Exception:
+        logger.exception("bot contact registration failed telegram_id=%s", tg_user.id)
 
 
 def get_resume_count() -> int:
@@ -149,22 +157,6 @@ async def _reply_support_hub(update: Update, *, edit: bool = False) -> None:
         await message.reply_text(text, reply_markup=keyboard, parse_mode="HTML")
 
 
-async def _persist_referral(referrer_id: int, tg_user) -> None:
-    try:
-        db = get_db()
-        created = await asyncio.to_thread(_ensure_user_row, db, tg_user)
-        if created:
-            await notify_new_user(
-                db,
-                telegram_id=tg_user.id,
-                first_name=tg_user.first_name or "",
-                username=tg_user.username or "",
-            )
-        await asyncio.to_thread(db.save_referral, referrer_id, tg_user.id)
-    except Exception as exc:
-        logger.warning("Referral save failed: %s", exc)
-
-
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     referrer_id = None
     tg_user = update.message.from_user
@@ -178,8 +170,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = start_text(count, _display_name(tg_user))
     await update.message.reply_text(text, reply_markup=_start_keyboard(), parse_mode="HTML")
 
-    if referrer_id and referrer_id != tg_user.id:
-        asyncio.create_task(_persist_referral(referrer_id, tg_user))
+    asyncio.create_task(_register_bot_contact(tg_user, referrer_id))
 
 
 async def resume_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
