@@ -76,7 +76,7 @@ def main() -> None:
             SAMPLE_DATA,
             template_id,
             watermark=False,
-            resolution=130,
+            resolution=165,
         )
         dest = OUT_DIR / f"{template_id}.png"
         dest.write_bytes(png)
