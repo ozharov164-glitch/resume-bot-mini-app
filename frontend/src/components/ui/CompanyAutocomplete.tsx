@@ -82,6 +82,11 @@ export function CompanyAutocomplete({
     setSuggestions([]);
   };
 
+  const hintText =
+    kind === "institution"
+      ? "Достаточно аббревиатуры — подскажем полное название вуза"
+      : "Достаточно аббревиатуры — подскажем полное название компании";
+
   return (
     <div className="relative">
       <TextInput
@@ -92,6 +97,9 @@ export function CompanyAutocomplete({
         placeholder={placeholder}
         autoComplete="off"
       />
+      <p className="mt-1.5 text-xs leading-snug" style={{ color: "var(--text-muted)" }}>
+        {hintText}
+      </p>
       {open && suggestions.length > 0 && (
         <div
           className="absolute left-0 right-0 top-full z-50 mt-1 overflow-hidden rounded-xl border shadow-xl"

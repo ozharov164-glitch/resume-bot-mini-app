@@ -129,7 +129,7 @@ export const ONBOARDING_STEPS: OnboardingStep[] = [
     id: "education_place",
     question: "Название учебного заведения",
     type: "text",
-    placeholder: "Например: МГТУ им. Баумана, Рязанский колледж",
+    placeholder: "Например: МГУ, РГУ",
     hint: "Необязательно — можно пропустить",
     skipText: "Пропустить",
     required: false,

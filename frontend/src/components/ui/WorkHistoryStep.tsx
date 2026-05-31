@@ -86,7 +86,7 @@ export function WorkHistoryStep({
           <CompanyAutocomplete
             value={entry.company}
             onChange={(company) => updateEntry(index, { company })}
-            placeholder="Компания"
+            placeholder="Компания (например: Сбер, МТС)"
           />
           <TextInput
             value={entry.period}
