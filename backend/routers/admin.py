@@ -7,6 +7,12 @@ from services.admin_stats import (
     count_resumes_today_clean,
     get_promo_analytics_clean,
 )
+from services.affiliate_service import (
+    get_affiliate_stats_for_owner,
+    grant_affiliate,
+    list_affiliates_with_stats,
+    revoke_affiliate,
+)
 from services.stats_display import public_resume_count
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
@@ -38,6 +44,8 @@ async def create_promo(body: dict, db=Depends(get_db)):
         discount=discount,
         max_uses=max_uses,
     )
+    if owner_tg_id is not None:
+        db.set_user_affiliate(owner_tg_id, is_affiliate=True)
     return {"ok": True, "promo": promo}
 
 
@@ -84,3 +92,60 @@ async def admin_referrers(db=Depends(get_db), limit: int = 10):
         return {"referrers": db.top_referrers(min(limit, 50))}
     except Exception:
         return {"referrers": []}
+
+
+@router.get("/affiliates", dependencies=[Depends(verify_admin_key)])
+async def admin_affiliates(db=Depends(get_db)):
+    try:
+        return {"affiliates": list_affiliates_with_stats(db)}
+    except Exception:
+        return {"affiliates": []}
+
+
+@router.get("/affiliates/{telegram_id}", dependencies=[Depends(verify_admin_key)])
+async def admin_affiliate_detail(telegram_id: int, db=Depends(get_db)):
+    from services.admin_stats import stats_exclude_telegram_ids
+
+    stats = get_affiliate_stats_for_owner(
+        db, telegram_id, exclude_telegram_ids=stats_exclude_telegram_ids()
+    )
+    if not stats:
+        raise HTTPException(status_code=404, detail="Affiliate not found")
+    return {"affiliate": stats}
+
+
+@router.post("/affiliates", dependencies=[Depends(verify_admin_key)])
+async def create_affiliate(body: dict, db=Depends(get_db)):
+    telegram_id = body.get("telegram_id")
+    code = str(body.get("code", "")).strip()
+    if telegram_id is None:
+        raise HTTPException(status_code=400, detail="telegram_id is required")
+    if not code:
+        raise HTTPException(status_code=400, detail="code is required")
+    discount = int(body.get("discount", 10))
+    max_uses = int(body.get("max_uses", 100))
+    try:
+        result = grant_affiliate(
+            db,
+            telegram_id=int(telegram_id),
+            code=code,
+            discount=discount,
+            max_uses=max_uses,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+    return {"ok": True, **result}
+
+
+@router.post("/affiliates/revoke", dependencies=[Depends(verify_admin_key)])
+async def revoke_affiliate_admin(body: dict, db=Depends(get_db)):
+    telegram_id = body.get("telegram_id")
+    if telegram_id is None:
+        raise HTTPException(status_code=400, detail="telegram_id is required")
+    try:
+        result = revoke_affiliate(db, int(telegram_id))
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return {"ok": True, **result}

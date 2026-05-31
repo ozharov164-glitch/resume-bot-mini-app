@@ -79,6 +79,7 @@ class SQLiteBackend:
                 "ALTER TABLE resumes ADD COLUMN final_price_stars INTEGER DEFAULT NULL",
                 "ALTER TABLE resumes ADD COLUMN final_price_rub INTEGER DEFAULT NULL",
                 "ALTER TABLE resumes ADD COLUMN template_id TEXT DEFAULT 'classic'",
+                "ALTER TABLE users ADD COLUMN is_affiliate INTEGER DEFAULT 0",
             ]:
                 try:
                     conn.execute(col_sql)
@@ -433,6 +434,50 @@ class SQLiteBackend:
                 promo["paid_count"] = int(paid["c"]) if paid else 0
                 out.append(promo)
             return out
+
+    def is_user_affiliate(self, telegram_id: int) -> bool:
+        user = self.find_user_by_telegram_id(telegram_id)
+        if not user:
+            return False
+        return bool(user.get("is_affiliate"))
+
+    def set_user_affiliate(self, telegram_id: int, *, is_affiliate: bool) -> None:
+        with self._connect() as conn:
+            conn.execute(
+                "UPDATE users SET is_affiliate = ? WHERE telegram_id = ?",
+                (1 if is_affiliate else 0, telegram_id),
+            )
+            conn.commit()
+
+    def deactivate_promos_by_owner(self, owner_tg_id: int) -> list[str]:
+        with self._connect() as conn:
+            rows = conn.execute(
+                "SELECT code FROM promo_codes WHERE owner_tg_id = ? AND is_active = 1",
+                (owner_tg_id,),
+            ).fetchall()
+            codes = [str(r["code"]) for r in rows]
+            if codes:
+                conn.execute(
+                    "UPDATE promo_codes SET is_active = 0 WHERE owner_tg_id = ?",
+                    (owner_tg_id,),
+                )
+                conn.commit()
+            return codes
+
+    def list_promo_codes_by_owner(self, owner_tg_id: int) -> list[dict]:
+        with self._connect() as conn:
+            rows = conn.execute(
+                "SELECT * FROM promo_codes WHERE owner_tg_id = ? ORDER BY created_at DESC",
+                (owner_tg_id,),
+            ).fetchall()
+        return [dict(r) for r in rows]
+
+    def list_affiliate_users(self) -> list[dict]:
+        with self._connect() as conn:
+            rows = conn.execute(
+                "SELECT * FROM users WHERE is_affiliate = 1 ORDER BY created_at DESC"
+            ).fetchall()
+        return [dict(r) for r in rows]
 
     def list_recent_promo_activations(self, limit: int = 20) -> list[dict]:
         with self._connect() as conn:
@@ -948,3 +993,64 @@ class SupabaseBackend:
             "telegram_id", telegram_id
         ).execute()
         return True
+
+    def is_user_affiliate(self, telegram_id: int) -> bool:
+        user = self.find_user_by_telegram_id(telegram_id)
+        if not user:
+            return False
+        return bool(user.get("is_affiliate"))
+
+    def set_user_affiliate(self, telegram_id: int, *, is_affiliate: bool) -> None:
+        try:
+            self.client.table("users").update({"is_affiliate": is_affiliate}).eq(
+                "telegram_id", telegram_id
+            ).execute()
+        except Exception as e:
+            logger.warning("set_user_affiliate failed: %s", e)
+
+    def deactivate_promos_by_owner(self, owner_tg_id: int) -> list[str]:
+        try:
+            result = (
+                self.client.table("promo_codes")
+                .select("code")
+                .eq("owner_tg_id", owner_tg_id)
+                .eq("is_active", True)
+                .execute()
+            )
+            codes = [str(r["code"]) for r in (result.data or [])]
+            if codes:
+                self.client.table("promo_codes").update({"is_active": False}).eq(
+                    "owner_tg_id", owner_tg_id
+                ).execute()
+            return codes
+        except Exception as e:
+            logger.warning("deactivate_promos_by_owner failed: %s", e)
+            return []
+
+    def list_promo_codes_by_owner(self, owner_tg_id: int) -> list[dict]:
+        try:
+            result = (
+                self.client.table("promo_codes")
+                .select("*")
+                .eq("owner_tg_id", owner_tg_id)
+                .order("created_at", desc=True)
+                .execute()
+            )
+            return result.data or []
+        except Exception as e:
+            logger.warning("list_promo_codes_by_owner failed: %s", e)
+            return []
+
+    def list_affiliate_users(self) -> list[dict]:
+        try:
+            result = (
+                self.client.table("users")
+                .select("*")
+                .eq("is_affiliate", True)
+                .order("created_at", desc=True)
+                .execute()
+            )
+            return result.data or []
+        except Exception as e:
+            logger.warning("list_affiliate_users failed: %s", e)
+            return []

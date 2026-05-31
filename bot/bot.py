@@ -60,6 +60,8 @@ from services.bot_copy import (  # noqa: E402
 )
 from services.payment_fulfillment import fulfill_paid_resume  # noqa: E402
 from services.stats_display import public_resume_count  # noqa: E402
+from services.affiliate_service import get_affiliate_stats_for_owner  # noqa: E402
+from services.admin_stats import stats_exclude_telegram_ids  # noqa: E402
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
 logging.getLogger("httpx").setLevel(logging.WARNING)
@@ -74,6 +76,37 @@ _stats_cache: tuple[int, float] | None = None
 
 def _founder_ids() -> list[int]:
     return [int(x) for x in settings.FOUNDER_TELEGRAM_IDS.split(",") if x.strip()]
+
+
+def _is_user_affiliate(telegram_id: int) -> bool:
+    try:
+        return bool(get_db().is_user_affiliate(telegram_id))
+    except Exception:
+        logger.exception("is_user_affiliate check failed telegram_id=%s", telegram_id)
+        return False
+
+
+def _menu_flags(user) -> tuple[bool, bool]:
+    if not user:
+        return False, False
+    is_admin = user.id in _founder_ids()
+    is_affiliate = _is_user_affiliate(user.id)
+    return is_admin, is_affiliate
+
+
+def affiliate_only(func):
+    @wraps(func)
+    async def wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
+        user = update.effective_user
+        if not user or not _is_user_affiliate(user.id):
+            if update.callback_query:
+                await update.callback_query.answer("⛔ Доступ закрыт", show_alert=True)
+            elif update.message:
+                await update.message.reply_text("⛔ Доступ к панели траффера закрыт.")
+            return
+        return await func(update, context)
+
+    return wrapper
 
 
 def admin_only(func):
@@ -95,6 +128,15 @@ def _admin_headers() -> dict[str, str]:
     return {"X-Admin-Key": _ADMIN_KEY}
 
 
+def _admin_back_refresh(refresh_callback: str) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        [
+            [InlineKeyboardButton("🔄 Обновить", callback_data=refresh_callback)],
+            [InlineKeyboardButton("◀️ Назад", callback_data="adm_back")],
+        ]
+    )
+
+
 def _admin_menu_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         [
@@ -103,8 +145,12 @@ def _admin_menu_keyboard() -> InlineKeyboardMarkup:
                 InlineKeyboardButton("🎟 Промокоды", callback_data="adm_promos"),
             ],
             [
+                InlineKeyboardButton("👥 Трафферы", callback_data="adm_affiliates"),
+                InlineKeyboardButton("➕ Добавить траффера", callback_data="adm_add_affiliate"),
+            ],
+            [
                 InlineKeyboardButton("➕ /newpromo КОД", callback_data="adm_create_promo"),
-                InlineKeyboardButton("👥 Топ рефереры", callback_data="adm_refs"),
+                InlineKeyboardButton("📈 Топ рефереры", callback_data="adm_refs"),
             ],
             [
                 InlineKeyboardButton("📋 Активации промо", callback_data="adm_promo_acts"),
@@ -181,9 +227,7 @@ async def adm_stats_callback(update: Update, context: ContextTypes.DEFAULT_TYPE)
             f"Пользователей: {data.get('users', 0)}\n"
             f"Пришли по реф-ссылкам: {data.get('referred', 0)}"
         )
-        keyboard = InlineKeyboardMarkup(
-            [[InlineKeyboardButton("◀️ Назад", callback_data="adm_back")]]
-        )
+        keyboard = _admin_back_refresh("adm_stats")
         await query.edit_message_text(text, parse_mode="HTML", reply_markup=keyboard)
     except Exception as exc:
         logger.exception("adm_stats failed")
@@ -220,13 +264,284 @@ async def adm_promos_callback(update: Update, context: ContextTypes.DEFAULT_TYPE
                     f"активаций {activations}, оплат {paid}, использований {uses}/{max_u}{owner_part}"
                 )
             text = "\n".join(lines)
-        keyboard = InlineKeyboardMarkup(
-            [[InlineKeyboardButton("◀️ Назад", callback_data="adm_back")]]
-        )
+        keyboard = _admin_back_refresh("adm_promos")
         await query.edit_message_text(text, parse_mode="HTML", reply_markup=keyboard)
     except Exception as exc:
         logger.exception("adm_promos failed")
         await query.edit_message_text(f"❌ {exc}")
+
+
+def _format_affiliate_name(stats: dict) -> str:
+    name = html.escape(str(stats.get("first_name") or "")) or "—"
+    uname = stats.get("username")
+    handle = f" @{html.escape(str(uname))}" if uname else ""
+    return f"{name}{handle}"
+
+
+def _format_affiliate_panel_text(stats: dict) -> str:
+    code = stats.get("code")
+    if not code:
+        return (
+            "📈 <b>Панель траффера</b>\n\n"
+            "Промокод ещё не назначен. Напишите администратору."
+        )
+    code_esc = html.escape(str(code))
+    bot_user = settings.BOT_USERNAME.lstrip("@")
+    promo_link = f"https://t.me/{bot_user}?start=promo_{code_esc}"
+    status = "активен ✅" if stats.get("is_active") else "отключён ❌"
+    discount = int(stats.get("discount_percent") or 0)
+    return (
+        "📈 <b>Панель траффера</b>\n\n"
+        f"Промокод: <code>{code_esc}</code> (−{discount}%) · {status}\n"
+        f"Ссылка: {html.escape(promo_link)}\n\n"
+        f"👤 Активировали промокод: <b>{stats.get('activations', 0)}</b>\n"
+        f"💳 Купили резюме: <b>{stats.get('paid_count', 0)}</b>"
+    )
+
+
+def _affiliate_panel_keyboard() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        [
+            [InlineKeyboardButton("🔄 Обновить", callback_data="aff_refresh")],
+            [InlineKeyboardButton("◀️ В меню", callback_data="back_to_start")],
+        ]
+    )
+
+
+async def _fetch_affiliate_stats(telegram_id: int) -> dict | None:
+    return await asyncio.to_thread(
+        get_affiliate_stats_for_owner,
+        get_db(),
+        telegram_id,
+        exclude_telegram_ids=stats_exclude_telegram_ids(),
+    )
+
+
+async def _notify_affiliate_granted(context: ContextTypes.DEFAULT_TYPE, telegram_id: int, code: str) -> None:
+    try:
+        await context.bot.send_message(
+            chat_id=telegram_id,
+            text=(
+                "🎉 <b>Вам открыта панель траффера!</b>\n\n"
+                f"Ваш промокод: <code>{html.escape(code)}</code>\n\n"
+                "Нажмите /start — в меню появится кнопка «📈 Панель траффера»."
+            ),
+            parse_mode="HTML",
+        )
+    except Exception:
+        logger.exception("affiliate grant notify failed telegram_id=%s", telegram_id)
+
+
+async def _notify_affiliate_revoked(context: ContextTypes.DEFAULT_TYPE, telegram_id: int) -> None:
+    try:
+        await context.bot.send_message(
+            chat_id=telegram_id,
+            text="ℹ️ Доступ к панели траффера закрыт. Промокод больше не принимается.",
+        )
+    except Exception:
+        logger.exception("affiliate revoke notify failed telegram_id=%s", telegram_id)
+
+
+@admin_only
+async def adm_affiliates_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    try:
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            resp = await client.get(f"{API_URL}/api/admin/affiliates", headers=_admin_headers())
+        if resp.status_code != 200:
+            await query.edit_message_text(
+                f"❌ Ошибка affiliates: {resp.status_code}",
+                reply_markup=_admin_back_refresh("adm_affiliates"),
+            )
+            return
+        affiliates = resp.json().get("affiliates", [])
+        if not affiliates:
+            text = (
+                "👥 <b>Трафферы</b>\n\n"
+                "Пока никого нет.\n\n"
+                "Нажмите «➕ Добавить траффера» или используйте /newpromo с owner_tg_id."
+            )
+            keyboard = InlineKeyboardMarkup(
+                [
+                    [InlineKeyboardButton("🔄 Обновить", callback_data="adm_affiliates")],
+                    [InlineKeyboardButton("◀️ Назад", callback_data="adm_back")],
+                ]
+            )
+        else:
+            lines = ["👥 <b>Трафферы</b> (активации / оплаты)\n"]
+            rows: list[list[InlineKeyboardButton]] = []
+            for aff in affiliates[:15]:
+                tg_id = aff.get("telegram_id")
+                code = html.escape(str(aff.get("code") or "—"))
+                activations = aff.get("activations", 0)
+                paid = aff.get("paid_count", 0)
+                lines.append(
+                    f"• {_format_affiliate_name(aff)} (<code>{tg_id}</code>)\n"
+                    f"  <code>{code}</code> · акт. {activations}, оплат {paid}"
+                )
+                rows.append(
+                    [
+                        InlineKeyboardButton(
+                            f"❌ Убрать {tg_id}",
+                            callback_data=f"adm_revoke_aff:{tg_id}",
+                        )
+                    ]
+                )
+            text = "\n".join(lines)
+            rows.append([InlineKeyboardButton("🔄 Обновить", callback_data="adm_affiliates")])
+            rows.append([InlineKeyboardButton("◀️ Назад", callback_data="adm_back")])
+            keyboard = InlineKeyboardMarkup(rows)
+        await query.edit_message_text(text, parse_mode="HTML", reply_markup=keyboard)
+    except Exception as exc:
+        logger.exception("adm_affiliates failed")
+        await query.edit_message_text(
+            f"❌ {exc}",
+            reply_markup=_admin_back_refresh("adm_affiliates"),
+        )
+
+
+@admin_only
+async def adm_add_affiliate_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    context.user_data["awaiting_affiliate"] = "id"
+    context.user_data.pop("affiliate_draft", None)
+    keyboard = InlineKeyboardMarkup(
+        [[InlineKeyboardButton("◀️ Отмена", callback_data="adm_add_affiliate_cancel")]]
+    )
+    await query.edit_message_text(
+        "➕ <b>Добавить траффера</b>\n\n"
+        "Отправьте Telegram ID пользователя (число).\n"
+        "Пример: <code>123456789</code>",
+        reply_markup=keyboard,
+        parse_mode="HTML",
+    )
+
+
+@admin_only
+async def adm_add_affiliate_cancel_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    context.user_data.pop("awaiting_affiliate", None)
+    context.user_data.pop("affiliate_draft", None)
+    await query.edit_message_text(
+        "🔧 Админ-панель ResumeBot",
+        reply_markup=_admin_menu_keyboard(),
+    )
+
+
+@admin_only
+async def adm_revoke_affiliate_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    data = query.data or ""
+    try:
+        telegram_id = int(data.split(":", 1)[1])
+    except (IndexError, ValueError):
+        await query.answer("Некорректный ID", show_alert=True)
+        return
+    keyboard = InlineKeyboardMarkup(
+        [
+            [
+                InlineKeyboardButton(
+                    "✅ Да, убрать",
+                    callback_data=f"adm_revoke_ok:{telegram_id}",
+                ),
+                InlineKeyboardButton("◀️ Отмена", callback_data="adm_affiliates"),
+            ]
+        ]
+    )
+    await query.edit_message_text(
+        f"⚠️ Убрать траффера <code>{telegram_id}</code>?\n\n"
+        "Статистика сохранится, промокод перестанет работать.",
+        reply_markup=keyboard,
+        parse_mode="HTML",
+    )
+
+
+@admin_only
+async def adm_revoke_affiliate_confirm_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    data = query.data or ""
+    try:
+        telegram_id = int(data.split(":", 1)[1])
+    except (IndexError, ValueError):
+        await query.answer("Некорректный ID", show_alert=True)
+        return
+    try:
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            resp = await client.post(
+                f"{API_URL}/api/admin/affiliates/revoke",
+                headers=_admin_headers(),
+                json={"telegram_id": telegram_id},
+            )
+        if resp.status_code != 200:
+            detail = resp.text[:200]
+            await query.edit_message_text(
+                f"❌ Не удалось убрать: {resp.status_code} {detail}",
+                reply_markup=_admin_back_refresh("adm_affiliates"),
+            )
+            return
+        payload = resp.json()
+        codes = payload.get("codes_deactivated") or []
+        codes_line = ", ".join(html.escape(str(c)) for c in codes) if codes else "—"
+        await _notify_affiliate_revoked(context, telegram_id)
+        await query.edit_message_text(
+            f"✅ Траффер <code>{telegram_id}</code> снят.\n"
+            f"Отключены промокоды: {codes_line}",
+            reply_markup=_admin_back_refresh("adm_affiliates"),
+            parse_mode="HTML",
+        )
+    except Exception as exc:
+        logger.exception("adm_revoke_affiliate_confirm failed")
+        await query.edit_message_text(
+            f"❌ {exc}",
+            reply_markup=_admin_back_refresh("adm_affiliates"),
+        )
+
+
+@affiliate_only
+async def aff_panel_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    stats = await _fetch_affiliate_stats(query.from_user.id)
+    if not stats:
+        await query.edit_message_text(
+            "⛔ Доступ к панели траффера закрыт.",
+            reply_markup=InlineKeyboardMarkup(
+                [[InlineKeyboardButton("◀️ В меню", callback_data="back_to_start")]]
+            ),
+        )
+        return
+    await query.edit_message_text(
+        _format_affiliate_panel_text(stats),
+        reply_markup=_affiliate_panel_keyboard(),
+        parse_mode="HTML",
+        disable_web_page_preview=True,
+    )
+
+
+@affiliate_only
+async def aff_refresh_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer("Обновлено")
+    stats = await _fetch_affiliate_stats(query.from_user.id)
+    if not stats:
+        await query.edit_message_text(
+            "⛔ Доступ к панели траффера закрыт.",
+            reply_markup=InlineKeyboardMarkup(
+                [[InlineKeyboardButton("◀️ В меню", callback_data="back_to_start")]]
+            ),
+        )
+        return
+    await query.edit_message_text(
+        _format_affiliate_panel_text(stats),
+        reply_markup=_affiliate_panel_keyboard(),
+        parse_mode="HTML",
+        disable_web_page_preview=True,
+    )
 
 
 @admin_only
@@ -345,7 +660,7 @@ async def adm_open_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 
-def _start_keyboard(is_admin: bool = False) -> InlineKeyboardMarkup:
+def _start_keyboard(is_admin: bool = False, is_affiliate: bool = False) -> InlineKeyboardMarkup:
     rows = [
         [InlineKeyboardButton("📝 Создать резюме", web_app=WebAppInfo(url=MINI_APP_URL))],
         [
@@ -364,6 +679,10 @@ def _start_keyboard(is_admin: bool = False) -> InlineKeyboardMarkup:
         [InlineKeyboardButton("🎁 Пригласить друга", callback_data="invite_prompt")],
         [InlineKeyboardButton("🎟 Активировать промокод", callback_data="promo_prompt")],
     ]
+    if is_affiliate:
+        rows.append(
+            [InlineKeyboardButton("📈 Панель траффера", callback_data="aff_panel")]
+        )
     if is_admin:
         rows.append(
             [InlineKeyboardButton("🔧 Админ-панель", callback_data="adm_open")]
@@ -544,9 +863,9 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     count = get_resume_count()
     text = start_text(count, _display_name(tg_user))
-    is_admin = bool(tg_user and tg_user.id in _founder_ids())
+    is_admin, is_affiliate = _menu_flags(tg_user)
     await update.message.reply_text(
-        text, reply_markup=_start_keyboard(is_admin), parse_mode="HTML"
+        text, reply_markup=_start_keyboard(is_admin, is_affiliate), parse_mode="HTML"
     )
 
     asyncio.create_task(_register_bot_contact(tg_user, referrer_id))
@@ -739,10 +1058,10 @@ async def back_to_start_callback(update: Update, context: ContextTypes.DEFAULT_T
     query = update.callback_query
     await query.answer()
     count = get_resume_count()
-    is_admin = bool(query.from_user and query.from_user.id in _founder_ids())
+    is_admin, is_affiliate = _menu_flags(query.from_user)
     await query.edit_message_text(
         start_text(count),
-        reply_markup=_start_keyboard(is_admin),
+        reply_markup=_start_keyboard(is_admin, is_affiliate),
         parse_mode="HTML",
     )
 
@@ -762,18 +1081,93 @@ async def promo_cancel_callback(update: Update, context: ContextTypes.DEFAULT_TY
     await query.answer()
     context.user_data.pop("awaiting_promo", None)
     count = get_resume_count()
-    is_admin = bool(query.from_user and query.from_user.id in _founder_ids())
+    is_admin, is_affiliate = _menu_flags(query.from_user)
     await query.message.reply_text(
         start_text(count),
-        reply_markup=_start_keyboard(is_admin),
+        reply_markup=_start_keyboard(is_admin, is_affiliate),
         parse_mode="HTML",
     )
 
 
-async def promo_text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not context.user_data.get("awaiting_promo"):
-        await fallback_text(update, context)
+async def affiliate_admin_text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user = update.effective_user
+    if not user or user.id not in _founder_ids():
         return
+    step = context.user_data.get("awaiting_affiliate")
+    if not step:
+        return
+
+    text = (update.message.text or "").strip()
+    draft = context.user_data.setdefault("affiliate_draft", {})
+
+    if step == "id":
+        try:
+            telegram_id = int(text)
+        except ValueError:
+            await update.message.reply_text("Отправьте числовой Telegram ID, например: 123456789")
+            return
+        if telegram_id in _founder_ids():
+            await update.message.reply_text("Нельзя назначить администратора траффером.")
+            return
+        draft["telegram_id"] = telegram_id
+        context.user_data["awaiting_affiliate"] = "code"
+        await update.message.reply_text(
+            f"ID: <code>{telegram_id}</code>\n\n"
+            "Теперь отправьте промокод (латиница и цифры).\n"
+            "Пример: <code>BLOG10</code>",
+            parse_mode="HTML",
+        )
+        return
+
+    if step == "code":
+        code = text.upper().replace(" ", "")
+        if not code or len(code) < 3:
+            await update.message.reply_text("Промокод слишком короткий. Пример: BLOG10")
+            return
+        telegram_id = draft.get("telegram_id")
+        if not telegram_id:
+            context.user_data.pop("awaiting_affiliate", None)
+            await update.message.reply_text("Сессия сброшена. Начните снова из админ-панели.")
+            return
+        try:
+            async with httpx.AsyncClient(timeout=15.0) as client:
+                resp = await client.post(
+                    f"{API_URL}/api/admin/affiliates",
+                    headers=_admin_headers(),
+                    json={"telegram_id": telegram_id, "code": code},
+                )
+            if resp.status_code != 200:
+                detail = resp.text[:300]
+                await update.message.reply_text(f"❌ Ошибка: {resp.status_code}\n{detail}")
+                return
+            data = resp.json()
+            promo = data.get("promo", {})
+            promo_code = str(promo.get("code", code))
+            context.user_data.pop("awaiting_affiliate", None)
+            context.user_data.pop("affiliate_draft", None)
+            await _notify_affiliate_granted(context, int(telegram_id), promo_code)
+            await update.message.reply_text(
+                f"✅ Траффер <code>{telegram_id}</code> добавлен.\n"
+                f"Промокод: <b>{html.escape(promo_code)}</b>\n"
+                "Пользователю отправлено уведомление — ему нужно нажать /start.",
+                parse_mode="HTML",
+            )
+        except Exception as exc:
+            logger.exception("add affiliate failed")
+            await update.message.reply_text(f"❌ Не удалось добавить траффера: {exc}")
+
+
+async def text_message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if context.user_data.get("awaiting_affiliate"):
+        await affiliate_admin_text_handler(update, context)
+        return
+    if context.user_data.get("awaiting_promo"):
+        await promo_text_handler(update, context)
+        return
+    await fallback_text(update, context)
+
+
+async def promo_text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data.pop("awaiting_promo", None)
     code = (update.message.text or "").strip()
     if not code:
@@ -922,7 +1316,19 @@ def main():
     app.add_handler(CallbackQueryHandler(adm_refs_callback, pattern="^adm_refs$"))
     app.add_handler(CallbackQueryHandler(adm_create_promo_callback, pattern="^adm_create_promo$"))
     app.add_handler(CallbackQueryHandler(adm_promo_acts_callback, pattern="^adm_promo_acts$"))
+    app.add_handler(CallbackQueryHandler(adm_affiliates_callback, pattern="^adm_affiliates$"))
+    app.add_handler(CallbackQueryHandler(adm_add_affiliate_callback, pattern="^adm_add_affiliate$"))
+    app.add_handler(
+        CallbackQueryHandler(adm_add_affiliate_cancel_callback, pattern="^adm_add_affiliate_cancel$")
+    )
+    app.add_handler(CallbackQueryHandler(adm_revoke_affiliate_callback, pattern=r"^adm_revoke_aff:\d+$"))
+    app.add_handler(
+        CallbackQueryHandler(adm_revoke_affiliate_confirm_callback, pattern=r"^adm_revoke_ok:\d+$")
+    )
     app.add_handler(CallbackQueryHandler(adm_back_callback, pattern="^adm_back$"))
+
+    app.add_handler(CallbackQueryHandler(aff_panel_callback, pattern="^aff_panel$"))
+    app.add_handler(CallbackQueryHandler(aff_refresh_callback, pattern="^aff_refresh$"))
 
     app.add_handler(CallbackQueryHandler(promo_prompt_callback, pattern="^promo_prompt$"))
     app.add_handler(CallbackQueryHandler(promo_cancel_callback, pattern="^promo_cancel$"))
@@ -937,7 +1343,7 @@ def main():
     app.add_handler(PreCheckoutQueryHandler(pre_checkout))
     app.add_handler(MessageHandler(filters.SUCCESSFUL_PAYMENT, successful_payment))
 
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, promo_text_handler))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, text_message_handler))
 
     logger.info("Bot started")
     app.run_polling(allowed_updates=Update.ALL_TYPES)
