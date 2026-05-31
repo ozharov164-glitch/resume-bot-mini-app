@@ -73,12 +73,23 @@ body {
 
 .app-shell {
   position: relative;
+  display: flex;
+  flex-direction: column;
   width: 100%;
   max-width: var(--app-max-width);
   height: var(--tg-viewport-stable-height);
   margin: 0 auto;
   overflow: hidden;
   background: #ffffff;
+}
+
+.app-shell-inner {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+  width: 100%;
 }
 
 @media (min-width: 520px) {
@@ -90,28 +101,13 @@ body {
   #root {
     display: flex;
     justify-content: center;
+    width: 100%;
   }
 
   .app-shell {
     box-shadow:
       0 0 0 1px rgba(0, 0, 0, 0.06),
       0 16px 48px rgba(0, 0, 0, 0.1);
-  }
-
-  .app-header {
-    left: 50%;
-    right: auto;
-    width: min(100vw, var(--app-max-width));
-    max-width: var(--app-max-width);
-    transform: translateX(-50%) translateZ(0);
-  }
-
-  .fixed-bottom-bar {
-    left: 50%;
-    right: auto;
-    width: min(100vw, var(--app-max-width));
-    max-width: var(--app-max-width);
-    transform: translateX(-50%);
   }
 }
 
@@ -648,25 +644,21 @@ textarea::-moz-placeholder {
 }
 
 .app-header {
-  position: fixed;
+  position: sticky;
   top: 0;
-  left: 0;
-  right: 0;
   z-index: 50;
   display: flex;
+  flex-shrink: 0;
   height: var(--app-header-height);
   align-items: center;
   justify-content: space-between;
   border-bottom: 1px solid var(--border-subtle);
   background: #ffffff;
   padding: 0 1rem;
-  transform: translateZ(0);
-  backface-visibility: hidden;
 }
 
 .app-header-spacer {
-  height: var(--app-header-height);
-  flex-shrink: 0;
+  display: none;
 }
 
 .app-header-side {
@@ -703,11 +695,14 @@ textarea::-moz-placeholder {
 }
 
 .app-screen {
+  position: relative;
   height: 100%;
+  flex: 1;
+  min-height: 0;
 }
 
 .fixed-bottom-bar {
-  position: fixed;
+  position: absolute;
   left: 0;
   right: 0;
   bottom: 0;

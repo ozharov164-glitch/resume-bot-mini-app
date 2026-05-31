@@ -31,7 +31,7 @@ export function Screen({
   return (
     <div
       className={clsx(
-        "app-screen flex h-full min-h-0 flex-col overflow-hidden",
+        "app-screen flex h-full min-h-0 flex-1 flex-col overflow-hidden",
         bottomPad ? BOTTOM_BAR_PADDING[bottomBarButtons] : "pb-6",
         centered && "justify-center",
         className,

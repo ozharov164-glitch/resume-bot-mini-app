@@ -33,7 +33,6 @@ export function AppHeader({ title = APP_TITLE, showBack = false, onBack }: AppHe
           <Icon name="close" />
         </button>
       </header>
-      <div className="app-header-spacer" aria-hidden />
     </>
   );
 }
