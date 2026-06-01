@@ -7,7 +7,7 @@ import { PreviewPaidHero } from "../components/preview/PreviewPaidHero";
 import { PreviewLoadingSkeleton } from "../components/preview/PreviewLoadingSkeleton";
 import { PreviewResumeCard } from "../components/preview/PreviewResumeCard";
 import { HhTextEntryCard } from "../components/hh/HhTextEntryCard";
-import { ensureAuthToken, fetchHhText, getResume } from "../api";
+import { ensureAuthToken, getResume } from "../api";
 import { AppHeader } from "../components/ui/AppHeader";
 import { Button } from "../components/ui/Button";
 import { FixedBottomBar } from "../components/ui/FixedBottomBar";
@@ -40,7 +40,6 @@ export function PreviewPage() {
   const [previewError, setPreviewError] = useState(false);
   const [hydrating, setHydrating] = useState(false);
   const [hydrateError, setHydrateError] = useState(false);
-  const [hhPreview, setHhPreview] = useState<string | null>(null);
   const previewLocked = !isPaid && !founderActive;
   const previewPaid = isPaid || founderActive;
   const useFitLayout = previewLocked || previewPaid;
@@ -113,30 +112,6 @@ export function PreviewPage() {
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
   }, [authToken, resumeId]);
-
-  useEffect(() => {
-    if (!resumeId) return;
-    let cancelled = false;
-    (async () => {
-      try {
-        const token = authToken || (await ensureAuthToken());
-        const data = await fetchHhText(token, resumeId);
-        if (cancelled) return;
-        if (data.is_paid && data.text) {
-          setHhPreview(null);
-        } else if (data.preview) {
-          setHhPreview(data.preview);
-        }
-      } catch {
-        if (!cancelled) {
-          setHhPreview(null);
-        }
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [authToken, resumeId, isPaid, founderActive]);
 
   if (!resumeData) {
     return (
@@ -226,16 +201,6 @@ export function PreviewPage() {
 
         {previewPaid ? (
           <HhTextEntryCard onClick={() => openHhTextView("preview")} />
-        ) : null}
-
-        {previewLocked && hhPreview ? (
-          <section className="preview-hh-block preview-hh-block--locked">
-            <h3 className="preview-hh-title">Текст для hh.ru</h3>
-            <pre className="preview-hh-preview-text">{hhPreview}</pre>
-            <div className="preview-hh-blur">
-              <p>Полный текст — после оплаты</p>
-            </div>
-          </section>
         ) : null}
 
         {founderActive ? <FounderBadge /> : null}

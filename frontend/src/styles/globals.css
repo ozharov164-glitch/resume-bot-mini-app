@@ -949,6 +949,14 @@ body {
   height: 0.25rem;
 }
 
+.hh-text-page__hint {
+  margin: 0;
+  max-width: 18rem;
+  font-size: 0.875rem;
+  line-height: 1.45;
+  color: var(--text-muted, #707579);
+}
+
 .preview-hh-title {
   margin: 0 0 0.5rem;
   font-size: 0.8125rem;

@@ -5,6 +5,7 @@ from fastapi.responses import PlainTextResponse
 
 from dependencies import get_current_user
 from database import get_db
+from services.founder import is_founder
 from services.hh_text_service import format_hh_text
 from services.payment_fulfillment import parse_resume_data
 
@@ -23,6 +24,11 @@ async def text_export(
         raise HTTPException(
             status_code=404,
             detail={"error": "not_found", "message": "Резюме не найдено."},
+        )
+    if not resume.get("is_paid") and not is_founder(current_user.get("telegram_id")):
+        raise HTTPException(
+            status_code=403,
+            detail={"error": "payment_required", "message": "Текст доступен после оплаты."},
         )
     try:
         resume_data = parse_resume_data(resume["data"])

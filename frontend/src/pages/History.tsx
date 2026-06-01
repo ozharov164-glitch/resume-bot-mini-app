@@ -1,14 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 
-import {
-  clearResumeHistory,
-  ensureAuthToken,
-  fetchResumeList,
-  fetchTextExport,
-  getResume,
-  type ResumeListItem,
-} from "../api";
-import { trackEvent } from "../lib/analytics";
+import { clearResumeHistory, ensureAuthToken, fetchResumeList, getResume, type ResumeListItem } from "../api";
 import { AppHeader } from "../components/ui/AppHeader";
 import { Icon } from "../components/ui/Icon";
 import { PaidBadge } from "../components/ui/PaidBadge";
@@ -86,21 +78,8 @@ export function HistoryPage() {
     e.stopPropagation();
     if (!item.is_paid) return;
     getTg()?.HapticFeedback?.impactOccurred("light");
-    useAppStore.setState({ resumeId: item.id });
+    useAppStore.setState({ resumeId: item.id, isPaid: true });
     openHhTextView("history");
-  };
-
-  const copyText = async (item: ResumeListItem, e: React.MouseEvent) => {
-    e.stopPropagation();
-    try {
-      const token = await ensureAuthToken();
-      const text = await fetchTextExport(token, item.id);
-      await navigator.clipboard.writeText(text);
-      trackEvent("text_exported", { source: "history" });
-      getTg()?.HapticFeedback?.notificationOccurred("success");
-    } catch {
-      alert("Не удалось скопировать текст.");
-    }
   };
 
   const clearHistory = async () => {
@@ -209,17 +188,7 @@ export function HistoryPage() {
                 >
                   <Icon name="article" size={18} style={{ color: "var(--brand)" }} />
                 </button>
-              ) : (
-                <button
-                  type="button"
-                  className="flex h-9 w-9 items-center justify-center rounded-full"
-                  style={{ background: "var(--surface-variant, #f3f4f6)" }}
-                  aria-label="Скопировать текст"
-                  onClick={(e) => void copyText(item, e)}
-                >
-                  <Icon name="content_copy" size={18} style={{ color: "#6b7280" }} />
-                </button>
-              )}
+              ) : null}
               <Icon name="chevron_right" style={{ color: "var(--text-muted)" }} />
             </div>
           </button>
