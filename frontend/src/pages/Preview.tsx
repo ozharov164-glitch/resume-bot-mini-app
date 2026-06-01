@@ -29,13 +29,11 @@ export function PreviewPage() {
     resumeId,
     authToken,
     setPage,
-    setPaid,
     startEditResume,
     previewReturnPage,
     isPaid,
     selectedTemplate,
-  } =
-    useAppStore();
+  } = useAppStore();
   const founderActive = useFounderStatus();
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewError, setPreviewError] = useState(false);
@@ -143,20 +141,18 @@ export function PreviewPage() {
 
   if (!resumeData) {
     return (
-      <Screen centered className="px-4">
+      <Screen centered className="preview-page px-4">
         <AppHeader onBack={handleBack} showBack title="Предпросмотр" />
-        <main className="flex flex-1 flex-col items-center justify-center gap-4 px-4 text-center">
+        <main className="preview-page-empty">
           {hydrating ? (
             <>
               <PreviewLoadingSkeleton />
-              <p className="text-sm" style={{ color: "var(--text-muted)" }}>
-                Загружаем резюме…
-              </p>
+              <p className="preview-page-caption">Загружаем резюме…</p>
             </>
           ) : hydrateError || !resumeId ? (
             <>
-              <p className="text-base font-medium">Не удалось открыть предпросмотр</p>
-              <p className="text-sm" style={{ color: "var(--text-muted)" }}>
+              <p className="preview-page-error-title">Не удалось открыть предпросмотр</p>
+              <p className="preview-page-caption">
                 Попробуйте сформировать резюме ещё раз или откройте его из истории.
               </p>
               <Button variant="brand" onClick={() => setPage("home")}>
@@ -171,14 +167,12 @@ export function PreviewPage() {
     );
   }
 
-  const handlePdf = async () => {
+  const goToCheckout = () => {
     getTg()?.HapticFeedback?.impactOccurred("medium");
-
     if (!resumeId) {
-      alert("Резюме не найдено. Сформируй его заново.");
+      alert("Резюме не найдено. Сформируйте его заново.");
       return;
     }
-
     setPage("template_select");
   };
 
@@ -188,95 +182,97 @@ export function PreviewPage() {
     if (!userId) return;
     const link = `https://t.me/resumeez_bot?start=ref_${userId}`;
     trackEvent("share_clicked", { source: "preview" });
-    tg?.openTelegramLink?.(`https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent("Создал резюме за 5 минут — попробуй!")}`);
+    tg?.openTelegramLink?.(
+      `https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent("Создал резюме за 5 минут — попробуй!")}`,
+    );
   };
 
   return (
-    <Screen withBottomBar bottomBarButtons={2}>
+    <Screen withBottomBar bottomBarButtons={2} className="preview-page">
       <AppHeader onBack={handleBack} showBack title="Предпросмотр" />
-      <main className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto overscroll-y-contain px-4 py-3 pb-2">
+      <main className="preview-page-main">
         <PreviewStatusHero />
+
         <section className="preview-template-bar">
-          <span>Шаблон: <strong>{templateName}</strong></span>
+          <div className="preview-template-bar-copy">
+            <span className="preview-template-bar-label">Шаблон PDF</span>
+            <strong className="preview-template-bar-name">{templateName}</strong>
+          </div>
           <button type="button" onClick={() => setPage("template_select")} className="preview-share-link">
             Изменить
           </button>
         </section>
+
         {previewUrl && !previewError ? (
-          <>
-            <PreviewImageFrame src={previewUrl} locked={previewLocked} />
-            {previewLocked && (
-              <div className="preview-unlock-block">
-                <div className="preview-unlock-header">
-                  <p className="preview-unlock-text">PDF + полный текст для hh.ru</p>
-                  <span className="preview-unlock-price">{STARS_PRICE} ⭐</span>
-                </div>
-                <p className="preview-unlock-sub">Один отклик — и первый оффер</p>
-                <Button variant="brand" onClick={handlePdf} className="w-full">
-                  Получить PDF + текст для hh.ru →
-                </Button>
-              </div>
-            )}
-          </>
+          <PreviewImageFrame src={previewUrl} locked={previewLocked} />
         ) : previewError ? (
           <PreviewResumeCard resume={resumeData} />
         ) : (
           <PreviewLoadingSkeleton />
         )}
+
+        {previewLocked ? (
+          <section className="preview-offer-card" aria-label="Стоимость полной версии">
+            <div className="preview-offer-row">
+              <div>
+                <p className="preview-offer-title">PDF + полный текст для hh.ru</p>
+                <p className="preview-offer-sub">Нижняя часть PDF и текст hh.ru откроются после оплаты</p>
+              </div>
+              <span className="preview-offer-price">{STARS_PRICE} ⭐</span>
+            </div>
+          </section>
+        ) : null}
+
         {(hhPreview || hhPaidText) && (
           <section className={`preview-hh-block${previewLocked ? " preview-hh-block--locked" : ""}`}>
-            <h3 className="text-sm font-semibold mb-2">📋 Текст для hh.ru</h3>
-            <pre className="preview-hh-preview-text">
-              {hhPaidText ?? hhPreview}
-            </pre>
-            {previewLocked && hhPreview && (
+            <h3 className="preview-hh-title">Текст для hh.ru</h3>
+            <pre className="preview-hh-preview-text">{hhPaidText ?? hhPreview}</pre>
+            {previewLocked && hhPreview ? (
               <div className="preview-hh-blur">
                 <p>Полный текст — после оплаты</p>
               </div>
-            )}
+            ) : null}
           </section>
         )}
-        {founderActive && <FounderBadge />}
+
+        {founderActive ? <FounderBadge /> : null}
       </main>
 
       <FixedBottomBar>
-        <div className="flex flex-col gap-2">
-          {previewLocked && (
+        <div className="preview-bottom-stack">
+          {previewLocked ? (
             <div className="preview-share-hint">
               <span>Знаете кого-то, кто ищет работу?</span>
               <button type="button" className="preview-share-link" onClick={handleShare}>
                 Пригласить
               </button>
             </div>
-          )}
-          <div className="flex flex-col gap-1.5 mb-3">
+          ) : null}
+
+          <ul className="preview-checklist">
             {PREVIEW_CHECKLIST.map((text) => (
-              <div
-                key={text}
-                className="flex items-center gap-2 text-sm"
-                style={{ color: "var(--text-secondary)" }}
-              >
-                <span className="text-[#2de08a]">✓</span>
+              <li key={text} className="preview-checklist-item">
+                <span className="preview-checklist-mark" aria-hidden>
+                  ✓
+                </span>
                 <span>{text}</span>
-              </div>
+              </li>
             ))}
-          </div>
+          </ul>
+
           <Button
             variant="secondary"
             onClick={() => {
               getTg()?.HapticFeedback?.impactOccurred("light");
               startEditResume();
             }}
-            className="!min-h-[44px] flex items-center justify-center gap-2"
+            className="preview-secondary-btn"
           >
             <Icon name="edit" size={18} />
             Изменить ответы
           </Button>
-          <Button
-            variant="brand"
-            onClick={handlePdf}
-            className="preview-pdf-btn relative flex items-center justify-center gap-2 overflow-hidden"
-          >
+
+          <Button variant="brand" onClick={goToCheckout} className="preview-pdf-btn">
             <span className="preview-btn-shimmer pointer-events-none absolute inset-0" aria-hidden />
             <Icon name="picture_as_pdf" size={20} />
             {previewLocked ? "Получить PDF + текст hh.ru" : "Получить PDF в Telegram"}

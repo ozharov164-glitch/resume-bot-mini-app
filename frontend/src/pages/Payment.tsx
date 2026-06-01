@@ -10,6 +10,7 @@ import {
   validatePromo,
   waitUntilPaid,
 } from "../api";
+import { PaymentReviews } from "../components/payment/PaymentReviews";
 import { trackEvent } from "../lib/analytics";
 import { useYookassaReturnPoll } from "../hooks/useYookassaReturnPoll";
 import { markYookassaPending } from "../lib/paymentReturn";
@@ -94,9 +95,6 @@ export function PaymentPage() {
     [answers.name, answers.patronymic].filter(Boolean).join(" ") ||
     "клиента";
   const position = resumeData?.target_position || answers.target_position || "";
-  const orderLabel = position
-    ? `Резюме для ${fullName} (${position})`
-    : `Резюме для ${fullName}`;
 
   const baseStarsPrice = applyDiscount(STARS_PRICE, promoDiscount);
   const baseRubPrice = applyDiscount(RUB_PRICE, promoDiscount);
@@ -105,21 +103,6 @@ export function PaymentPage() {
     : 0;
   const starsPrice = Math.max(1, baseStarsPrice - bonusDiscount);
   const rubPrice = Math.max(1, baseRubPrice - bonusDiscount);
-
-  const PAYMENT_QUOTES = [
-    {
-      text: "Откликнулся утром, к вечеру уже был звонок от работодателя.",
-      role: "Продавец-консультант, Санкт-Петербург",
-    },
-    {
-      text: "С первого резюме получил оффер через 5 дней.",
-      role: "Водитель, Москва",
-    },
-    {
-      text: "Сын искал работу почти месяц, с вашим шаблоном получилось за неделю.",
-      role: "Родитель соискателя, Екатеринбург",
-    },
-  ] as const;
 
   const applyPromo = async () => {
     const code = promoCode.trim();
@@ -234,88 +217,70 @@ export function PaymentPage() {
   const busy = paying || cardPaying;
 
   return (
-    <Screen className="px-4">
+    <Screen className="payment-page px-4">
       <AppHeader onBack={handleBack} showBack />
-      <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-5 py-4">
-        <section className="flex flex-col items-center gap-2 pt-2 text-center">
-          <div
-            className="mb-1 flex h-16 w-16 items-center justify-center rounded-full"
-            style={{ background: "var(--brand-muted)" }}
-          >
-            <Icon name="payments" filled size={32} style={{ color: "var(--brand)" }} />
+      <main className="payment-main">
+        <header className="payment-hero">
+          <div className="payment-hero-icon" aria-hidden>
+            <Icon name="payments" filled size={30} style={{ color: "var(--brand)" }} />
           </div>
-          <h2 className="text-2xl font-bold">Выберите способ оплаты</h2>
-          {todayCount > 3 && (
+          <h2 className="payment-hero-title">Выберите способ оплаты</h2>
+          {todayCount > 3 ? (
             <p className="payment-today-count">
               Сегодня {todayCount} человек уже создали резюме
             </p>
-          )}
-        </section>
+          ) : null}
+        </header>
 
-        <section
-          className="rounded-xl border p-4"
-          style={{ background: "var(--surface-card)", borderColor: "var(--border-subtle)" }}
-        >
-          <p className="text-xs font-medium uppercase tracking-wide" style={{ color: "var(--text-muted)" }}>
-            Заказ
-          </p>
-          <h3 className="mt-1 text-base font-semibold leading-snug">{orderLabel}</h3>
-          <div className="mt-3 flex flex-col gap-2 border-t pt-3" style={{ borderColor: "var(--border-subtle)" }}>
-            <div className="flex items-center justify-between">
-              <span className="text-sm" style={{ color: "var(--text-muted)" }}>
-                Telegram Stars
-              </span>
-              <span className="text-lg font-bold">
+        <section className="payment-card payment-order-card">
+          <p className="payment-card-label">Заказ</p>
+          <h3 className="payment-order-name">{fullName}</h3>
+          {position ? <p className="payment-order-role">{position}</p> : null}
+
+          <div className="payment-price-grid">
+            <div className="payment-price-row">
+              <span className="payment-price-label">Telegram Stars</span>
+              <span className="payment-price-value">
                 {starsPrice} ⭐
                 {(promoDiscount > 0 || bonusApplied) && starsPrice !== STARS_PRICE ? (
-                  <span className="ml-2 text-sm line-through opacity-50">{STARS_PRICE}</span>
+                  <span className="payment-price-old">{STARS_PRICE}</span>
                 ) : null}
               </span>
             </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm" style={{ color: "var(--text-muted)" }}>
-                Банковская карта
-              </span>
-              <span className="text-lg font-bold">
+            <div className="payment-price-row">
+              <span className="payment-price-label">Банковская карта</span>
+              <span className="payment-price-value">
                 {rubPrice} ₽
                 {(promoDiscount > 0 || bonusApplied) && rubPrice !== RUB_PRICE ? (
-                  <span className="ml-2 text-sm line-through opacity-50">{RUB_PRICE}</span>
+                  <span className="payment-price-old">{RUB_PRICE}</span>
                 ) : null}
               </span>
             </div>
           </div>
+
           {bonusApplied && bonusDiscount > 0 ? (
-            <p className="text-sm font-medium" style={{ color: "var(--brand)" }}>
-              Списано {bonusDiscount} бонусных Stars — скидка действует и для Stars, и для карты
+            <p className="payment-discount-note">
+              Списано {bonusDiscount} бонусных Stars — скидка для Stars и карты
             </p>
           ) : null}
           {promoDiscount > 0 ? (
-            <p className="mt-2 text-sm font-medium" style={{ color: "var(--brand)" }}>
-              Скидка {promoDiscount}% применена{promoCode ? ` (промокод ${promoCode})` : ""}!
+            <p className="payment-discount-note">
+              Скидка {promoDiscount}% применена{promoCode ? ` · ${promoCode}` : ""}
             </p>
           ) : null}
-          <div className="payment-quotes mt-3">
-            <p className="payment-quotes-title">Что пишут после оплаты</p>
-            {PAYMENT_QUOTES.map((quote) => (
-              <div key={quote.text} className="payment-quote">
-                <p className="payment-quote-text">“{quote.text}”</p>
-                <p className="payment-quote-role">{quote.role}</p>
-              </div>
-            ))}
-          </div>
+
+          <PaymentReviews preferredProfession={position} />
         </section>
 
         {bonusStars > 0 && !bonusApplied ? (
-          <section
-            className="rounded-xl border p-4"
-            style={{ background: "var(--surface-card)", borderColor: "var(--border-subtle)" }}
-          >
-            <p className="text-sm font-medium">
-              У вас {bonusStars} бонусных Stars — 1 ⭐ = 1 ₽ скидки при оплате
+          <section className="payment-card payment-bonus-card">
+            <p className="payment-bonus-text">
+              У вас {bonusStars} бонусных Stars — 1 ⭐ = 1 ₽ скидки
             </p>
             <Button
               variant="outline"
-              className="mt-2 w-full"
+              fullWidth={false}
+              className="payment-bonus-btn"
               onClick={() => {
                 setBonusApplied(true);
                 trackEvent("bonus_applied", { bonus_stars: bonusStars });
@@ -327,48 +292,46 @@ export function PaymentPage() {
           </section>
         ) : null}
 
-        {!showPromo && promoReady ? (
-          <button
-            type="button"
-            className="text-sm underline"
-            style={{ color: "var(--brand)" }}
-            onClick={() => setShowPromo(true)}
-          >
-            У меня есть промокод
-          </button>
-        ) : (
-          <div className="flex flex-col gap-2">
-            <p className="text-xs font-medium uppercase tracking-wide" style={{ color: "var(--text-muted)" }}>
-              Промокод
-            </p>
-            <div className="flex gap-2">
-              <TextInput
-                value={promoCode}
-                onChange={(e) => {
-                  setPromoCode(e.target.value);
-                  setPromoError(null);
-                }}
-                placeholder="Промокод"
-                className="flex-1"
-              />
-              <Button variant="outline" onClick={applyPromo} disabled={promoLoading || !promoCode.trim()}>
-                {promoLoading ? "…" : "Применить"}
-              </Button>
-            </div>
-            {promoError ? (
-              <p className="text-sm" style={{ color: "#dc2626" }}>
-                {promoError}
-              </p>
-            ) : null}
-          </div>
-        )}
+        <section className="payment-card payment-promo-card">
+          {!showPromo && promoReady ? (
+            <button type="button" className="payment-promo-toggle" onClick={() => setShowPromo(true)}>
+              У меня есть промокод
+            </button>
+          ) : (
+            <>
+              <p className="payment-card-label">Промокод</p>
+              <div className="payment-promo-row">
+                <TextInput
+                  value={promoCode}
+                  onChange={(e) => {
+                    setPromoCode(e.target.value);
+                    setPromoError(null);
+                  }}
+                  placeholder="Введите код"
+                  className="payment-promo-input"
+                  aria-label="Промокод"
+                />
+                <Button
+                  variant="outline"
+                  fullWidth={false}
+                  className="payment-promo-apply"
+                  onClick={applyPromo}
+                  disabled={promoLoading || !promoCode.trim()}
+                >
+                  {promoLoading ? "…" : "Применить"}
+                </Button>
+              </div>
+              {promoError ? <p className="payment-promo-error">{promoError}</p> : null}
+            </>
+          )}
+        </section>
 
-        <div className="flex flex-col gap-3">
+        <div className="payment-actions">
           <Button
             variant="brand"
             onClick={payStars}
             disabled={busy}
-            className="!min-h-[52px] flex items-center justify-center gap-2"
+            className="payment-pay-btn"
           >
             <Icon name="star" filled size={20} />
             {paying ? "Ожидаем оплату…" : `Оплатить Telegram Stars (${starsPrice})`}
@@ -378,16 +341,16 @@ export function PaymentPage() {
             variant="outline"
             onClick={payYookassa}
             disabled={busy}
-            className="!min-h-[52px] flex items-center justify-center gap-2"
+            className="payment-pay-btn payment-pay-btn--card"
           >
             <Icon name="credit_card" size={20} />
             {cardPaying ? "Открываем оплату…" : `Оплатить картой — ${rubPrice} ₽`}
           </Button>
         </div>
 
-        <p className="mt-auto text-center text-sm leading-relaxed" style={{ color: "var(--text-muted)" }}>
-          После оплаты вернитесь в Telegram и снова откройте Mini App. Готовый PDF и полный текст для hh.ru
-          автоматически придут в чат с ботом.
+        <p className="payment-footer-note">
+          После оплаты вернитесь в Telegram и снова откройте Mini App. PDF и полный текст для hh.ru
+          придут в чат с ботом автоматически.
         </p>
       </main>
     </Screen>
