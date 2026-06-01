@@ -16,6 +16,21 @@
       Зарплата: <strong>{{ resume.salary }}</strong>
     </div>
     {% endif %}
+    {% if resume.work_schedule %}
+    <div class="modern-meta" style="margin-top: 4pt;">
+      График:
+      {% if resume.work_schedule is iterable and resume.work_schedule is not string %}
+      <strong>{{ resume.work_schedule | join(', ') }}</strong>
+      {% else %}
+      <strong>{{ resume.work_schedule }}</strong>
+      {% endif %}
+    </div>
+    {% endif %}
+    {% if resume.relocation %}
+    <div class="modern-meta" style="margin-top: 4pt;">
+      Переезд: <strong>{{ resume.relocation }}</strong>
+    </div>
+    {% endif %}
   </header>
 
   {% if resume.summary %}

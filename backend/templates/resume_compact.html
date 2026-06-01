@@ -34,6 +34,26 @@
     </div>
     {% endif %}
 
+    {% if resume.work_schedule %}
+    <div>
+      <div class="section-title">График</div>
+      <div class="lang-item">
+        {% if resume.work_schedule is iterable and resume.work_schedule is not string %}
+        {{ resume.work_schedule | join(', ') }}
+        {% else %}
+        {{ resume.work_schedule }}
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+
+    {% if resume.relocation %}
+    <div>
+      <div class="section-title">Переезд</div>
+      <div class="lang-item">{{ resume.relocation }}</div>
+    </div>
+    {% endif %}
+
     {% if resume.skills %}
     <div>
       <div class="section-title">Навыки</div>

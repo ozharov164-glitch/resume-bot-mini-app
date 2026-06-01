@@ -16,7 +16,7 @@ export const HOME_BENEFITS = [
   {
     icon: "palette" as const,
     title: "Оформление уже готово",
-    subtitle: "Три шаблона PDF — выберите стиль до оплаты.",
+    subtitle: "Три шаблона PDF — смените стиль на предпросмотре перед оплатой.",
   },
   {
     icon: "send" as const,
@@ -52,8 +52,8 @@ export const EXAMPLES_GALLERY_SUB =
   "Посмотрите, как выглядит результат — один опыт, три стиля оформления под hh.ru.";
 
 export const PREVIEW_CHECKLIST = [
-  "Готово к отправке работодателю",
-  "Структура под hh.ru",
+  "PDF для отправки работодателю",
+  "Текст для вставки на hh.ru",
   "Оформление в выбранном шаблоне",
 ] as const;
 
