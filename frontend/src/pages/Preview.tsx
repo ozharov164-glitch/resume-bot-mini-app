@@ -16,6 +16,7 @@ import { Screen } from "../components/ui/Screen";
 import { useFounderStatus } from "../hooks/useFounderStatus";
 import { useTelegramBackButton } from "../hooks/useTelegramBackButton";
 import { PREVIEW_CHECKLIST } from "../lib/marketingCopy";
+import { STARS_PRICE } from "../lib/pricing";
 import { useAppStore } from "../store";
 import { getTg } from "../telegram";
 
@@ -161,7 +162,7 @@ export function PreviewPage() {
               <div className="preview-unlock-block">
                 <div className="preview-unlock-header">
                   <p className="preview-unlock-text">Полное резюме (2 стр.)</p>
-                  <span className="preview-unlock-price">149 ⭐</span>
+                  <span className="preview-unlock-price">{STARS_PRICE} ⭐</span>
                 </div>
                 <p className="preview-unlock-sub">Один отклик — и первый оффер</p>
                 <Button variant="brand" onClick={handlePdf} className="w-full">
