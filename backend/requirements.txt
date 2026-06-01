@@ -11,4 +11,3 @@ supabase==2.7.4
 pydantic-settings==2.4.0
 python-multipart==0.0.9
 yookassa==3.3.0
-qrcode[pil]==8.0
