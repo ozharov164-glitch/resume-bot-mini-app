@@ -17,6 +17,7 @@ import { useAppStore } from "../store";
 import { getTg } from "../telegram";
 
 const BOT_USERNAME = "resumeez_bot";
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
 export function SuccessPage() {
   const { resumeId, authToken } = useAppStore();
@@ -54,6 +55,29 @@ export function SuccessPage() {
       showToast("Скопировано в буфер");
     } catch {
       alert("Не удалось скопировать текст. Попробуйте ещё раз.");
+    }
+  };
+
+  const downloadShareBanner = async () => {
+    if (!resumeId || !authToken) return;
+    try {
+      const token = authToken || (await ensureAuthToken());
+      const res = await fetch(`${API_URL}/api/resume/${resumeId}/share-image`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error("banner");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = "resumebot-share.png";
+      anchor.click();
+      URL.revokeObjectURL(url);
+      getTg()?.HapticFeedback?.impactOccurred("light");
+      showToast("Баннер сохранён");
+      trackEvent("share_banner_downloaded");
+    } catch {
+      alert("Не удалось скачать баннер. Попробуйте позже.");
     }
   };
 
@@ -162,8 +186,11 @@ export function SuccessPage() {
           <Button variant="outline" onClick={shareInvite} className="w-full">
             Пригласить друга
           </Button>
+          <Button variant="outline" onClick={() => void downloadShareBanner()} className="w-full">
+            Скачать баннер для Stories
+          </Button>
           <p className="text-xs" style={{ color: "#6b7280" }}>
-            Друг получит скидку, вы получите бонусные Stars
+            За оплату друга — бонусные Stars (~20% от суммы) на ваш счёт
           </p>
         </section>
       </main>
