@@ -140,6 +140,15 @@ export function PreviewPage() {
     setPage("template_select");
   };
 
+  const handleShare = () => {
+    const tg = getTg();
+    const userId = tg?.initDataUnsafe?.user?.id;
+    if (!userId) return;
+    const link = `https://t.me/resumeez_bot?start=ref_${userId}`;
+    trackEvent("share_clicked", { source: "preview" });
+    tg?.openTelegramLink?.(`https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent("Создал резюме за 5 минут — попробуй!")}`);
+  };
+
   return (
     <Screen withBottomBar bottomBarButtons={2}>
       <AppHeader onBack={handleBack} showBack title="Предпросмотр" />
@@ -150,7 +159,11 @@ export function PreviewPage() {
             <PreviewImageFrame src={previewUrl} locked={previewLocked} />
             {previewLocked && (
               <div className="preview-unlock-block">
-                <p className="preview-unlock-text">Полное резюме (2 стр.) — после оплаты</p>
+                <div className="preview-unlock-header">
+                  <p className="preview-unlock-text">Полное резюме (2 стр.)</p>
+                  <span className="preview-unlock-price">149 ⭐</span>
+                </div>
+                <p className="preview-unlock-sub">Один отклик — и первый оффер</p>
                 <Button variant="brand" onClick={handlePdf} className="w-full">
                   Получить PDF
                 </Button>
@@ -167,6 +180,14 @@ export function PreviewPage() {
 
       <FixedBottomBar>
         <div className="flex flex-col gap-2">
+          {previewLocked && (
+            <div className="preview-share-hint">
+              <span>Знаете кого-то, кто ищет работу?</span>
+              <button type="button" className="preview-share-link" onClick={handleShare}>
+                Пригласить
+              </button>
+            </div>
+          )}
           <div className="flex flex-col gap-1.5 mb-3">
             {PREVIEW_CHECKLIST.map((text) => (
               <div

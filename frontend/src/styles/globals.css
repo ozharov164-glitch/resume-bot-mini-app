@@ -1949,3 +1949,54 @@ textarea::-moz-placeholder {
   white-space: nowrap;
 }
 
+/* ── Virality 1 — Share hint on Preview ── */
+.preview-share-hint {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 4px;
+  font-size: 13px;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border-subtle);
+  margin-bottom: 8px;
+}
+.preview-share-link {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--brand);
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* ── Virality 2 — Price anchor on Preview ── */
+.preview-unlock-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+.preview-unlock-price {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--brand);
+  white-space: nowrap;
+}
+.preview-unlock-sub {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin: 2px 0 6px;
+  line-height: 1.4;
+}
+
+/* ── Virality 3 — Social proof on Payment ── */
+.payment-today-count {
+  font-size: 12px;
+  color: #10b981;
+  font-weight: 500;
+  margin-top: -4px;
+}
+
