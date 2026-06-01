@@ -38,6 +38,8 @@ def create_yookassa_payment(
     resume_id: str,
     user_id: str,
     amount_rub: str | None = None,
+    *,
+    bonus_stars_applied: int = 0,
 ) -> dict:
     if not settings.YOKASSA_SHOP_ID or not settings.YOKASSA_SECRET_KEY:
         raise ValueError("YooKassa credentials are not configured.")
@@ -54,7 +56,12 @@ def create_yookassa_payment(
             },
             "capture": True,
             "description": "ResumeBot: PDF-резюме",
-            "metadata": {"resume_id": resume_id, "user_id": user_id},
+            "metadata": {
+                "resume_id": resume_id,
+                "user_id": user_id,
+                "type": "single_pdf",
+                "bonus_stars_applied": str(bonus_stars_applied),
+            },
         },
         str(uuid.uuid4()),
     )

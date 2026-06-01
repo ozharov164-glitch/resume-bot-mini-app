@@ -1049,7 +1049,7 @@ async def my_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     referral = db.get_referral_bonus(user_id)
     lines = [
         f"💎 Бонусный счёт: {bonus} Stars",
-        "Списываются при оплате резюме в Mini App (кнопка «Применить скидку»).",
+        "Списываются при оплате в Mini App — Stars или картой (кнопка «Применить скидку»).",
         "",
         f"👥 Друзей по вашей ссылке: {stats.get('invited', 0)}",
         f"💳 Из них оплатили: {stats.get('paid_referrals', 0)}",

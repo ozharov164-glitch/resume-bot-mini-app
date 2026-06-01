@@ -277,10 +277,22 @@ export async function waitUntilPaid(
   return false;
 }
 
-export async function createYookassaInvoice(token: string, resumeId: string) {
-  return http<{ confirmation_url: string }>("/api/payment/create-yookassa/" + resumeId, {
+export async function createYookassaInvoice(
+  token: string,
+  resumeId: string,
+  useBonus = false,
+) {
+  return http<{
+    confirmation_url: string;
+    amount_rub?: string;
+    bonus_stars_applied?: number;
+  }>("/api/payment/create-yookassa/" + resumeId, {
     method: "POST",
-    headers: { Authorization: `Bearer ${token}` },
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ use_bonus: useBonus }),
   });
 }
 

@@ -98,10 +98,13 @@ export function PaymentPage() {
     ? `Резюме для ${fullName} (${position})`
     : `Резюме для ${fullName}`;
 
-  let starsPrice = applyDiscount(STARS_PRICE, promoDiscount);
-  const rubPrice = applyDiscount(RUB_PRICE, promoDiscount);
-  const bonusDiscount = bonusApplied ? Math.min(bonusStars, starsPrice - 1) : 0;
-  starsPrice = Math.max(1, starsPrice - bonusDiscount);
+  const baseStarsPrice = applyDiscount(STARS_PRICE, promoDiscount);
+  const baseRubPrice = applyDiscount(RUB_PRICE, promoDiscount);
+  const bonusDiscount = bonusApplied
+    ? Math.min(bonusStars, Math.max(baseStarsPrice, baseRubPrice) - 1)
+    : 0;
+  const starsPrice = Math.max(1, baseStarsPrice - bonusDiscount);
+  const rubPrice = Math.max(1, baseRubPrice - bonusDiscount);
 
   const PAYMENT_QUOTES = [
     "Устроился через 5 дней после первого отклика. Водитель, Москва",
@@ -198,7 +201,11 @@ export function PaymentPage() {
     trackEvent("pay_clicked", { method: "yukassa" });
     setCardPaying(true);
     try {
-      const response = (await createYookassaInvoice(authToken, resumeId)) as YookassaCreateResponse;
+      const response = (await createYookassaInvoice(
+        authToken,
+        resumeId,
+        bonusApplied,
+      )) as YookassaCreateResponse;
       const checkoutUrl = response.confirmation_url?.trim();
       if (!checkoutUrl) {
         throw new Error("Ссылка на оплату не получена");
@@ -244,17 +251,35 @@ export function PaymentPage() {
             Заказ
           </p>
           <h3 className="mt-1 text-base font-semibold leading-snug">{orderLabel}</h3>
-          <div className="mt-3 flex items-center justify-between border-t pt-3" style={{ borderColor: "var(--border-subtle)" }}>
-            <span className="text-sm" style={{ color: "var(--text-muted)" }}>
-              К оплате
-            </span>
-            <span className="text-lg font-bold">
-              {starsPrice} ⭐
-              {promoDiscount > 0 && starsPrice !== STARS_PRICE ? (
-                <span className="ml-2 text-sm line-through opacity-50">{STARS_PRICE}</span>
-              ) : null}
-            </span>
+          <div className="mt-3 flex flex-col gap-2 border-t pt-3" style={{ borderColor: "var(--border-subtle)" }}>
+            <div className="flex items-center justify-between">
+              <span className="text-sm" style={{ color: "var(--text-muted)" }}>
+                Telegram Stars
+              </span>
+              <span className="text-lg font-bold">
+                {starsPrice} ⭐
+                {(promoDiscount > 0 || bonusApplied) && starsPrice !== STARS_PRICE ? (
+                  <span className="ml-2 text-sm line-through opacity-50">{STARS_PRICE}</span>
+                ) : null}
+              </span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm" style={{ color: "var(--text-muted)" }}>
+                Банковская карта
+              </span>
+              <span className="text-lg font-bold">
+                {rubPrice} ₽
+                {(promoDiscount > 0 || bonusApplied) && rubPrice !== RUB_PRICE ? (
+                  <span className="ml-2 text-sm line-through opacity-50">{RUB_PRICE}</span>
+                ) : null}
+              </span>
+            </div>
           </div>
+          {bonusApplied && bonusDiscount > 0 ? (
+            <p className="text-sm font-medium" style={{ color: "var(--brand)" }}>
+              Списано {bonusDiscount} бонусных Stars — скидка действует и для Stars, и для карты
+            </p>
+          ) : null}
           {promoDiscount > 0 ? (
             <p className="mt-2 text-sm font-medium" style={{ color: "var(--brand)" }}>
               Скидка {promoDiscount}% применена{promoCode ? ` (промокод ${promoCode})` : ""}!
@@ -272,7 +297,9 @@ export function PaymentPage() {
             className="rounded-xl border p-4"
             style={{ background: "var(--surface-card)", borderColor: "var(--border-subtle)" }}
           >
-            <p className="text-sm font-medium">У вас {bonusStars} бонусных Stars</p>
+            <p className="text-sm font-medium">
+              У вас {bonusStars} бонусных Stars — 1 ⭐ = 1 ₽ скидки при оплате
+            </p>
             <Button
               variant="outline"
               className="mt-2 w-full"
