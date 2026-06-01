@@ -91,6 +91,7 @@ export function SuccessPage() {
         });
       });
       showToast("Адаптированное резюме придёт в чат с ботом");
+      trackEvent("adapt_purchased");
     } catch (err) {
       const message = err instanceof Error ? err.message : "";
       if (message !== "cancelled") {

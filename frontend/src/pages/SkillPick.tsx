@@ -126,7 +126,10 @@ export function SkillPickPage() {
         const token = await ensureAuthToken();
         const gender = String(answers.gender ?? "");
         const result = await fetchResumeSnippet(token, position, gender);
-        if (!cancelled) setSnippet(result.snippet);
+        if (!cancelled) {
+          setSnippet(result.snippet);
+          trackEvent("snippet_shown", { position });
+        }
       } catch {
         if (!cancelled) {
           setSnippet(

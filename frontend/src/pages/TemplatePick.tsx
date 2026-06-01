@@ -1,6 +1,7 @@
 import { useCallback, type CSSProperties } from "react";
 import { motion } from "motion/react";
 
+import { trackEvent } from "../lib/analytics";
 import { AppHeader } from "../components/ui/AppHeader";
 import { Button } from "../components/ui/Button";
 import { FixedBottomBar } from "../components/ui/FixedBottomBar";
@@ -19,6 +20,7 @@ export function TemplatePickPage() {
 
   const continueFlow = () => {
     getTg()?.HapticFeedback?.impactOccurred("medium");
+    trackEvent("template_selected", { template: selectedTemplate });
     setPage("onboarding");
   };
 
