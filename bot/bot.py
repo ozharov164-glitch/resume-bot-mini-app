@@ -1354,7 +1354,9 @@ async def successful_payment(update: Update, context: ContextTypes.DEFAULT_TYPE)
         return
     payment = update.message.successful_payment
     try:
-        payload = json.loads(payment.invoice_payload)
+        from services.invoice_payload import parse_invoice_payload
+
+        payload = parse_invoice_payload(payment.invoice_payload)
         resume_id = payload["resume_id"]
         telegram_id = update.message.from_user.id
         from_user = update.message.from_user

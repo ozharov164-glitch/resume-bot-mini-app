@@ -1,4 +1,3 @@
-import json
 import uuid
 from datetime import datetime
 
@@ -6,27 +5,11 @@ from telegram import Bot, LabeledPrice
 from yookassa import Configuration, Payment
 
 from config import settings
+from services.invoice_payload import encode_invoice_payload
 from services.payment_return import yookassa_return_url
 
 _STARS_TITLE = "Резюме в PDF"
 _STARS_DESCRIPTION = "Резюме в выбранном PDF-шаблоне для отклика на вакансии hh.ru."
-
-
-def _invoice_payload(
-    resume_id: str,
-    user_id: str,
-    *,
-    payment_type: str = "single_pdf",
-    bonus_stars_applied: int = 0,
-) -> str:
-    return json.dumps(
-        {
-            "resume_id": resume_id,
-            "user_id": user_id,
-            "type": payment_type,
-            "bonus_stars_applied": bonus_stars_applied,
-        }
-    )
 
 
 def _stars_prices(amount: int | None = None) -> list[LabeledPrice]:
@@ -83,9 +66,8 @@ async def create_stars_invoice_link(
     link = await bot.create_invoice_link(
         title=title or _STARS_TITLE,
         description=description or _STARS_DESCRIPTION,
-        payload=_invoice_payload(
+        payload=encode_invoice_payload(
             resume_id,
-            user_id,
             payment_type=payment_type,
             bonus_stars_applied=bonus_stars_applied,
         ),

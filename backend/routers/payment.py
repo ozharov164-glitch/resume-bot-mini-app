@@ -68,10 +68,11 @@ async def create_invoice(
         )
     except Exception as exc:
         logger.exception("create_stars_invoice_link failed resume_id=%s", resume_id)
-        raise HTTPException(
-            status_code=502,
-            detail="Не удалось создать счёт Stars. Попробуйте ещё раз.",
-        ) from exc
+        detail = "Не удалось создать счёт Stars. Попробуйте ещё раз."
+        err_text = str(exc).lower()
+        if "invoice_payload" in err_text:
+            detail = "Ошибка счёта Stars (payload). Обновите приложение и попробуйте снова."
+        raise HTTPException(status_code=502, detail=detail) from exc
 
     return {
         "status": "ready",
@@ -184,7 +185,9 @@ async def telegram_payment_webhook(request: Request, db=Depends(get_db)):
     if update.message and update.message.successful_payment:
         payment = update.message.successful_payment
         try:
-            payload = json.loads(payment.invoice_payload)
+            from services.invoice_payload import parse_invoice_payload
+
+            payload = parse_invoice_payload(payment.invoice_payload)
             from_user = update.message.from_user
             telegram_id = from_user.id
             pay_info = PaymentNotifyInfo(

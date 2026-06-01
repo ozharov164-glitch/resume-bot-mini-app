@@ -1,15 +1,14 @@
 import { useCallback, useEffect, useState } from "react";
 
 import {
-  createStarsInvoice,
   createYookassaInvoice,
   ensureAuthToken,
   fetchActivePromo,
   fetchMe,
   fetchTodayCount,
   validatePromo,
-  waitUntilPaid,
 } from "../api";
+import { openStarsPayment } from "../lib/openStarsPayment";
 import { PaymentReviews } from "../components/payment/PaymentReviews";
 import { trackEvent } from "../lib/analytics";
 import { useYookassaReturnPoll } from "../hooks/useYookassaReturnPoll";
@@ -28,8 +27,6 @@ import {
 } from "../lib/pricing";
 import { useAppStore } from "../store";
 import { getTg, openExternalUrl } from "../telegram";
-
-type InvoiceStatus = "paid" | "cancelled" | "failed" | "pending";
 
 type YookassaCreateResponse = {
   status: string;
@@ -124,87 +121,77 @@ export function PaymentPage() {
   };
 
   const payStars = async () => {
-    const tg = getTg();
-    if (!tg?.openInvoice) {
-      alert("Оплата Stars доступна только внутри Telegram. Откройте приложение через бота.");
-      return;
-    }
-
-    tg.HapticFeedback?.impactOccurred("medium");
+    getTg()?.HapticFeedback?.impactOccurred("medium");
     trackEvent("pay_clicked", { method: "stars" });
     setPaying(true);
     try {
-      const { invoice_link: invoiceLink } = await createStarsInvoice(
-        authToken,
-        resumeId,
-        bonusApplied,
-      );
-
-      await new Promise<void>((resolve, reject) => {
-        let settled = false;
-        const finish = (fn: () => void) => {
-          if (settled) return;
-          settled = true;
-          clearTimeout(timer);
-          fn();
-        };
-        const timer = window.setTimeout(() => finish(() => reject(new Error("timeout"))), 120_000);
-
-        tg.openInvoice!(invoiceLink, async (status: InvoiceStatus) => {
-          if (status === "pending") return;
-          if (status === "paid") {
-            const confirmed = await waitUntilPaid(authToken, resumeId);
-            if (confirmed) {
-              setPaid(true);
-              tg.HapticFeedback?.notificationOccurred("success");
-              finish(() => resolve());
-            } else {
-              finish(() => reject(new Error("timeout")));
-            }
-            return;
-          }
-          if (status === "cancelled") {
-            finish(() => reject(new Error("cancelled")));
-            return;
-          }
-          if (status === "failed") {
-            finish(() => reject(new Error("failed")));
-          }
-        });
-      });
-      setPage("success");
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "";
-      if (message === "cancelled") return;
-      if (message === "timeout") {
-        alert(
-          "Оплата прошла, но PDF ещё готовится. Проверьте чат с ботом — файл должен появиться через минуту.",
-        );
+      const result = await openStarsPayment(authToken, resumeId, bonusApplied);
+      if (result === "cancelled") return;
+      if (result === "paid") {
+        setPaid(true);
+        getTg()?.HapticFeedback?.notificationOccurred("success");
         setPage("success");
         return;
       }
-      alert("Не удалось оплатить через Stars. Попробуйте ещё раз.");
+      if (result === "timeout") {
+        alert(
+          "Оплата прошла, но PDF ещё готовится. Проверьте чат с ботом — файл должен появиться через минуту.",
+        );
+        setPaid(true);
+        setPage("success");
+        return;
+      }
+      alert("Не удалось завершить оплату Stars. Попробуйте ещё раз или оплатите картой.");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "";
+      if (message === "founder_unlimited") {
+        setPaid(true);
+        setPage("success");
+        return;
+      }
+      if (message === "OPEN_IN_TELEGRAM") {
+        alert("Оплата Stars доступна только внутри Telegram. Откройте приложение через бота.");
+        return;
+      }
+      alert(message || "Не удалось оплатить через Stars. Попробуйте ещё раз.");
     } finally {
       setPaying(false);
     }
   };
 
   const payYookassa = async () => {
+    if (cardPaying || paying) return;
     getTg()?.HapticFeedback?.impactOccurred("light");
     trackEvent("pay_clicked", { method: "yukassa" });
     setCardPaying(true);
     try {
-      const response = (await createYookassaInvoice(
-        authToken,
-        resumeId,
-        bonusApplied,
-      )) as YookassaCreateResponse;
-      const checkoutUrl = response.confirmation_url?.trim();
+      let checkoutUrl = "";
+      let lastError = "Не удалось создать платёж.";
+      for (let attempt = 0; attempt < 2; attempt++) {
+        try {
+          const response = (await createYookassaInvoice(
+            authToken,
+            resumeId,
+            bonusApplied,
+          )) as YookassaCreateResponse;
+          checkoutUrl = response.confirmation_url?.trim() ?? "";
+          if (checkoutUrl) break;
+          lastError = "ЮKassa не вернула ссылку на оплату.";
+        } catch (err) {
+          lastError = err instanceof Error ? err.message : lastError;
+          if (attempt === 0) await new Promise((r) => setTimeout(r, 500));
+        }
+      }
       if (!checkoutUrl) {
-        throw new Error("Ссылка на оплату не получена");
+        throw new Error(lastError);
       }
       markYookassaPending(resumeId);
-      openExternalUrl(checkoutUrl);
+      const opened = openExternalUrl(checkoutUrl);
+      if (!opened) {
+        alert(
+          `Не удалось открыть браузер. Скопируйте ссылку вручную:\n\n${checkoutUrl}`,
+        );
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : "ЮKassa недоступна";
       alert(message.includes("ЮKassa") || message.includes("оплат")

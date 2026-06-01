@@ -145,13 +145,22 @@ export function isTelegramMiniApp(): boolean {
 }
 
 /** Card / external checkout — location.href is blocked inside Telegram WebView. */
-export function openExternalUrl(url: string): void {
+export function openExternalUrl(url: string): boolean {
   const trimmed = url.trim();
-  if (!trimmed) return;
+  if (!trimmed) return false;
   const webApp = getTg();
   if (webApp?.openLink) {
-    webApp.openLink(trimmed, { try_instant_view: false });
-    return;
+    try {
+      webApp.openLink(trimmed, { try_instant_view: false });
+      return true;
+    } catch {
+      /* fall through */
+    }
   }
-  window.open(trimmed, "_blank", "noopener,noreferrer");
+  try {
+    const opened = window.open(trimmed, "_blank", "noopener,noreferrer");
+    return opened != null;
+  } catch {
+    return false;
+  }
 }
