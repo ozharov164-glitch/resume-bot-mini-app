@@ -93,10 +93,8 @@ export function HomePage({ onStart, onHistory }: HomeProps) {
 
   useTelegramBackButton(homeTab === "examples" ? handleBack : null);
 
-  const statsLabel =
-    statsCount > 0
-      ? `${displayCount.toLocaleString("ru-RU")}+`
-      : "…";
+  const statsDisplay =
+    statsCount > 0 ? `${displayCount.toLocaleString("ru-RU")}+` : "1 200+";
 
   return (
     <Screen withBottomBar bottomBarButtons={2}>
@@ -160,23 +158,13 @@ export function HomePage({ onStart, onHistory }: HomeProps) {
               </span>
             ))}
           </div>
-          <p className="text-sm text-gray-600">
-            Уже {statsCount > 0 ? displayCount.toLocaleString("ru-RU") : "1 200"}+ резюме отправлено на
-            hh.ru
+          <p className="home-social-proof-text">
+            Уже{" "}
+            <span className="tabular-nums font-semibold" style={{ color: "#10b981" }}>
+              {statsDisplay}
+            </span>{" "}
+            резюме отправлено на hh.ru
           </p>
-        </div>
-
-        <div className="flex w-full flex-wrap justify-center gap-2">
-          <div
-            className="flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium"
-            style={{ background: "var(--surface-card)", borderColor: "var(--border-subtle)", color: "var(--text-primary)" }}
-          >
-            <Icon name="description" filled size={16} style={{ color: "var(--brand)" }} />
-            <span>
-              Уже создано{" "}
-              <span className="stat-number tabular-nums">{statsLabel}</span> резюме
-            </span>
-          </div>
         </div>
 
         <div className="flex w-full flex-col gap-3 pb-1">
