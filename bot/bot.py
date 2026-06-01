@@ -178,6 +178,7 @@ def _admin_menu_keyboard() -> InlineKeyboardMarkup:
             ],
             [
                 InlineKeyboardButton("📋 Активации промо", callback_data="adm_promo_acts"),
+                InlineKeyboardButton("📈 Воронка", callback_data="adm_funnel"),
             ],
         ]
     )
@@ -670,6 +671,35 @@ async def adm_promo_acts_callback(update: Update, context: ContextTypes.DEFAULT_
     except Exception as exc:
         logger.exception("adm_promo_acts failed")
         await query.edit_message_text(f"❌ {exc}", reply_markup=keyboard)
+
+
+@admin_only
+async def adm_funnel_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    try:
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            resp = await client.get(
+                f"{API_URL}/api/admin/funnel-key",
+                headers=_admin_headers(),
+            )
+        if resp.status_code != 200:
+            await _edit_callback_message(query, f"❌ Ошибка funnel: {resp.status_code}")
+            return
+        d = resp.json()
+        text = (
+            "📈 <b>Воронка (7 дней)</b>\n\n"
+            f"Начали анкету: {d.get('onboarding_started', 0)}\n"
+            f"Нажали «Сформировать»: {d.get('generate_started', 0)}\n"
+            f"Открыли предпросмотр: {d.get('preview_viewed', 0)}\n"
+            f"Нажали «Оплатить»: {d.get('pay_clicked', 0)}\n"
+            f"Оплатили: {d.get('payment_completed', 0)}\n\n"
+            f"Конверсия: <b>{d.get('conversion_rate', '0%')}</b>"
+        )
+        keyboard = _admin_back_refresh("adm_funnel")
+        await _edit_callback_message(query, text, reply_markup=keyboard)
+    except Exception as exc:
+        logger.exception("adm_funnel failed")
+        await query.answer(f"❌ {exc}", show_alert=True)
 
 
 @admin_only
@@ -1373,6 +1403,7 @@ def main():
     app.add_handler(
         CallbackQueryHandler(adm_revoke_affiliate_confirm_callback, pattern=r"^adm_revoke_ok:\d+$")
     )
+    app.add_handler(CallbackQueryHandler(adm_funnel_callback, pattern="^adm_funnel$"))
     app.add_handler(CallbackQueryHandler(adm_back_callback, pattern="^adm_back$"))
 
     app.add_handler(CallbackQueryHandler(aff_panel_callback, pattern="^aff_panel$"))

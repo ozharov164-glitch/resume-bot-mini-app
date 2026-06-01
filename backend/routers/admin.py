@@ -91,6 +91,22 @@ async def admin_funnel(
     return {**steps, "conversion_rate": conversion}
 
 
+@router.get("/funnel-key", dependencies=[Depends(verify_admin_key)])
+async def admin_funnel_by_key(db=Depends(get_db)):
+    since = (datetime.utcnow() - timedelta(days=7)).isoformat()
+    steps = {
+        "onboarding_started": db.count_analytics_events_since("onboarding_started", since),
+        "generate_started": db.count_analytics_events_since("generate_started", since),
+        "preview_viewed": db.count_analytics_events_since("preview_viewed", since),
+        "pay_clicked": db.count_analytics_events_since("pay_clicked", since),
+        "payment_completed": db.count_analytics_events_since("payment_completed", since),
+    }
+    started = steps["onboarding_started"] or 1
+    completed = steps["payment_completed"] or 0
+    conversion = round(100 * completed / started, 1)
+    return {**steps, "conversion_rate": f"{conversion}%"}
+
+
 @router.get("/stats", dependencies=[Depends(verify_admin_key)])
 async def admin_stats(db=Depends(get_db)):
     try:
