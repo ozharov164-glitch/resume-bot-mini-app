@@ -5,7 +5,7 @@ from typing import Any
 
 from config import settings
 from services.admin_notify import PaymentNotifyInfo, notify_payment
-from services.pdf_service import generate_pdf
+from services.pdf_async import generate_pdf_async
 from services.telegram_service import send_document_to_user
 
 logger = logging.getLogger(__name__)
@@ -19,12 +19,24 @@ def parse_resume_data(raw: Any) -> dict:
     raise ValueError("resume data must be dict or json string")
 
 
+def _parse_paid_amount(payment: PaymentNotifyInfo | None) -> int:
+    if not payment:
+        return settings.STARS_PRICE_SINGLE_PDF
+    raw = str(payment.amount).strip()
+    digits = "".join(ch for ch in raw if ch.isdigit())
+    try:
+        return int(digits) if digits else settings.STARS_PRICE_SINGLE_PDF
+    except ValueError:
+        return settings.STARS_PRICE_SINGLE_PDF
+
+
 async def fulfill_paid_resume(
     db: Any,
     resume_id: str,
     telegram_id: int,
     *,
     payment: PaymentNotifyInfo | None = None,
+    bonus_stars_applied: int = 0,
 ) -> bool:
     """Mark resume paid and send PDF to user's Telegram chat. Idempotent."""
     resume = db.find_resume(resume_id)
@@ -50,8 +62,11 @@ async def fulfill_paid_resume(
         raise exc
 
     template_name = resume.get("template_id") or "classic"
+    if bonus_stars_applied > 0:
+        db.use_bonus_stars(telegram_id, bonus_stars_applied)
+
     try:
-        pdf_bytes = generate_pdf(resume_data, template_name)
+        pdf_bytes = await generate_pdf_async(resume_data, template_name)
     except Exception:
         logger.exception("fulfill: pdf generation failed resume_id=%s", resume_id)
         raise
@@ -77,17 +92,18 @@ async def fulfill_paid_resume(
             referred_by = buyer.get("referred_by") if buyer else None
             if referred_by:
                 referrer_id = int(referred_by)
-                db.increment_referral_bonus(referrer_id)
+                paid_amount = _parse_paid_amount(payment)
+                bonus = max(1, round(paid_amount * 0.20))
+                db.add_bonus_stars(referrer_id, bonus)
                 from telegram import Bot
 
                 bot = Bot(token=settings.BOT_TOKEN)
                 await bot.send_message(
                     chat_id=referrer_id,
                     text=(
-                        "🎉 Ваш друг оплатил резюме! Вам начислено 1 бесплатное резюме. "
-                        "Создай его в боте — оплата не потребуется."
+                        f"Ваш друг создал резюме! +{bonus} Stars на вашем счёте. "
+                        "Используйте при следующей оплате командой /my"
                     ),
-                    parse_mode="HTML",
                 )
         except Exception as exc:
             logger.warning("fulfill: referral bonus failed resume_id=%s: %s", resume_id, exc)

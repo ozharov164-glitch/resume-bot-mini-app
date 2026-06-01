@@ -1,7 +1,11 @@
+from datetime import datetime, timedelta
+
 from fastapi import APIRouter, Depends, Header, HTTPException
 
 from config import settings
 from database import get_db
+from dependencies import get_current_user
+from services.founder import is_founder
 from services.admin_stats import (
     count_paid_resumes_clean,
     count_resumes_today_clean,
@@ -63,6 +67,28 @@ async def promo_activations(db=Depends(get_db), limit: int = 20):
         return {"activations": db.list_recent_promo_activations(min(limit, 50))}
     except Exception:
         return {"activations": []}
+
+
+@router.get("/funnel")
+async def admin_funnel(
+    current_user: dict = Depends(get_current_user),
+    db=Depends(get_db),
+):
+    if not is_founder(current_user.get("telegram_id")):
+        raise HTTPException(status_code=403, detail="Доступ только для founder.")
+
+    since = (datetime.utcnow() - timedelta(days=7)).isoformat()
+    steps = {
+        "onboarding_started": db.count_analytics_events_since("onboarding_started", since),
+        "generate_started": db.count_analytics_events_since("generate_started", since),
+        "preview_viewed": db.count_analytics_events_since("preview_viewed", since),
+        "pay_clicked": db.count_analytics_events_since("pay_clicked", since),
+        "payment_completed": db.count_analytics_events_since("payment_completed", since),
+    }
+    started = steps["onboarding_started"] or 0
+    completed = steps["payment_completed"] or 0
+    conversion = f"{round(100 * completed / started, 1)}%" if started else "0%"
+    return {**steps, "conversion_rate": conversion}
 
 
 @router.get("/stats", dependencies=[Depends(verify_admin_key)])

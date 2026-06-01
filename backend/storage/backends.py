@@ -67,11 +67,22 @@ class SQLiteBackend:
                 );
                 CREATE INDEX IF NOT EXISTS idx_promo_act_user ON promo_activations(user_tg_id);
                 CREATE INDEX IF NOT EXISTS idx_promo_act_code ON promo_activations(promo_code);
+                CREATE TABLE IF NOT EXISTS analytics_events (
+                    id TEXT PRIMARY KEY,
+                    event TEXT NOT NULL,
+                    telegram_id INTEGER NOT NULL,
+                    step INTEGER,
+                    metadata TEXT,
+                    created_at TEXT NOT NULL
+                );
+                CREATE INDEX IF NOT EXISTS idx_analytics_events_event ON analytics_events(event);
+                CREATE INDEX IF NOT EXISTS idx_analytics_events_created ON analytics_events(created_at);
                 """
             )
             for col_sql in [
                 "ALTER TABLE users ADD COLUMN referred_by INTEGER DEFAULT NULL",
                 "ALTER TABLE users ADD COLUMN referral_bonus INTEGER DEFAULT 0",
+                "ALTER TABLE users ADD COLUMN bonus_stars INTEGER DEFAULT 0",
                 "ALTER TABLE users ADD COLUMN active_promo_code TEXT DEFAULT NULL",
                 "ALTER TABLE users ADD COLUMN promo_activated_at TEXT DEFAULT NULL",
                 "ALTER TABLE resumes ADD COLUMN promo_code TEXT DEFAULT NULL",
@@ -552,7 +563,7 @@ class SQLiteBackend:
         with self._connect() as conn:
             rows = conn.execute(
                 """
-                SELECT id, data, user_answers, is_paid, created_at
+                SELECT id, data, user_answers, is_paid, created_at, template_id
                 FROM resumes
                 WHERE user_id = ?
                 ORDER BY created_at DESC
@@ -578,9 +589,73 @@ class SQLiteBackend:
                     "target_position": data.get("target_position", ""),
                     "is_paid": bool(record.get("is_paid")),
                     "created_at": record.get("created_at"),
+                    "template_id": record.get("template_id") or "classic",
                 }
             )
         return items
+
+    def insert_analytics_event(self, record: dict[str, Any]) -> None:
+        with self._connect() as conn:
+            conn.execute(
+                """
+                INSERT INTO analytics_events (id, event, telegram_id, step, metadata, created_at)
+                VALUES (?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    record["id"],
+                    record["event"],
+                    int(record["telegram_id"]),
+                    record.get("step"),
+                    record.get("metadata"),
+                    record["created_at"],
+                ),
+            )
+            conn.commit()
+
+    def count_analytics_events_since(self, event: str, since_iso: str) -> int:
+        with self._connect() as conn:
+            row = conn.execute(
+                """
+                SELECT COUNT(*) AS c FROM analytics_events
+                WHERE event = ? AND created_at >= ?
+                """,
+                (event, since_iso),
+            ).fetchone()
+        return int(row["c"]) if row else 0
+
+    def get_bonus_stars(self, telegram_id: int) -> int:
+        with self._connect() as conn:
+            row = conn.execute(
+                "SELECT bonus_stars FROM users WHERE telegram_id = ? LIMIT 1",
+                (telegram_id,),
+            ).fetchone()
+        if not row:
+            return 0
+        return int(row["bonus_stars"] or 0)
+
+    def add_bonus_stars(self, telegram_id: int, amount: int) -> None:
+        if amount <= 0:
+            return
+        with self._connect() as conn:
+            conn.execute(
+                "UPDATE users SET bonus_stars = COALESCE(bonus_stars, 0) + ? WHERE telegram_id = ?",
+                (amount, telegram_id),
+            )
+            conn.commit()
+
+    def use_bonus_stars(self, telegram_id: int, amount: int) -> int:
+        """Deduct up to `amount` bonus stars; returns stars actually applied."""
+        available = self.get_bonus_stars(telegram_id)
+        applied = min(available, max(0, amount))
+        if applied <= 0:
+            return 0
+        with self._connect() as conn:
+            conn.execute(
+                "UPDATE users SET bonus_stars = bonus_stars - ? WHERE telegram_id = ?",
+                (applied, telegram_id),
+            )
+            conn.commit()
+        return applied
 
     def delete_all_resumes_for_user(self, user_id: str) -> int:
         with self._connect() as conn:
@@ -676,7 +751,7 @@ class SupabaseBackend:
     def list_resumes_for_user(self, user_id: str, limit: int = 30) -> list[dict[str, Any]]:
         result = (
             self.client.table("resumes")
-            .select("id, data, is_paid, created_at")
+            .select("id, data, is_paid, created_at, template_id")
             .eq("user_id", user_id)
             .order("created_at", desc=True)
             .limit(limit)
@@ -697,9 +772,56 @@ class SupabaseBackend:
                     "target_position": data.get("target_position", ""),
                     "is_paid": bool(record.get("is_paid")),
                     "created_at": record.get("created_at"),
+                    "template_id": record.get("template_id") or "classic",
                 }
             )
         return items
+
+    def insert_analytics_event(self, record: dict[str, Any]) -> None:
+        try:
+            self.client.table("analytics_events").insert(record).execute()
+        except Exception as exc:
+            logger.warning("insert_analytics_event failed: %s", exc)
+
+    def count_analytics_events_since(self, event: str, since_iso: str) -> int:
+        try:
+            result = (
+                self.client.table("analytics_events")
+                .select("id", count="exact")
+                .eq("event", event)
+                .gte("created_at", since_iso)
+                .execute()
+            )
+            return int(result.count or 0)
+        except Exception:
+            return 0
+
+    def get_bonus_stars(self, telegram_id: int) -> int:
+        user = self.find_user_by_telegram_id(telegram_id)
+        if not user:
+            return 0
+        return int(user.get("bonus_stars") or 0)
+
+    def add_bonus_stars(self, telegram_id: int, amount: int) -> None:
+        if amount <= 0:
+            return
+        user = self.find_user_by_telegram_id(telegram_id)
+        if not user:
+            return
+        current = int(user.get("bonus_stars") or 0)
+        self.client.table("users").update({"bonus_stars": current + amount}).eq(
+            "telegram_id", telegram_id
+        ).execute()
+
+    def use_bonus_stars(self, telegram_id: int, amount: int) -> int:
+        available = self.get_bonus_stars(telegram_id)
+        applied = min(available, max(0, amount))
+        if applied <= 0:
+            return 0
+        self.client.table("users").update({"bonus_stars": available - applied}).eq(
+            "telegram_id", telegram_id
+        ).execute()
+        return applied
 
     def delete_all_resumes_for_user(self, user_id: str) -> int:
         result = self.client.table("resumes").delete().eq("user_id", user_id).execute()

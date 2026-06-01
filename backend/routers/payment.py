@@ -9,7 +9,7 @@ from database import get_db
 from dependencies import get_current_user
 from services.founder import is_founder
 from services.admin_notify import PaymentNotifyInfo
-from services.payment_fulfillment import fulfill_paid_resume
+from services.payment_dispatch import fulfill_from_invoice_payload
 from services.payment_service import create_stars_invoice_link, create_yookassa_payment
 from services.promo_service import RUB_PRICE_SINGLE_PDF, activate_promo, discounted_prices, resolve_payment_promo
 from services.yookassa_webhook import handle_yookassa_webhook
@@ -34,8 +34,21 @@ def _prepare_resume_promo(db, resume_id: str, telegram_id: int) -> tuple[int, st
     return stars, rub
 
 
+def _apply_bonus_stars(db, telegram_id: int, stars: int, use_bonus: bool) -> tuple[int, int]:
+    if not use_bonus or stars <= 1:
+        return stars, 0
+    available = db.get_bonus_stars(telegram_id)
+    discount = min(available, stars - 1)
+    return stars - discount, discount
+
+
 @router.post("/create-invoice/{resume_id}")
-async def create_invoice(resume_id: str, current_user: dict = Depends(get_current_user), db=Depends(get_db)):
+async def create_invoice(
+    resume_id: str,
+    body: dict | None = None,
+    current_user: dict = Depends(get_current_user),
+    db=Depends(get_db),
+):
     resume = db.find_resume(resume_id, current_user["id"])
     if not resume:
         raise HTTPException(status_code=404, detail="Резюме не найдено.")
@@ -48,12 +61,17 @@ async def create_invoice(resume_id: str, current_user: dict = Depends(get_curren
         }
 
     stars, _rub = _prepare_resume_promo(db, resume_id, current_user["telegram_id"])
+    use_bonus = bool((body or {}).get("use_bonus"))
+    stars, bonus_applied = _apply_bonus_stars(
+        db, int(current_user["telegram_id"]), stars, use_bonus
+    )
 
     try:
         invoice_link = await create_stars_invoice_link(
             resume_id,
             current_user["id"],
             stars_amount=stars,
+            bonus_stars_applied=bonus_applied,
         )
     except Exception as exc:
         logger.exception("create_stars_invoice_link failed resume_id=%s", resume_id)
@@ -61,6 +79,39 @@ async def create_invoice(resume_id: str, current_user: dict = Depends(get_curren
             status_code=502,
             detail="Не удалось создать счёт Stars. Попробуйте ещё раз.",
         ) from exc
+
+    return {
+        "status": "ready",
+        "provider": "telegram_stars",
+        "invoice_link": invoice_link,
+        "stars_amount": stars,
+        "bonus_stars_applied": bonus_applied,
+    }
+
+
+@router.post("/create-adapt-invoice/{resume_id}")
+async def create_adapt_invoice(
+    resume_id: str,
+    current_user: dict = Depends(get_current_user),
+    db=Depends(get_db),
+):
+    resume = db.find_resume(resume_id, current_user["id"])
+    if not resume:
+        raise HTTPException(status_code=404, detail="Резюме не найдено.")
+
+    stars = settings.STARS_PRICE_ADAPT
+    try:
+        invoice_link = await create_stars_invoice_link(
+            resume_id,
+            current_user["id"],
+            stars_amount=stars,
+            payment_type="adapt",
+            title="Адаптация резюме",
+            description="Резюме под конкретную вакансию с hh.ru",
+        )
+    except Exception as exc:
+        logger.exception("create_adapt_invoice failed resume_id=%s", resume_id)
+        raise HTTPException(status_code=502, detail="Не удалось создать счёт.") from exc
 
     return {
         "status": "ready",
@@ -129,19 +180,18 @@ async def telegram_payment_webhook(request: Request, db=Depends(get_db)):
         payment = update.message.successful_payment
         try:
             payload = json.loads(payment.invoice_payload)
-            resume_id = payload["resume_id"]
             from_user = update.message.from_user
             telegram_id = from_user.id
             pay_info = PaymentNotifyInfo(
                 provider="telegram_stars",
                 amount=str(payment.total_amount),
                 currency="⭐" if payment.currency == "XTR" else payment.currency,
-                resume_id=resume_id,
+                resume_id=str(payload.get("resume_id") or ""),
                 telegram_id=telegram_id,
                 username=from_user.username or "",
                 first_name=from_user.first_name or "",
             )
-            await fulfill_paid_resume(db, resume_id, telegram_id, payment=pay_info)
+            await fulfill_from_invoice_payload(db, payload, telegram_id, payment=pay_info)
         except Exception:
             logger.exception("telegram-webhook fulfill failed")
 

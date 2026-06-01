@@ -91,8 +91,14 @@ async def handle_yookassa_webhook(db: Any, payload: dict) -> dict:
         first_name=user.get("first_name") or "",
         external_id=payment_id,
     )
-    from services.payment_fulfillment import fulfill_paid_resume
+    from services.payment_dispatch import fulfill_from_invoice_payload
 
-    await fulfill_paid_resume(db, resume_id, telegram_id, payment=pay_info)
+    payload = {
+        "resume_id": resume_id,
+        "user_id": user_id,
+        "type": _metadata_value(verified.metadata, "type") or "single_pdf",
+        "bonus_stars_applied": int(_metadata_value(verified.metadata, "bonus_stars_applied") or 0),
+    }
+    await fulfill_from_invoice_payload(db, payload, telegram_id, payment=pay_info)
     logger.info("yookassa webhook: fulfilled resume_id=%s payment_id=%s", resume_id, payment_id)
     return {"ok": True, "status": "fulfilled", "resume_id": resume_id}

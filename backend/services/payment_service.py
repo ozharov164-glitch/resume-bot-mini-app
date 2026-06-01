@@ -12,8 +12,21 @@ _STARS_TITLE = "Резюме в PDF"
 _STARS_DESCRIPTION = "Резюме в выбранном PDF-шаблоне для отклика на вакансии hh.ru."
 
 
-def _invoice_payload(resume_id: str, user_id: str) -> str:
-    return json.dumps({"resume_id": resume_id, "user_id": user_id, "type": "single_pdf"})
+def _invoice_payload(
+    resume_id: str,
+    user_id: str,
+    *,
+    payment_type: str = "single_pdf",
+    bonus_stars_applied: int = 0,
+) -> str:
+    return json.dumps(
+        {
+            "resume_id": resume_id,
+            "user_id": user_id,
+            "type": payment_type,
+            "bonus_stars_applied": bonus_stars_applied,
+        }
+    )
 
 
 def _stars_prices(amount: int | None = None) -> list[LabeledPrice]:
@@ -53,13 +66,22 @@ async def create_stars_invoice_link(
     user_id: str,
     *,
     stars_amount: int | None = None,
+    payment_type: str = "single_pdf",
+    bonus_stars_applied: int = 0,
+    title: str | None = None,
+    description: str | None = None,
 ) -> str:
     """Invoice link for Telegram Mini App WebApp.openInvoice (in-app Stars payment)."""
     bot = Bot(token=settings.BOT_TOKEN)
     link = await bot.create_invoice_link(
-        title=_STARS_TITLE,
-        description=_STARS_DESCRIPTION,
-        payload=_invoice_payload(resume_id, user_id),
+        title=title or _STARS_TITLE,
+        description=description or _STARS_DESCRIPTION,
+        payload=_invoice_payload(
+            resume_id,
+            user_id,
+            payment_type=payment_type,
+            bonus_stars_applied=bonus_stars_applied,
+        ),
         currency="XTR",
         prices=_stars_prices(stars_amount),
         provider_token="",

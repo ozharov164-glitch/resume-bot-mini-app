@@ -35,7 +35,18 @@ async def auth_me(authorization: str = Header(default="")):
 
     tid = int(telegram_id)
     founder = bool(payload.get("founder")) or is_founder(tid)
-    return {"telegram_id": tid, "is_founder": founder, "unlimited": founder}
+    bonus_stars = 0
+    try:
+        db = get_db()
+        bonus_stars = db.get_bonus_stars(tid)
+    except Exception:
+        logger.debug("bonus_stars lookup failed telegram_id=%s", tid)
+    return {
+        "telegram_id": tid,
+        "is_founder": founder,
+        "unlimited": founder,
+        "bonus_stars": bonus_stars,
+    }
 
 
 @router.post("/telegram", response_model=TokenResponse)

@@ -1006,6 +1006,19 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 
+async def my_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not update.message:
+        return
+    user_id = update.message.from_user.id
+    db = get_db()
+    bonus = db.get_bonus_stars(user_id)
+    referral = db.get_referral_bonus(user_id)
+    lines = [f"💎 Бонусный счёт: {bonus} Stars"]
+    if referral > 0:
+        lines.append(f"Бесплатных резюме по рефералке: {referral}")
+    await update.message.reply_text("\n".join(lines))
+
+
 async def invite_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.message.from_user.id
     invite_link = f"https://t.me/{settings.BOT_USERNAME}?start=ref_{user_id}"
@@ -1279,7 +1292,9 @@ async def successful_payment(update: Update, context: ContextTypes.DEFAULT_TYPE)
             username=from_user.username or "",
             first_name=from_user.first_name or "",
         )
-        await fulfill_paid_resume(db, resume_id, telegram_id, payment=pay_info)
+        from services.payment_dispatch import fulfill_from_invoice_payload
+
+        await fulfill_from_invoice_payload(db, payload, telegram_id, payment=pay_info)
 
         if context.job_queue:
             context.job_queue.run_once(
@@ -1335,6 +1350,7 @@ def main():
     app.add_handler(CommandHandler("examples", examples_command))
     app.add_handler(CommandHandler("help", help_command))
     app.add_handler(CommandHandler("trust", trust_command))
+    app.add_handler(CommandHandler("my", my_command))
     app.add_handler(CommandHandler("invite", invite_command))
     app.add_handler(CommandHandler("support", support_command))
     app.add_handler(CommandHandler("founder", founder_command))
