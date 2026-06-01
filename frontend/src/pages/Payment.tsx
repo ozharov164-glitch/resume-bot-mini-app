@@ -107,9 +107,18 @@ export function PaymentPage() {
   const rubPrice = Math.max(1, baseRubPrice - bonusDiscount);
 
   const PAYMENT_QUOTES = [
-    "Устроился через 5 дней после первого отклика. Водитель, Москва",
-    "Рекрутер позвонила в тот же день. Продавец-консультант, СПб",
-    "Дочка нашла работу охранником за неделю. Благодарна создателям",
+    {
+      text: "Откликнулся утром, к вечеру уже был звонок от работодателя.",
+      role: "Продавец-консультант, Санкт-Петербург",
+    },
+    {
+      text: "С первого резюме получил оффер через 5 дней.",
+      role: "Водитель, Москва",
+    },
+    {
+      text: "Сын искал работу почти месяц, с вашим шаблоном получилось за неделю.",
+      role: "Родитель соискателя, Екатеринбург",
+    },
   ] as const;
 
   const applyPromo = async () => {
@@ -285,11 +294,15 @@ export function PaymentPage() {
               Скидка {promoDiscount}% применена{promoCode ? ` (промокод ${promoCode})` : ""}!
             </p>
           ) : null}
-          {PAYMENT_QUOTES.map((quote) => (
-            <p key={quote} className="payment-quote mt-3">
-              {quote}
-            </p>
-          ))}
+          <div className="payment-quotes mt-3">
+            <p className="payment-quotes-title">Что пишут после оплаты</p>
+            {PAYMENT_QUOTES.map((quote) => (
+              <div key={quote.text} className="payment-quote">
+                <p className="payment-quote-text">“{quote.text}”</p>
+                <p className="payment-quote-role">{quote.role}</p>
+              </div>
+            ))}
+          </div>
         </section>
 
         {bonusStars > 0 && !bonusApplied ? (
@@ -325,6 +338,9 @@ export function PaymentPage() {
           </button>
         ) : (
           <div className="flex flex-col gap-2">
+            <p className="text-xs font-medium uppercase tracking-wide" style={{ color: "var(--text-muted)" }}>
+              Промокод
+            </p>
             <div className="flex gap-2">
               <TextInput
                 value={promoCode}
@@ -370,8 +386,8 @@ export function PaymentPage() {
         </div>
 
         <p className="mt-auto text-center text-sm leading-relaxed" style={{ color: "var(--text-muted)" }}>
-          Оплата откроется в браузере. После оплаты нажмите «Вернуться в магазин» — откроется Telegram. Затем
-          кнопку «Открыть приложение» у бота или просто вернитесь в это окно — PDF придёт в чат.
+          После оплаты вернитесь в Telegram и снова откройте Mini App. Готовый PDF и полный текст для hh.ru
+          автоматически придут в чат с ботом.
         </p>
       </main>
     </Screen>

@@ -610,13 +610,38 @@ body {
   margin-left: 0;
 }
 
-.payment-quote {
+.payment-quotes {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.payment-quotes-title {
+  margin: 0;
   font-size: 12px;
-  color: #6b7280;
-  border-left: 2px solid #e5e7eb;
-  padding-left: 12px;
-  margin-bottom: 8px;
+  font-weight: 600;
+  color: var(--text-muted, #6b7280);
+}
+
+.payment-quote {
+  border: 1px solid var(--border-subtle, #e5e7eb);
+  background: var(--surface, #fff);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
+.payment-quote-text {
+  margin: 0;
+  font-size: 12px;
   line-height: 1.45;
+  color: var(--text-secondary, #374151);
+}
+
+.payment-quote-role {
+  margin: 4px 0 0;
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--text-muted, #6b7280);
 }
 
 .history-template-badge {
@@ -2050,6 +2075,19 @@ textarea::-moz-placeholder {
   color: var(--text-muted);
   margin: 2px 0 6px;
   line-height: 1.4;
+}
+
+.preview-template-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--border-subtle, #e5e7eb);
+  border-radius: 12px;
+  background: var(--surface-card, #fff);
+  font-size: 13px;
+  color: var(--text-secondary, #374151);
 }
 
 /* ── Virality 3 — Social proof on Payment ── */

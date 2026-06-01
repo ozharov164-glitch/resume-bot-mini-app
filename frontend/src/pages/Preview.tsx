@@ -17,13 +17,24 @@ import { useFounderStatus } from "../hooks/useFounderStatus";
 import { useTelegramBackButton } from "../hooks/useTelegramBackButton";
 import { PREVIEW_CHECKLIST } from "../lib/marketingCopy";
 import { STARS_PRICE } from "../lib/pricing";
+import { PDF_TEMPLATES } from "../lib/templates";
 import { useAppStore } from "../store";
 import { getTg } from "../telegram";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
 export function PreviewPage() {
-  const { resumeData, resumeId, authToken, setPage, setPaid, startEditResume, previewReturnPage, isPaid } =
+  const {
+    resumeData,
+    resumeId,
+    authToken,
+    setPage,
+    setPaid,
+    startEditResume,
+    previewReturnPage,
+    isPaid,
+    selectedTemplate,
+  } =
     useAppStore();
   const founderActive = useFounderStatus();
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -33,6 +44,7 @@ export function PreviewPage() {
   const [hhPreview, setHhPreview] = useState<string | null>(null);
   const [hhPaidText, setHhPaidText] = useState<string | null>(null);
   const previewLocked = !isPaid && !founderActive;
+  const templateName = PDF_TEMPLATES.find((tmpl) => tmpl.id === selectedTemplate)?.name ?? "Классический";
 
   const handleBack = useCallback(() => setPage(previewReturnPage), [setPage, previewReturnPage]);
   useTelegramBackButton(handleBack);
@@ -184,6 +196,12 @@ export function PreviewPage() {
       <AppHeader onBack={handleBack} showBack title="Предпросмотр" />
       <main className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto overscroll-y-contain px-4 py-3 pb-2">
         <PreviewStatusHero />
+        <section className="preview-template-bar">
+          <span>Шаблон: <strong>{templateName}</strong></span>
+          <button type="button" onClick={() => setPage("template_select")} className="preview-share-link">
+            Изменить
+          </button>
+        </section>
         {previewUrl && !previewError ? (
           <>
             <PreviewImageFrame src={previewUrl} locked={previewLocked} />
@@ -196,9 +214,6 @@ export function PreviewPage() {
                 <p className="preview-unlock-sub">Один отклик — и первый оффер</p>
                 <Button variant="brand" onClick={handlePdf} className="w-full">
                   Получить PDF + текст для hh.ru →
-                </Button>
-                <Button variant="secondary" onClick={handlePdf} className="w-full !min-h-[44px]">
-                  Сменить шаблон
                 </Button>
               </div>
             )}

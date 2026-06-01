@@ -90,7 +90,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   setSelectedTemplate: (selectedTemplate) => set({ selectedTemplate }),
   startNewResume: () =>
     set({
-      page: "onboarding",
+      page: "template_pick",
       onboardingMode: "create",
       previewReturnPage: "home",
       onboardingStep: 0,
