@@ -1,6 +1,5 @@
 import os
 import sys
-import types
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -57,18 +56,18 @@ async def test_webhook_fulfills_on_payment_succeeded():
     }
 
     fulfill = AsyncMock()
-    fake_fulfillment = types.ModuleType("services.payment_fulfillment")
-    fake_fulfillment.fulfill_paid_resume = fulfill
+    fake_dispatch = MagicMock()
+    fake_dispatch.fulfill_from_invoice_payload = fulfill
 
     with patch("services.yookassa_webhook.settings") as mock_settings:
         mock_settings.YOKASSA_SHOP_ID = "1371148"
         mock_settings.YOKASSA_SECRET_KEY = "live_test_key"
         with patch("services.yookassa_webhook.Payment.find_one", return_value=verified):
-            with patch.dict(sys.modules, {"services.payment_fulfillment": fake_fulfillment}):
+            with patch.dict(sys.modules, {"services.payment_dispatch": fake_dispatch}):
                 result = await handle_yookassa_webhook(db, payload)
 
     assert result["ok"] is True
     assert result["status"] == "fulfilled"
     fulfill.assert_awaited_once()
-    assert fulfill.await_args.args[1] == "resume-1"
+    assert fulfill.await_args.args[1]["resume_id"] == "resume-1"
     assert fulfill.await_args.args[2] == 12345

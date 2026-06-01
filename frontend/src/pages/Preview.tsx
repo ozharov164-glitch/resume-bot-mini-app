@@ -6,7 +6,7 @@ import { PreviewImageFrame } from "../components/preview/PreviewImageFrame";
 import { PreviewLoadingSkeleton } from "../components/preview/PreviewLoadingSkeleton";
 import { PreviewResumeCard } from "../components/preview/PreviewResumeCard";
 import { PreviewStatusHero } from "../components/preview/PreviewStatusHero";
-import { ensureAuthToken } from "../api";
+import { ensureAuthToken, getResume } from "../api";
 import { AppHeader } from "../components/ui/AppHeader";
 import { Button } from "../components/ui/Button";
 import { FixedBottomBar } from "../components/ui/FixedBottomBar";
@@ -27,6 +27,8 @@ export function PreviewPage() {
   const founderActive = useFounderStatus();
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewError, setPreviewError] = useState(false);
+  const [hydrating, setHydrating] = useState(false);
+  const [hydrateError, setHydrateError] = useState(false);
   const previewLocked = !isPaid && !founderActive;
 
   const handleBack = useCallback(() => setPage(previewReturnPage), [setPage, previewReturnPage]);
@@ -35,6 +37,31 @@ export function PreviewPage() {
   useEffect(() => {
     trackEvent("preview_viewed");
   }, []);
+
+  useEffect(() => {
+    if (resumeData || !resumeId) return;
+
+    let cancelled = false;
+    setHydrating(true);
+    setHydrateError(false);
+
+    (async () => {
+      try {
+        const token = authToken || (await ensureAuthToken());
+        const record = await getResume(token, resumeId);
+        if (cancelled) return;
+        useAppStore.getState().setResumeResult(resumeId, record.data, record.is_paid);
+      } catch {
+        if (!cancelled) setHydrateError(true);
+      } finally {
+        if (!cancelled) setHydrating(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [authToken, resumeData, resumeId]);
 
   useEffect(() => {
     if (!resumeId) return;
@@ -72,7 +99,35 @@ export function PreviewPage() {
     };
   }, [authToken, resumeId]);
 
-  if (!resumeData) return null;
+  if (!resumeData) {
+    return (
+      <Screen centered className="px-4">
+        <AppHeader onBack={handleBack} showBack title="Предпросмотр" />
+        <main className="flex flex-1 flex-col items-center justify-center gap-4 px-4 text-center">
+          {hydrating ? (
+            <>
+              <PreviewLoadingSkeleton />
+              <p className="text-sm" style={{ color: "var(--text-muted)" }}>
+                Загружаем резюме…
+              </p>
+            </>
+          ) : hydrateError || !resumeId ? (
+            <>
+              <p className="text-base font-medium">Не удалось открыть предпросмотр</p>
+              <p className="text-sm" style={{ color: "var(--text-muted)" }}>
+                Попробуйте сформировать резюме ещё раз или откройте его из истории.
+              </p>
+              <Button variant="brand" onClick={() => setPage("home")}>
+                На главную
+              </Button>
+            </>
+          ) : (
+            <PreviewLoadingSkeleton />
+          )}
+        </main>
+      </Screen>
+    );
+  }
 
   const handlePdf = async () => {
     getTg()?.HapticFeedback?.impactOccurred("medium");

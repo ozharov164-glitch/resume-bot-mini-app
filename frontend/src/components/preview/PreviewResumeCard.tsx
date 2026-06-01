@@ -5,8 +5,8 @@ import { HH_RU_BADGE } from "../../lib/marketingCopy";
 import { Icon } from "../ui/Icon";
 import { PreviewWatermarkOverlay } from "./PreviewWatermarkOverlay";
 
-function initialsFromName(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
+function initialsFromName(name: string | undefined): string {
+  const parts = (name ?? "").trim().split(/\s+/).filter(Boolean);
   if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
   return (parts[0]?.slice(0, 2) ?? "?").toUpperCase();
 }
@@ -53,9 +53,9 @@ export function PreviewResumeCard({ resume }: PreviewResumeCardProps) {
             {initialsFromName(resume.full_name)}
           </div>
           <div className="min-w-0">
-            <h3 className="truncate text-lg font-bold">{resume.full_name}</h3>
+            <h3 className="truncate text-lg font-bold">{resume.full_name || "Кандидат"}</h3>
             <p className="mt-1 text-sm font-semibold" style={{ color: "var(--brand)" }}>
-              {resume.target_position}
+              {resume.target_position || "Специалист"}
             </p>
             {contactParts.length > 0 && (
               <p className="mt-1 truncate text-xs" style={{ color: "var(--text-muted)" }}>

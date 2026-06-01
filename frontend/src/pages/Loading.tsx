@@ -1,8 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 
 import { AppHeader } from "../components/ui/AppHeader";
 import { Screen } from "../components/ui/Screen";
+import { runResumeGenerate } from "../lib/runResumeGenerate";
 
 const PHRASES = [
   "Анализирую ваш опыт...",
@@ -17,6 +18,13 @@ const PROGRESS_MS = 12_000;
 export function LoadingPage() {
   const [phraseIndex, setPhraseIndex] = useState(0);
   const [progress, setProgress] = useState(0);
+  const generateStarted = useRef(false);
+
+  useEffect(() => {
+    if (generateStarted.current) return;
+    generateStarted.current = true;
+    void runResumeGenerate();
+  }, []);
 
   useEffect(() => {
     const phraseTimer = window.setInterval(() => {

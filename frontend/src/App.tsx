@@ -2,6 +2,7 @@ import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react"
 
 import { AppShell } from "./components/ui/AppShell";
 import { BootstrapScreen } from "./components/BootstrapScreen";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 import { useFounderStatus } from "./hooks/useFounderStatus";
 import { isFounderTelegramId } from "./lib/founder";
 import { readCachedAuthToken } from "./lib/authSession";
@@ -145,6 +146,7 @@ export default function App() {
 
   return (
     <AppShell>
+      <ErrorBoundary>
       <Suspense fallback={<PageFallback />}>
         {page === "home" ? (
           <HomePage onStart={startNewResume} onHistory={() => setPage("history")} />
@@ -157,18 +159,9 @@ export default function App() {
         {page === "template_select" ? <TemplateSelectPage /> : null}
         {page === "payment" ? <PaymentPage /> : null}
         {page === "success" ? <SuccessPage /> : null}
-        {page !== "home" &&
-        page !== "history" &&
-        page !== "template_pick" &&
-        page !== "skill_pick" &&
-        page !== "loading" &&
-        page !== "preview" &&
-        page !== "template_select" &&
-        page !== "payment" &&
-        page !== "success" ? (
-          <OnboardingPage />
-        ) : null}
+        {page === "onboarding" ? <OnboardingPage /> : null}
       </Suspense>
+      </ErrorBoundary>
     </AppShell>
   );
 }

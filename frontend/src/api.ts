@@ -16,8 +16,21 @@ async function http<T>(path: string, init: RequestInit, timeoutMs = DEFAULT_TIME
   if (!response.ok) {
     let detail = text || "Сервис временно недоступен";
     try {
-      const parsed = JSON.parse(text) as { detail?: string };
-      if (parsed.detail) detail = parsed.detail;
+      const parsed = JSON.parse(text) as {
+        detail?: string | { msg?: string }[];
+        message?: string;
+        error?: string;
+      };
+      if (typeof parsed.message === "string" && parsed.message) {
+        detail = parsed.message;
+      } else if (parsed.detail) {
+        detail =
+          typeof parsed.detail === "string"
+            ? parsed.detail
+            : Array.isArray(parsed.detail)
+              ? parsed.detail.map((d) => d.msg).filter(Boolean).join("; ")
+              : detail;
+      }
     } catch {
       /* plain text error */
     }

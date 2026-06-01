@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 
-import { ensureAuthToken, generateResume, HttpTimeoutError } from "../api";
 import { OptionButton } from "../components/OptionButton";
 import { ProfessionChip } from "../components/ProfessionChip";
 import { ProgressBar } from "../components/ProgressBar";
@@ -19,7 +18,6 @@ import {
   PROFESSION_PRESETS,
   SALARY_CUSTOM_OPTION,
   buildLastJobFromWorkHistory,
-  deriveExperienceLevel,
   getVisibleSteps,
   normalizeSalaryDigits,
   professionOtherSelected,
@@ -44,10 +42,7 @@ export function OnboardingPage() {
   const {
     answers,
     setAnswer,
-    setResumeResult,
     setPage,
-    setFounder,
-    setPaid,
     onboardingMode,
     cancelEditResume,
     onboardingStep,
@@ -224,44 +219,6 @@ export function OnboardingPage() {
 
     setSubmitting(true);
     setPage("loading");
-    trackEvent("generate_started");
-    try {
-      const token = await ensureAuthToken();
-      const state = useAppStore.getState();
-      const payload = { ...state.answers };
-      const last_job = buildLastJobFromWorkHistory(state.answers.work_history);
-      payload.experience_level = deriveExperienceLevel(state.answers.work_history);
-      setAnswer("experience_level", payload.experience_level);
-      if (last_job) {
-        payload.last_job = last_job;
-      }
-      setAnswer("last_job", last_job);
-      const response = await generateResume(token, payload, state.selectedTemplate);
-      setResumeResult(response.resume_id, response.resume, response.paid);
-      if (response.paid) {
-        setFounder(true);
-        setPaid(true);
-      }
-      if (state.onboardingMode === "create") {
-        useAppStore.setState({ previewReturnPage: "home" });
-      }
-      setPage("preview");
-    } catch (error) {
-      setPage("onboarding");
-      const message = error instanceof Error ? error.message : "";
-      if (message === "OPEN_VIA_BOT") {
-        alert("Откройте приложение через бота @resumeez_bot — без этого авторизация не работает.");
-      } else if (error instanceof HttpTimeoutError) {
-        alert("Генерация заняла слишком много времени. Проверьте интернет и попробуйте ещё раз.");
-      } else if (/401|авториза|токен|пользователь/i.test(message)) {
-        alert("Сессия истекла. Закройте Mini App и откройте снова через бота.");
-      } else {
-        alert(message || "Не удалось составить резюме. Проверьте соединение и попробуйте ещё раз.");
-      }
-      console.debug(error);
-    } finally {
-      setSubmitting(false);
-    }
   };
 
   const skipOptional = () => {
