@@ -20,6 +20,7 @@ import { Icon } from "../components/ui/Icon";
 import { Screen } from "../components/ui/Screen";
 import { TextInput } from "../components/ui/TextField";
 import { useTelegramBackButton } from "../hooks/useTelegramBackButton";
+import { buildFullName } from "../lib/formatPersonName";
 import {
   applyDiscount,
   RUB_PRICE,
@@ -92,7 +93,7 @@ export function PaymentPage() {
 
   const fullName =
     resumeData?.full_name ||
-    [answers.name, answers.patronymic].filter(Boolean).join(" ") ||
+    buildFullName(String(answers.name ?? ""), String(answers.patronymic ?? "")) ||
     "клиента";
   const position = resumeData?.target_position || answers.target_position || "";
 
