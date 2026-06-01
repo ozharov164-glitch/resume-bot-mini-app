@@ -23,9 +23,7 @@ const SkillPickPage = lazy(() => import("./pages/SkillPick").then((m) => ({ defa
 const TemplatePickPage = lazy(() =>
   import("./pages/TemplatePick").then((m) => ({ default: m.TemplatePickPage })),
 );
-const TemplateSelectPage = lazy(() =>
-  import("./pages/TemplateSelect").then((m) => ({ default: m.TemplateSelectPage })),
-);
+const HhTextPage = lazy(() => import("./pages/HhText").then((m) => ({ default: m.HhTextPage })));
 
 function PageFallback() {
   return <BootstrapScreen message="Загружаем экран…" />;
@@ -159,6 +157,7 @@ export default function App() {
         {page === "template_select" ? <TemplateSelectPage /> : null}
         {page === "payment" ? <PaymentPage /> : null}
         {page === "success" ? <SuccessPage /> : null}
+        {page === "hh_text" ? <HhTextPage /> : null}
         {page === "onboarding" ? <OnboardingPage /> : null}
       </Suspense>
       </ErrorBoundary>

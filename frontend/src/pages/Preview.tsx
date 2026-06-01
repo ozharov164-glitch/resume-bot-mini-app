@@ -3,9 +3,10 @@ import { useCallback, useEffect, useState } from "react";
 import { trackEvent } from "../lib/analytics";
 
 import { PreviewImageFrame } from "../components/preview/PreviewImageFrame";
-import { PreviewStatusHero } from "../components/preview/PreviewStatusHero";
+import { PreviewPaidHero } from "../components/preview/PreviewPaidHero";
 import { PreviewLoadingSkeleton } from "../components/preview/PreviewLoadingSkeleton";
 import { PreviewResumeCard } from "../components/preview/PreviewResumeCard";
+import { HhTextEntryCard } from "../components/hh/HhTextEntryCard";
 import { ensureAuthToken, fetchHhText, getResume } from "../api";
 import { AppHeader } from "../components/ui/AppHeader";
 import { Button } from "../components/ui/Button";
@@ -32,6 +33,7 @@ export function PreviewPage() {
     previewReturnPage,
     isPaid,
     selectedTemplate,
+    openHhTextView,
   } = useAppStore();
   const founderActive = useFounderStatus();
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -39,8 +41,9 @@ export function PreviewPage() {
   const [hydrating, setHydrating] = useState(false);
   const [hydrateError, setHydrateError] = useState(false);
   const [hhPreview, setHhPreview] = useState<string | null>(null);
-  const [hhPaidText, setHhPaidText] = useState<string | null>(null);
   const previewLocked = !isPaid && !founderActive;
+  const previewPaid = isPaid || founderActive;
+  const useFitLayout = previewLocked || previewPaid;
   const templateName = PDF_TEMPLATES.find((tmpl) => tmpl.id === selectedTemplate)?.name ?? "Классический";
 
   const handleBack = useCallback(() => setPage(previewReturnPage), [setPage, previewReturnPage]);
@@ -120,16 +123,13 @@ export function PreviewPage() {
         const data = await fetchHhText(token, resumeId);
         if (cancelled) return;
         if (data.is_paid && data.text) {
-          setHhPaidText(data.text);
           setHhPreview(null);
         } else if (data.preview) {
           setHhPreview(data.preview);
-          setHhPaidText(null);
         }
       } catch {
         if (!cancelled) {
           setHhPreview(null);
-          setHhPaidText(null);
         }
       }
     })();
@@ -186,19 +186,23 @@ export function PreviewPage() {
     );
   };
 
-  const mainClass = previewLocked
-    ? "preview-page-main preview-page-main--fit"
-    : "preview-page-main";
+  const mainClass = useFitLayout ? "preview-page-main preview-page-main--fit" : "preview-page-main";
 
   return (
     <Screen
       withBottomBar
-      bottomBarButtons={2}
-      className={previewLocked ? "preview-page preview-page--fit" : "preview-page"}
+      bottomBarButtons={previewPaid ? 1 : 2}
+      className={
+        useFitLayout
+          ? previewPaid
+            ? "preview-page preview-page--fit preview-page--paid"
+            : "preview-page preview-page--fit"
+          : "preview-page"
+      }
     >
       <AppHeader onBack={handleBack} showBack title="Предпросмотр" />
       <main className={mainClass}>
-        {!previewLocked ? <PreviewStatusHero /> : null}
+        {previewPaid ? <PreviewPaidHero /> : null}
 
         <section className="preview-template-bar preview-template-bar--compact">
           <div className="preview-template-bar-copy">
@@ -220,17 +224,19 @@ export function PreviewPage() {
           )}
         </div>
 
-        {!previewLocked && (hhPreview || hhPaidText) && (
-          <section className={`preview-hh-block${previewLocked ? " preview-hh-block--locked" : ""}`}>
+        {previewPaid ? (
+          <HhTextEntryCard onClick={() => openHhTextView("preview")} />
+        ) : null}
+
+        {previewLocked && hhPreview ? (
+          <section className="preview-hh-block preview-hh-block--locked">
             <h3 className="preview-hh-title">Текст для hh.ru</h3>
-            <pre className="preview-hh-preview-text">{hhPaidText ?? hhPreview}</pre>
-            {previewLocked && hhPreview ? (
-              <div className="preview-hh-blur">
-                <p>Полный текст — после оплаты</p>
-              </div>
-            ) : null}
+            <pre className="preview-hh-preview-text">{hhPreview}</pre>
+            <div className="preview-hh-blur">
+              <p>Полный текст — после оплаты</p>
+            </div>
           </section>
-        )}
+        ) : null}
 
         {founderActive ? <FounderBadge /> : null}
       </main>
@@ -246,16 +252,18 @@ export function PreviewPage() {
             </div>
           ) : null}
 
-          <ul className="preview-checklist">
-            {PREVIEW_CHECKLIST.map((text) => (
-              <li key={text} className="preview-checklist-item">
-                <span className="preview-checklist-mark" aria-hidden>
-                  ✓
-                </span>
-                <span>{text}</span>
-              </li>
-            ))}
-          </ul>
+          {previewLocked ? (
+            <ul className="preview-checklist">
+              {PREVIEW_CHECKLIST.map((text) => (
+                <li key={text} className="preview-checklist-item">
+                  <span className="preview-checklist-mark" aria-hidden>
+                    ✓
+                  </span>
+                  <span>{text}</span>
+                </li>
+              ))}
+            </ul>
+          ) : null}
 
           <Button
             variant="secondary"
@@ -269,11 +277,13 @@ export function PreviewPage() {
             Изменить ответы
           </Button>
 
-          <Button variant="brand" onClick={goToCheckout} className="preview-pdf-btn">
-            <span className="preview-btn-shimmer pointer-events-none absolute inset-0" aria-hidden />
-            <Icon name="picture_as_pdf" size={20} />
-            {previewLocked ? "Получить PDF + текст hh.ru" : "Получить PDF в Telegram"}
-          </Button>
+          {previewLocked ? (
+            <Button variant="brand" onClick={goToCheckout} className="preview-pdf-btn">
+              <span className="preview-btn-shimmer pointer-events-none absolute inset-0" aria-hidden />
+              <Icon name="picture_as_pdf" size={20} />
+              Получить PDF + текст hh.ru
+            </Button>
+          ) : null}
         </div>
       </FixedBottomBar>
     </Screen>

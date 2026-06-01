@@ -40,7 +40,7 @@ const TEMPLATE_LABELS: Record<string, string> = {
 };
 
 export function HistoryPage() {
-  const { setPage, openResumeFromHistory } = useAppStore();
+  const { setPage, openResumeFromHistory, openHhTextView } = useAppStore();
   const [items, setItems] = useState<ResumeListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [openingId, setOpeningId] = useState<string | null>(null);
@@ -80,6 +80,14 @@ export function HistoryPage() {
     } finally {
       setOpeningId(null);
     }
+  };
+
+  const openHhText = (item: ResumeListItem, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!item.is_paid) return;
+    getTg()?.HapticFeedback?.impactOccurred("light");
+    useAppStore.setState({ resumeId: item.id });
+    openHhTextView("history");
   };
 
   const copyText = async (item: ResumeListItem, e: React.MouseEvent) => {
@@ -191,15 +199,27 @@ export function HistoryPage() {
               </div>
             </div>
             <div className="flex shrink-0 items-center gap-1">
-              <button
-                type="button"
-                className="flex h-9 w-9 items-center justify-center rounded-full"
-                style={{ background: "var(--surface-variant, #f3f4f6)" }}
-                aria-label="Скопировать текст"
-                onClick={(e) => void copyText(item, e)}
-              >
-                <Icon name="content_copy" size={18} style={{ color: "#6b7280" }} />
-              </button>
+              {item.is_paid ? (
+                <button
+                  type="button"
+                  className="flex h-9 w-9 items-center justify-center rounded-full"
+                  style={{ background: "var(--surface-variant, #f3f4f6)" }}
+                  aria-label="Текст для hh.ru"
+                  onClick={(e) => openHhText(item, e)}
+                >
+                  <Icon name="article" size={18} style={{ color: "var(--brand)" }} />
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="flex h-9 w-9 items-center justify-center rounded-full"
+                  style={{ background: "var(--surface-variant, #f3f4f6)" }}
+                  aria-label="Скопировать текст"
+                  onClick={(e) => void copyText(item, e)}
+                >
+                  <Icon name="content_copy" size={18} style={{ color: "#6b7280" }} />
+                </button>
+              )}
               <Icon name="chevron_right" style={{ color: "var(--text-muted)" }} />
             </div>
           </button>

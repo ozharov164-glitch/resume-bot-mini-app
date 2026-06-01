@@ -14,7 +14,8 @@ type Page =
   | "template_select"
   | "payment"
   | "success"
-  | "history";
+  | "history"
+  | "hh_text";
 type OnboardingMode = "create" | "edit";
 type HomeTab = "main" | "examples";
 export type TemplateId = "classic" | "modern" | "compact";
@@ -41,6 +42,8 @@ interface AppState {
   setFounder: (value: boolean) => void;
   onboardingMode: OnboardingMode;
   previewReturnPage: Page;
+  hhTextReturnPage: Page;
+  openHhTextView: (returnPage?: Page) => void;
   onboardingStep: number;
   setOnboardingStep: (step: number) => void;
   homeTab: HomeTab;
@@ -82,6 +85,12 @@ export const useAppStore = create<AppState>((set, get) => ({
   setFounder: (value) => set({ isFounder: value }),
   onboardingMode: "create",
   previewReturnPage: "home",
+  hhTextReturnPage: "preview",
+  openHhTextView: (returnPage) =>
+    set((state) => ({
+      page: "hh_text",
+      hhTextReturnPage: returnPage ?? state.page,
+    })),
   onboardingStep: 0,
   setOnboardingStep: (onboardingStep) => set({ onboardingStep }),
   homeTab: "main",

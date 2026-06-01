@@ -4,7 +4,6 @@ import confetti from "canvas-confetti";
 import {
   createAdaptInvoice,
   ensureAuthToken,
-  fetchTextExport,
   saveAdaptVacancy,
 } from "../api";
 import { AppHeader } from "../components/ui/AppHeader";
@@ -20,7 +19,7 @@ const BOT_USERNAME = "resumeez_bot";
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
 export function SuccessPage() {
-  const { resumeId, authToken } = useAppStore();
+  const { resumeId, authToken, openHhTextView } = useAppStore();
   const [toast, setToast] = useState<string | null>(null);
   const [vacancy, setVacancy] = useState("");
   const [adaptBusy, setAdaptBusy] = useState(false);
@@ -46,20 +45,6 @@ export function SuccessPage() {
   const showToast = (message: string) => {
     setToast(message);
     window.setTimeout(() => setToast(null), 2000);
-  };
-
-  const copyForHh = async () => {
-    if (!resumeId || !authToken) return;
-    try {
-      const token = authToken || (await ensureAuthToken());
-      const text = await fetchTextExport(token, resumeId);
-      await navigator.clipboard.writeText(text);
-      getTg()?.HapticFeedback?.notificationOccurred("success");
-      trackEvent("text_exported");
-      showToast("Скопировано в буфер");
-    } catch {
-      alert("Не удалось скопировать текст. Попробуйте ещё раз.");
-    }
   };
 
   const downloadShareBanner = async () => {
@@ -154,8 +139,8 @@ export function SuccessPage() {
           Вернуться в бот
         </Button>
 
-        <Button variant="outline" onClick={() => void copyForHh()} className="w-full">
-          Скопировать текст для hh.ru
+        <Button variant="outline" onClick={() => openHhTextView("success")} className="w-full">
+          Текст для hh.ru
         </Button>
 
         <section className="flex flex-col gap-3 rounded-xl p-4" style={{ background: "#f3f4f6" }}>
