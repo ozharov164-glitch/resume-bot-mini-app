@@ -120,6 +120,12 @@
   </main>
 
 </div>
+{% if qr_b64 %}
+<footer class="pdf-footer">
+  <img src="data:image/png;base64,{{ qr_b64 }}" width="60" height="60" alt="" />
+  <span>Создано в @resumeez_bot</span>
+</footer>
+{% endif %}
 {% if preview %}
 <div class="preview-watermark-layer" aria-hidden="true"></div>
 <div class="preview-watermark-stripes" aria-hidden="true"></div>

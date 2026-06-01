@@ -3,21 +3,37 @@ import uuid
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException
-from fastapi.responses import Response
+from fastapi.responses import JSONResponse, Response
+from pydantic import BaseModel, Field
 
 from database import get_db
 from dependencies import get_current_user
 from models.schemas import GenerateResumeRequest, ResumeGenerationResponse, SetTemplateRequest
-from services.ai_service import generate_resume
+from services.ai_service import generate_resume, generate_resume_snippet
 from services.founder import is_founder
 from services.payment_fulfillment import parse_resume_data
-from services.pdf_service import generate_pdf, generate_preview_png
+from services.pdf_async import PdfGenerationTimeoutError, generate_pdf_async
+from services.pdf_service import generate_preview_png
+from services.rate_limiter import RateLimitExceeded, check_rate_limit
 from services.telegram_service import send_document_to_user
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/resume", tags=["resume"])
 
 VALID_TEMPLATES = frozenset({"classic", "modern", "compact"})
+
+
+class SnippetRequest(BaseModel):
+    target_position: str = Field(min_length=1, max_length=150)
+    gender: str = ""
+
+
+class SnippetResponse(BaseModel):
+    snippet: str
+
+
+class AdaptVacancyRequest(BaseModel):
+    vacancy_text: str = Field(min_length=20, max_length=4000)
 
 
 def _as_str(value: object) -> str:
@@ -46,12 +62,43 @@ def _normalize_resume_fields(resume_data: dict) -> dict:
     return resume_data
 
 
+@router.post("/snippet", response_model=SnippetResponse)
+async def resume_snippet(
+    body: SnippetRequest,
+    current_user: dict = Depends(get_current_user),
+):
+    try:
+        check_rate_limit("skills_suggest", current_user.get("telegram_id"))
+    except RateLimitExceeded as exc:
+        return JSONResponse(
+            status_code=429,
+            content={
+                "error": "rate_limit",
+                "retry_after_hours": exc.retry_after_hours,
+                "message": "Лимит запросов исчерпан",
+            },
+        )
+    snippet = await generate_resume_snippet(body.target_position, body.gender)
+    return SnippetResponse(snippet=snippet)
+
+
 @router.post("/generate", response_model=ResumeGenerationResponse)
 async def create_resume(
     user_data: GenerateResumeRequest,
     current_user: dict = Depends(get_current_user),
     db=Depends(get_db),
 ):
+    try:
+        check_rate_limit("resume_generate", current_user.get("telegram_id"))
+    except RateLimitExceeded as exc:
+        return JSONResponse(
+            status_code=429,
+            content={
+                "error": "rate_limit",
+                "retry_after_hours": exc.retry_after_hours,
+                "message": "Лимит запросов исчерпан",
+            },
+        )
     try:
         resume_data = await generate_resume(user_data.model_dump())
         resume_data = _normalize_resume_fields(resume_data)
@@ -92,7 +139,7 @@ async def create_resume(
                 resume_id,
             )
         if is_paid_by_bonus:
-            pdf_bytes = generate_pdf(resume_data, template_id)
+            pdf_bytes = await generate_pdf_async(resume_data, template_id)
             safe_name = resume_data.get("full_name", "resume").replace(" ", "_")[:80]
             filename = f"resume_{safe_name}.pdf"
             name = (resume_data.get("full_name") or "").strip()
@@ -164,8 +211,8 @@ async def preview_resume_image(
         png_bytes = generate_preview_png(
             resume_data,
             tmpl,
-            watermark=not paid,
-            resolution=130 if paid else 72,
+            watermark=False,
+            resolution=130 if paid else 96,
         )
     except Exception as exc:
         logger.exception("preview image failed resume_id=%s", resume_id)
@@ -205,7 +252,15 @@ async def preview_resume_pdf(
     resume_data = parse_resume_data(resume["data"])
     tmpl = resume.get("template_id") or "classic"
     try:
-        pdf_bytes = generate_pdf(resume_data, tmpl)
+        pdf_bytes = await generate_pdf_async(resume_data, tmpl)
+    except PdfGenerationTimeoutError as exc:
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "error": "pdf_timeout",
+                "message": "Генерация PDF заняла слишком много времени. Попробуйте ещё раз.",
+            },
+        ) from exc
     except Exception as exc:
         logger.exception("pdf preview failed resume_id=%s", resume_id)
         raise HTTPException(
@@ -221,6 +276,35 @@ async def preview_resume_pdf(
             "Cache-Control": "private, no-store",
         },
     )
+
+
+@router.post("/{resume_id}/adapt")
+async def adapt_resume(
+    resume_id: str,
+    body: AdaptVacancyRequest,
+    current_user: dict = Depends(get_current_user),
+    db=Depends(get_db),
+):
+    """Store vacancy text for paid adaptation (invoice via /api/payment/create-adapt-invoice)."""
+    resume = db.find_resume(resume_id, current_user["id"])
+    if not resume:
+        raise HTTPException(status_code=404, detail="Резюме не найдено.")
+    if not resume.get("is_paid") and not is_founder(current_user.get("telegram_id")):
+        raise HTTPException(status_code=403, detail="Адаптация доступна после оплаты резюме.")
+
+    answers = resume.get("user_answers") or {}
+    if isinstance(answers, str):
+        import json as _json
+
+        try:
+            answers = _json.loads(answers)
+        except _json.JSONDecodeError:
+            answers = {}
+    if not isinstance(answers, dict):
+        answers = {}
+    answers["_pending_adapt_vacancy"] = body.vacancy_text.strip()
+    db.update_resume(resume_id, {"user_answers": answers})
+    return {"ok": True, "resume_id": resume_id}
 
 
 @router.get("/{resume_id}/download")
@@ -241,7 +325,15 @@ async def download_pdf(resume_id: str, current_user: dict = Depends(get_current_
     resume_data = parse_resume_data(resume["data"])
     tmpl = resume.get("template_id") or "classic"
     try:
-        pdf_bytes = generate_pdf(resume_data, tmpl)
+        pdf_bytes = await generate_pdf_async(resume_data, tmpl)
+    except PdfGenerationTimeoutError as exc:
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "error": "pdf_timeout",
+                "message": "Генерация PDF заняла слишком много времени. Попробуйте ещё раз.",
+            },
+        ) from exc
     except Exception as exc:
         logger.exception("pdf generation failed resume_id=%s", resume_id)
         raise HTTPException(

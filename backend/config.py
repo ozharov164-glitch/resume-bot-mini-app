@@ -38,6 +38,8 @@ class Settings(BaseSettings):
 
     STARS_PRICE_SINGLE_PDF: int = 149
     RUB_PRICE_SINGLE_PDF: int = 149
+    STARS_PRICE_ADAPT: int = 99
+    RUB_PRICE_ADAPT: int = 99
 
     # Telegram user IDs with free unlimited generate + PDF (comma-separated).
     FOUNDER_TELEGRAM_IDS: str = "7595981350"

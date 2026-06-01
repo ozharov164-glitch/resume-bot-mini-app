@@ -79,8 +79,38 @@ def _font_face_css() -> str:
 def _split_bullets(text: str) -> list[str]:
     if not text:
         return []
-    parts = re.split(r"[•·\n]+", text)
-    return [p.strip() for p in parts if p.strip()]
+    raw = str(text).strip()
+    if "•" in raw or "·" in raw or "\n" in raw:
+        parts = re.split(r"[•·\n]+", raw)
+        bullets = [p.strip() for p in parts if p.strip()]
+    else:
+        sentences = [s.strip() for s in re.split(r"\.\s+", raw) if s.strip()]
+        bullets = []
+        for sentence in sentences:
+            if not sentence.endswith("."):
+                sentence = f"{sentence}."
+            bullets.append(sentence[0].upper() + sentence[1:] if sentence else sentence)
+    bullets = bullets[:5]
+    return bullets
+
+
+def _bot_qr_base64() -> str:
+    try:
+        import qrcode
+        from qrcode.constants import ERROR_CORRECT_L
+    except ImportError:
+        logger.warning("qrcode package not installed — PDF footer QR skipped")
+        return ""
+
+    buf = io.BytesIO()
+    qr = qrcode.QRCode(version=1, error_correction=ERROR_CORRECT_L, box_size=3, border=1)
+    qr.add_data("https://t.me/resumeez_bot")
+    qr.make(fit=True)
+    img = qr.make_image(fill_color="#6b7280", back_color="white")
+    img.save(buf, format="PNG")
+    import base64
+
+    return base64.b64encode(buf.getvalue()).decode("ascii")
 
 
 def get_pdf_styles() -> str:
@@ -291,6 +321,16 @@ def get_pdf_styles() -> str:
     .edu-entry { margin-bottom: 7px; }
     .edu-institution { font-size: 9pt; font-weight: 700; color: #0d1f14; }
     .edu-details { font-size: 8pt; color: #6b7280; margin-top: 1px; }
+    .pdf-footer {
+        margin-top: 14px;
+        padding-top: 8px;
+        border-top: 1px solid #e5e7eb;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .pdf-footer img { width: 60px; height: 60px; }
+    .pdf-footer span { font-size: 7pt; color: #9ca3af; }
     """
 
 
@@ -387,6 +427,16 @@ def get_modern_pdf_styles() -> str:
         color: #374151;
         margin-bottom: 2pt;
     }}
+    .pdf-footer {{
+        margin-top: 14px;
+        padding-top: 8px;
+        border-top: 1px solid #e5e7eb;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }}
+    .pdf-footer img {{ width: 60px; height: 60px; }}
+    .pdf-footer span {{ font-size: 7pt; color: #9ca3af; }}
     """
 
 
@@ -542,6 +592,16 @@ def get_compact_pdf_styles() -> str:
     .edu-entry {{ margin-bottom: 5px; }}
     .edu-institution {{ font-size: 8pt; font-weight: 700; color: #111827; }}
     .edu-details {{ font-size: 7pt; color: #6b7280; }}
+    .pdf-footer {{
+        margin-top: 14px;
+        padding-top: 8px;
+        border-top: 1px solid #e5e7eb;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }}
+    .pdf-footer img {{ width: 60px; height: 60px; }}
+    .pdf-footer span {{ font-size: 7pt; color: #9ca3af; }}
     """
 
 
@@ -624,7 +684,11 @@ def _render_document(resume_data: dict, template_name: str = "classic", *, previ
     env = Environment(loader=FileSystemLoader(str(TEMPLATES_DIR)))
     env.filters["split_bullets"] = _split_bullets
     template = env.get_template(f"resume_{template_name}.html")
-    html_content = template.render(resume=data, preview=preview)
+    html_content = template.render(
+        resume=data,
+        preview=preview,
+        qr_b64=_bot_qr_base64(),
+    )
     if template_name == "modern":
         styles = get_modern_pdf_styles()
     elif template_name == "compact":

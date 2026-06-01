@@ -1,5 +1,7 @@
+import hashlib
 import json
 import logging
+import time
 from typing import Any
 
 import httpx
@@ -8,6 +10,34 @@ from config import settings
 from services.text_facts import sanitize_experience_descriptions
 
 logger = logging.getLogger(__name__)
+
+SKILLS_CACHE_TTL_SEC = 24 * 3600
+_skills_cache: dict[str, tuple[float, dict[str, Any]]] = {}
+_snippet_cache: dict[str, tuple[float, str]] = {}
+
+JOB_CONTEXT: dict[str, str] = {
+    "водитель": (
+        "Акцент на категории ВУ, стаж вождения, тип ТС, маршруты, безаварийность. "
+        "Не придумывать цифры."
+    ),
+    "охранник": (
+        "Лицензия охранника, разряд, тип объектов, смены, оборудование "
+        "(металлодетектор, видеонаблюдение)."
+    ),
+    "курьер": (
+        "Вид доставки (пеший/авто/вело), районы, средний чек заказов, рейтинг если есть."
+    ),
+    "продавец": (
+        "Товарные группы, выполнение плана, работа с кассой, CRM если есть, "
+        "размер торговой точки."
+    ),
+    "кассир": (
+        "Кассовая дисциплина, объём операций/день, инвентаризация, "
+        "опыт с конкретными POS-системами."
+    ),
+    "маляр": "Виды работ (фасад/интерьер/авто), материалы, площадь объектов, допуски.",
+    "грузчик": "Физические нормативы, спецтехника (погрузчик), тип грузов, смены.",
+}
 
 SYSTEM_PROMPT = """Ты — старший HR-редактор резюме для российского рынка (формат hh.ru).
 
@@ -207,7 +237,10 @@ def _build_user_payload(user_data: dict) -> str:
     if education_place:
         education_line += f"\nУчебное заведение: {education_place}"
 
+    job_ctx = get_job_context(str(user_data.get("target_position") or ""))
     blocks = []
+    if job_ctx:
+        blocks.append(f"Контекст профессии:\n{job_ctx}")
     if user_data.get("gender"):
         blocks.append(
             f"❗Пол кандидата: {user_data['gender']} — пиши ВСЁ резюме строго в этом роде."
@@ -285,6 +318,83 @@ def _build_request_body(
         "provider": _provider_routing(),
         "response_format": {"type": "json_object"},
     }
+
+
+def get_job_context(position: str) -> str:
+    lowered = (position or "").lower()
+    for keyword, context in JOB_CONTEXT.items():
+        if keyword in lowered:
+            return context
+    return ""
+
+
+def _is_no_experience(user_data: dict) -> bool:
+    level = str(user_data.get("experience_level") or "").lower().strip()
+    if level in {"no_experience", "нет опыта", "нет опыта работы", "без опыта"}:
+        return True
+    wh = user_data.get("work_history") or []
+    if not wh:
+        last_job = str(user_data.get("last_job") or "").lower()
+        if "опыта нет" in last_job or "нет опыта" in last_job:
+            return True
+    return False
+
+
+def _block_no_experience_hallucination(resume_data: dict, user_data: dict) -> dict:
+    if not _is_no_experience(user_data):
+        return resume_data
+    exp = resume_data.get("experience")
+    has_companies = False
+    if isinstance(exp, list):
+        for job in exp:
+            if isinstance(job, dict) and str(job.get("company") or "").strip():
+                has_companies = True
+                break
+    if not has_companies:
+        return resume_data
+
+    logger.warning("hallucination_blocked experience cleared for no_experience user")
+    resume_data["experience"] = []
+    summary = str(resume_data.get("summary") or "").strip()
+    readiness = "Готов к обучению и быстрому вхождению в рабочий процесс."
+    if readiness.lower() not in summary.lower():
+        resume_data["summary"] = f"{summary} {readiness}".strip() if summary else readiness
+    return resume_data
+
+
+async def _call_openrouter_text(
+    messages: list[dict],
+    model: str | None = None,
+    temperature: float = 0.7,
+    max_tokens: int = 120,
+    *,
+    timeout: float = 6.0,
+) -> str:
+    model = model or settings.OPENROUTER_MODEL
+    body = {
+        "model": model,
+        "messages": messages,
+        "temperature": temperature,
+        "max_tokens": max_tokens,
+        "provider": _provider_routing(),
+    }
+    async with httpx.AsyncClient(timeout=timeout) as client:
+        response = await client.post(
+            "https://openrouter.ai/api/v1/chat/completions",
+            headers={
+                "Authorization": f"Bearer {settings.OPENROUTER_API_KEY}",
+                "Content-Type": "application/json",
+                "HTTP-Referer": settings.OPENROUTER_APP_URL,
+                "X-Title": "ResumeBot",
+            },
+            json=body,
+        )
+        response.raise_for_status()
+        data = response.json()
+    choices = data.get("choices") or []
+    if not choices:
+        raise ValueError("OpenRouter returned empty completion")
+    return str(choices[0].get("message", {}).get("content") or "").strip()
 
 
 async def _call_openrouter(
@@ -515,7 +625,41 @@ async def generate_resume(user_data: dict) -> dict:
             )
         else:
             raise
-    return finalize_resume_data(raw, user_data)
+    result = finalize_resume_data(raw, user_data)
+    return _block_no_experience_hallucination(result, user_data)
+
+
+async def generate_resume_snippet(target_position: str, gender: str = "") -> str:
+    position = _truncate(target_position.strip(), MAX_FIELD_LEN["target_position"])
+    if not position:
+        return ""
+    cache_key = hashlib.sha256(f"{position.lower()}|{gender.lower()}".encode()).hexdigest()
+    now = time.time()
+    cached = _snippet_cache.get(cache_key)
+    if cached and cached[0] > now:
+        return cached[1]
+
+    gender_hint = f" Пол: {gender}." if gender else ""
+    messages = [
+        {
+            "role": "user",
+            "content": (
+                f"Напиши 2 предложения раздела «О себе» для резюме на должность «{position}»."
+                f"{gender_hint} Только текст, без JSON, без вступлений."
+            ),
+        },
+    ]
+    try:
+        text = await _call_openrouter_text(messages, temperature=0.7, max_tokens=120, timeout=6.0)
+    except Exception as exc:
+        logger.warning("snippet generation failed: %s", exc)
+        text = (
+            f"Мотивированный специалист на позицию «{position}». "
+            "Готов применить сильные стороны и быстро включиться в работу."
+        )
+    text = text.strip().strip('"')
+    _snippet_cache[cache_key] = (now + SKILLS_CACHE_TTL_SEC, text)
+    return text
 
 
 def _fallback_skills(position: str) -> dict[str, Any]:
@@ -573,6 +717,14 @@ def _normalize_skills_response(raw: dict[str, Any]) -> dict[str, Any]:
 
 async def suggest_skills(position: str) -> dict[str, Any]:
     position = _truncate(position, MAX_FIELD_LEN["target_position"])
+    cache_key = hashlib.sha256(position.lower().strip().encode()).hexdigest()
+    now = time.time()
+    cached = _skills_cache.get(cache_key)
+    if cached and cached[0] > now:
+        logger.info("skills_cache cache_hit position=%s", position[:40])
+        return cached[1]
+    logger.info("skills_cache cache_miss position=%s", position[:40])
+
     messages = [
         {"role": "system", "content": SKILLS_SUGGEST_PROMPT},
         {"role": "user", "content": f"Должность: {position}"},
@@ -583,10 +735,13 @@ async def suggest_skills(position: str) -> dict[str, Any]:
         fake_user = {"target_position": position, "skills": [], "certificates": "", "education_place": ""}
         result["skills"] = [s for s in result["skills"] if _skill_is_allowed(s, fake_user)]
         if result["skills"]:
+            _skills_cache[cache_key] = (now + SKILLS_CACHE_TTL_SEC, result)
             return result
     except Exception as exc:
         logger.warning("skills suggest failed (%s), using fallback", exc)
-    return _fallback_skills(position)
+    fallback = _fallback_skills(position)
+    _skills_cache[cache_key] = (now + SKILLS_CACHE_TTL_SEC, fallback)
+    return fallback
 
 
 async def adapt_resume_for_vacancy(resume_data: dict, vacancy_text: str) -> dict:

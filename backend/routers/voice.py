@@ -1,6 +1,8 @@
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi.responses import JSONResponse
 
 from dependencies import get_current_user
+from services.rate_limiter import RateLimitExceeded, check_rate_limit
 from services.voice_service import polish_experience_text, transcribe_audio
 
 router = APIRouter(prefix="/api/voice", tags=["voice"])
@@ -18,6 +20,17 @@ async def transcribe_voice(
         raise HTTPException(status_code=413, detail="Аудио слишком большое (макс. 5 МБ).")
     if not data:
         raise HTTPException(status_code=400, detail="Пустой аудиофайл.")
+    try:
+        check_rate_limit("voice_transcribe", current_user.get("telegram_id"))
+    except RateLimitExceeded as exc:
+        return JSONResponse(
+            status_code=429,
+            content={
+                "error": "rate_limit",
+                "retry_after_hours": exc.retry_after_hours,
+                "message": "Лимит запросов исчерпан",
+            },
+        )
     try:
         text = await transcribe_audio(
             data,
