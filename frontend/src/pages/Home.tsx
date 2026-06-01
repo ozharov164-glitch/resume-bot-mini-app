@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "motion/react";
 
 import { fetchStatsCount } from "../api";
@@ -24,6 +24,70 @@ import { getTg } from "../telegram";
 interface HomeProps {
   onStart: () => void;
   onHistory: () => void;
+}
+
+const AVATAR_ROTATION_MS = 10 * 60 * 1000;
+const AVATAR_POOL_SIZE = 8_192;
+const AVATAR_DISPLAY_COUNT = 3;
+const AVATAR_PALETTE = [
+  { bg: "#f1f5f9", fg: "#334155" },
+  { bg: "#ecfeff", fg: "#0f766e" },
+  { bg: "#eff6ff", fg: "#1d4ed8" },
+  { bg: "#fef3c7", fg: "#92400e" },
+  { bg: "#fce7f3", fg: "#9d174d" },
+  { bg: "#ede9fe", fg: "#6d28d9" },
+  { bg: "#dcfce7", fg: "#166534" },
+  { bg: "#fee2e2", fg: "#991b1b" },
+] as const;
+const AVATAR_INITIALS = [
+  "А",
+  "Б",
+  "В",
+  "Г",
+  "Д",
+  "Е",
+  "Ж",
+  "З",
+  "И",
+  "К",
+  "Л",
+  "М",
+  "Н",
+  "О",
+  "П",
+  "Р",
+  "С",
+  "Т",
+  "У",
+  "Ф",
+  "Х",
+  "Ц",
+  "Ч",
+  "Ш",
+  "Э",
+  "Ю",
+  "Я",
+] as const;
+
+function hash32(value: number): number {
+  let hash = value | 0;
+  hash ^= hash << 13;
+  hash ^= hash >>> 17;
+  hash ^= hash << 5;
+  return Math.abs(hash);
+}
+
+function buildAvatar(seed: number) {
+  const mix = hash32(seed * 2654435761);
+  const first = AVATAR_INITIALS[mix % AVATAR_INITIALS.length];
+  const second = AVATAR_INITIALS[Math.floor(mix / 31) % AVATAR_INITIALS.length];
+  const palette = AVATAR_PALETTE[Math.floor(mix / 997) % AVATAR_PALETTE.length];
+  return {
+    id: `${seed}-${mix}`,
+    label: `${first}${second}`,
+    bg: palette.bg,
+    fg: palette.fg,
+  };
 }
 
 function useCountUp(target: number, durationMs = 1400) {
@@ -56,6 +120,7 @@ export function HomePage({ onStart, onHistory }: HomeProps) {
   const { homeTab, setHomeTab } = useAppStore();
   const [statsCount, setStatsCount] = useState(0);
   const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [avatarBucket, setAvatarBucket] = useState(() => Math.floor(Date.now() / AVATAR_ROTATION_MS));
   const displayCount = useCountUp(statsCount);
   const isFounder = useFounderStatus();
 
@@ -69,6 +134,32 @@ export function HomePage({ onStart, onHistory }: HomeProps) {
     const timer = window.setTimeout(loadStats, 300);
     return () => window.clearTimeout(timer);
   }, []);
+
+  useEffect(() => {
+    const syncBucket = () => setAvatarBucket(Math.floor(Date.now() / AVATAR_ROTATION_MS));
+    let intervalId: number | undefined;
+    const now = Date.now();
+    const msToNextBucket = AVATAR_ROTATION_MS - (now % AVATAR_ROTATION_MS);
+    const timeoutId = window.setTimeout(() => {
+      syncBucket();
+      intervalId = window.setInterval(syncBucket, AVATAR_ROTATION_MS);
+    }, msToNextBucket);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+      if (intervalId) {
+        window.clearInterval(intervalId);
+      }
+    };
+  }, []);
+
+  const socialAvatars = useMemo(() => {
+    const base = (avatarBucket * 104_729) % AVATAR_POOL_SIZE;
+    return Array.from({ length: AVATAR_DISPLAY_COUNT }, (_, idx) => {
+      const seed = (base + idx * 1_363) % AVATAR_POOL_SIZE;
+      return buildAvatar(seed);
+    });
+  }, [avatarBucket]);
 
   const start = () => {
     getTg()?.HapticFeedback?.impactOccurred("light");
@@ -152,10 +243,17 @@ export function HomePage({ onStart, onHistory }: HomeProps) {
 
         <div className="home-social-proof w-full px-2">
           <div className="home-social-avatars" aria-hidden>
-            {["А", "М", "Е"].map((initial) => (
-              <span key={initial} className="home-social-avatar">
-                {initial}
-              </span>
+            {socialAvatars.map((avatar, idx) => (
+              <motion.span
+                key={`${avatarBucket}-${avatar.id}`}
+                className="home-social-avatar"
+                style={{ background: avatar.bg, color: avatar.fg }}
+                initial={{ opacity: 0, y: 6, scale: 0.92 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                transition={{ duration: 0.35, delay: idx * 0.06 }}
+              >
+                {avatar.label}
+              </motion.span>
             ))}
           </div>
           <p className="home-social-proof-text">
