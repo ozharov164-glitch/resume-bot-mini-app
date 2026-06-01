@@ -120,6 +120,15 @@ SYSTEM_PROMPT = """Ты — старший HR-редактор резюме дл
 - target_position в JSON должна начинаться с заглавной буквы: «Уборщик», «Фармацевт».
   Никогда строчными: «уборщик», «фармацевт» — это неверно для резюме.
 
+ПРАВИЛО 16 (ключевые слова hh.ru — только факты):
+- Усиливай семантику под hh.ru для массовых профессий (водитель, охранник, курьер, продавец, маляр):
+  в summary и skills — формулировки, которые рекрутер ищет по вакансии.
+- ЗАПРЕЩЕНО выдумывать документы и категории: права «B», лицензия охранника, медкнижка —
+  только если они явно есть в «Сертификаты и лицензии», «Навыки (указал пользователь)»,
+  profession_extra или опыте работы.
+- Если категории прав не указаны — не пиши «категория B» и не добавляй права в skills.
+- Не дублируй keyword stuffing: не больше 2–3 отраслевых терминов в summary.
+
 ═══ ОТВЕТ: ТОЛЬКО JSON, без markdown, без пояснений ═══
 {"full_name":"","target_position":"","city":"","phone":"","email":"","salary":"","summary":"","experience":[{"company":"","position":"","period":"","description":""}],"education":[{"institution":"","degree":"","year":""}],"skills":[],"languages":["Русский — родной"],"certificates":[]}"""
 
@@ -276,6 +285,29 @@ def _build_user_payload(user_data: dict) -> str:
         blocks.append(
             f"Достижения в цифрах (ОБЯЗАТЕЛЬНО в experience descriptions): {_truncate(achievements, 500)}"
         )
+    schedule = user_data.get("work_schedule")
+    if schedule:
+        if isinstance(schedule, list):
+            sched = ", ".join(str(s).strip() for s in schedule if str(s).strip())
+        else:
+            sched = str(schedule).strip()
+        if sched:
+            blocks.append(f"График работы: {sched}")
+    relocation = (user_data.get("relocation") or "").strip()
+    if relocation:
+        blocks.append(f"Готовность к переезду/командировкам: {relocation}")
+    profession_extra = user_data.get("profession_extra")
+    if isinstance(profession_extra, dict) and profession_extra:
+        extra_lines = []
+        for key, val in profession_extra.items():
+            if isinstance(val, list):
+                text = ", ".join(str(v).strip() for v in val if str(v).strip())
+            else:
+                text = str(val).strip()
+            if text:
+                extra_lines.append(f"{key}: {text}")
+        if extra_lines:
+            blocks.append("Доп. данные по профессии:\n" + "\n".join(extra_lines))
     return "\n\n".join(blocks)
 
 

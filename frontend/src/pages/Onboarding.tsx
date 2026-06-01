@@ -19,6 +19,7 @@ import {
   SALARY_CUSTOM_OPTION,
   buildLastJobFromWorkHistory,
   getVisibleSteps,
+  isProfessionExtraStep,
   normalizeSalaryDigits,
   professionOtherSelected,
   salaryFromOption,
@@ -31,6 +32,24 @@ import type { UserAnswers, WorkEntry } from "../types";
 function readStringAnswer(answers: Partial<UserAnswers>, key: string): string {
   const raw = answers[key as keyof UserAnswers];
   if (Array.isArray(raw)) return "";
+  return String(raw ?? "");
+}
+
+function readMultiAnswer(answers: Partial<UserAnswers>, key: string): string[] {
+  const raw = answers[key as keyof UserAnswers];
+  if (Array.isArray(raw)) return raw.map(String);
+  if (typeof raw === "string" && raw.trim()) return [raw.trim()];
+  return [];
+}
+
+function readProfessionExtra(
+  answers: Partial<UserAnswers>,
+  stepId: string,
+): string | string[] {
+  const key = stepId.replace(/^prof_/, "");
+  const bag = answers.profession_extra ?? {};
+  const raw = bag[key];
+  if (Array.isArray(raw)) return raw;
   return String(raw ?? "");
 }
 
@@ -65,6 +84,7 @@ export function OnboardingPage() {
   );
   const [submitting, setSubmitting] = useState(false);
   const [fieldError, setFieldError] = useState<string | null>(null);
+  const [multiValues, setMultiValues] = useState<string[]>([]);
 
   const isEdit = onboardingMode === "edit";
   const current = visibleSteps[step];
@@ -72,6 +92,7 @@ export function OnboardingPage() {
   const isContactsStep = current.type === "contacts_dual";
   const isSalaryStep = current.type === "options_with_input";
   const isWorkHistoryStep = current.type === "work_history";
+  const isMultiSelectStep = current.type === "multi_select";
   const salaryCustomMode = isSalaryStep && value === SALARY_CUSTOM_OPTION;
   const stepsFromEnd = visibleSteps.length - step;
   const progressHint =
@@ -108,6 +129,21 @@ export function OnboardingPage() {
       }
       return;
     }
+    if (current.type === "multi_select" && id === "work_schedule") {
+      setAnswer("work_schedule", multiValues);
+      return;
+    }
+    if (isProfessionExtraStep(current)) {
+      const key = String(current.id).replace(/^prof_/, "");
+      const existing = { ...(answers.profession_extra ?? {}) };
+      if (current.type === "multi_select") {
+        existing[key] = multiValues;
+      } else {
+        existing[key] = value;
+      }
+      setAnswer("profession_extra", existing);
+      return;
+    }
     if (id !== "contacts") {
       setAnswer(id as keyof UserAnswers, value);
     }
@@ -117,6 +153,8 @@ export function OnboardingPage() {
     current.id,
     current.type,
     salaryCustomDigits,
+    answers.profession_extra,
+    multiValues,
     workHistory,
     setAnswer,
     value,
@@ -149,6 +187,16 @@ export function OnboardingPage() {
             : [defaultWorkEntry(String(useAppStore.getState().answers.target_position ?? ""))],
         );
         setValue("");
+      } else if (next.type === "multi_select") {
+        if (next.id === "work_schedule") {
+          setMultiValues(readMultiAnswer(useAppStore.getState().answers, "work_schedule"));
+        } else if (isProfessionExtraStep(next)) {
+          const saved = readProfessionExtra(useAppStore.getState().answers, String(next.id));
+          setMultiValues(Array.isArray(saved) ? saved : saved ? [saved] : []);
+        } else {
+          setMultiValues([]);
+        }
+        setValue("");
       } else if (next.type === "options_with_input" && next.id === "salary") {
         const saved = readStringAnswer(answers, "salary");
         const preset = next.options?.find((o) => salaryFromOption(o) === saved);
@@ -162,6 +210,11 @@ export function OnboardingPage() {
           setValue("");
           setSalaryCustomDigits("");
         }
+      } else if (isProfessionExtraStep(next) && next.type === "options") {
+        const saved = readProfessionExtra(useAppStore.getState().answers, String(next.id));
+        setValue(Array.isArray(saved) ? saved[0] ?? "" : String(saved));
+        setMultiValues([]);
+        setOtherProfession(false);
       } else {
         const saved = readStringAnswer(answers, next.id);
         setValue(saved);
@@ -169,6 +222,9 @@ export function OnboardingPage() {
           setOtherProfession(professionOtherSelected(saved));
         } else {
           setOtherProfession(false);
+        }
+        if (next.type !== "multi_select") {
+          setMultiValues([]);
         }
       }
     },
@@ -185,7 +241,7 @@ export function OnboardingPage() {
     if (isEdit) {
       cancelEditResume();
     } else {
-      setPage("template_pick");
+      setPage("home");
     }
   }, [step, persistCurrentStep, goToStep, isEdit, cancelEditResume, setPage]);
 
@@ -206,8 +262,15 @@ export function OnboardingPage() {
     persistCurrentStep();
     trackEvent("step_completed", { step: current.id });
 
-    if (current.id === "target_position") {
-      setOnboardingStep(step + 1);
+    if (current.id === "target_position" || isProfessionExtraStep(current)) {
+      const steps = getVisibleSteps(useAppStore.getState().answers);
+      const nextIdx = step + 1;
+      if (nextIdx < steps.length && isProfessionExtraStep(steps[nextIdx])) {
+        goToStep(nextIdx);
+        return;
+      }
+      const salaryIdx = steps.findIndex((s) => s.id === "salary");
+      setOnboardingStep(salaryIdx >= 0 ? salaryIdx : nextIdx);
       setPage("skill_pick");
       return;
     }
@@ -241,6 +304,22 @@ export function OnboardingPage() {
     } else if (current.id === "education_place") {
       setAnswer("education_place", "");
       setValue("");
+    } else if (current.id === "work_schedule") {
+      setAnswer("work_schedule", []);
+      setMultiValues([]);
+    } else if (current.id === "relocation") {
+      setAnswer("relocation", "");
+      setValue("");
+    } else if (isProfessionExtraStep(current)) {
+      const key = String(current.id).replace(/^prof_/, "");
+      const existing = { ...(answers.profession_extra ?? {}) };
+      delete existing[key];
+      setAnswer("profession_extra", existing);
+      if (current.type === "multi_select") {
+        setMultiValues([]);
+      } else {
+        setValue("");
+      }
     } else if (isWorkHistoryStep) {
       setAnswer("work_history", []);
       setAnswer("last_job", "");
@@ -258,6 +337,9 @@ export function OnboardingPage() {
       current.id === "languages" ||
       current.id === "certificates" ||
       current.id === "education_place" ||
+      current.id === "work_schedule" ||
+      current.id === "relocation" ||
+      isProfessionExtraStep(current) ||
       current.optional);
 
   return (
@@ -362,6 +444,26 @@ export function OnboardingPage() {
                       if (option !== SALARY_CUSTOM_OPTION) {
                         setSalaryCustomDigits("");
                       }
+                      getTg()?.HapticFeedback?.selectionChanged();
+                    }}
+                  />
+                ))}
+              </div>
+            )}
+
+            {isMultiSelectStep && (
+              <div className="flex flex-wrap gap-2.5" role="group" aria-label={current.question}>
+                {current.options?.map((option) => (
+                  <OptionButton
+                    key={option}
+                    label={option}
+                    selected={multiValues.includes(option)}
+                    onSelect={() => {
+                      setMultiValues((prev) =>
+                        prev.includes(option)
+                          ? prev.filter((v) => v !== option)
+                          : [...prev, option],
+                      );
                       getTg()?.HapticFeedback?.selectionChanged();
                     }}
                   />

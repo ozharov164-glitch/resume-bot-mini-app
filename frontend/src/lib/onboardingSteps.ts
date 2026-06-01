@@ -165,6 +165,35 @@ export const ONBOARDING_STEPS: OnboardingStep[] = [
   },
   { id: "city", question: "Город поиска работы", type: "text", placeholder: "Казань" },
   {
+    id: "work_schedule",
+    question: "Удобный график работы",
+    type: "multi_select",
+    options: [
+      "Полный день",
+      "Сменный график",
+      "2/2",
+      "Вахта",
+      "Неполный день",
+      "Удалённо",
+    ],
+    hint: "Можно выбрать несколько вариантов.",
+    skipText: "Не указывать",
+    optional: true,
+  },
+  {
+    id: "relocation",
+    question: "Готовность к переезду",
+    type: "options",
+    options: [
+      "Не готов",
+      "Готов к переезду",
+      "Готов к командировкам",
+      "Готов к переезду и командировкам",
+    ],
+    skipText: "Не указывать",
+    optional: true,
+  },
+  {
     id: "about",
     question: "Коротко о себе",
     type: "textarea",
@@ -172,10 +201,79 @@ export const ONBOARDING_STEPS: OnboardingStep[] = [
   },
 ];
 
-export const OPTIONS_ONLY = new Set(["education", "languages", "gender"]);
+export const OPTIONS_ONLY = new Set(["education", "languages", "gender", "relocation"]);
+
+function positionLower(answers: Partial<UserAnswers>): string {
+  return String(answers.target_position ?? "").toLowerCase();
+}
+
+function matchesPosition(answers: Partial<UserAnswers>, keywords: readonly string[]): boolean {
+  const pos = positionLower(answers);
+  return keywords.some((k) => pos.includes(k));
+}
+
+export const PROFESSION_EXTRA_STEPS: OnboardingStep[] = [
+  {
+    id: "prof_driver_license",
+    question: "Категории водительских прав",
+    type: "multi_select",
+    options: ["B", "C", "D", "E", "BE"],
+    hint: "Только то, что есть у вас — попадёт в резюме.",
+    skipText: "Пропустить",
+    optional: true,
+    showIf: (a) => matchesPosition(a, ["водител", "дальнобой", "экспедитор", "такс"]),
+  },
+  {
+    id: "prof_driver_experience",
+    question: "Стаж за рулём",
+    type: "options",
+    options: ["до 1 года", "1–3 года", "3–5 лет", "более 5 лет"],
+    optional: true,
+    skipText: "Пропустить",
+    showIf: (a) => matchesPosition(a, ["водител", "дальнобой", "экспедитор"]),
+  },
+  {
+    id: "prof_guard_license",
+    question: "Лицензия / удостоверение охранника",
+    type: "options",
+    options: ["Есть действующая", "Прохожу переаттестацию", "Нет"],
+    showIf: (a) => matchesPosition(a, ["охран", "чоп", "вахт"]),
+  },
+  {
+    id: "prof_courier_vehicle",
+    question: "На чём доставляете",
+    type: "options",
+    options: ["Пешком", "Велосипед", "Свой автомобиль", "Авто компании"],
+    showIf: (a) => matchesPosition(a, ["курьер", "доставк"]),
+  },
+  {
+    id: "prof_painter_surfaces",
+    question: "С какими поверхностями работали",
+    type: "multi_select",
+    options: ["Штукатурка", "Гипсокартон", "Дерево", "Металл", "Фасады"],
+    skipText: "Пропустить",
+    optional: true,
+    showIf: (a) => matchesPosition(a, ["маляр", "штукатур", "отделоч"]),
+  },
+];
+
+export function isProfessionExtraStep(step: OnboardingStep): boolean {
+  return String(step.id).startsWith("prof_");
+}
 
 export function getVisibleSteps(answers: Partial<UserAnswers>): OnboardingStep[] {
-  return ONBOARDING_STEPS.filter((s) => !s.showIf || s.showIf(answers));
+  const base = ONBOARDING_STEPS.filter((s) => !s.showIf || s.showIf(answers));
+  const extras = PROFESSION_EXTRA_STEPS.filter((s) => !s.showIf || s.showIf(answers));
+  if (!extras.length) return base;
+
+  const out: OnboardingStep[] = [];
+  for (const step of base) {
+    out.push(step);
+    if (step.id === "target_position") {
+      out.push(...extras);
+    }
+  }
+  return out;
 }
 
 export function deriveExperienceLevel(workHistory: WorkEntry[] | undefined): string {

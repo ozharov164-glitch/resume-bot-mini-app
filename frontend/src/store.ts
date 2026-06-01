@@ -22,7 +22,10 @@ interface AppState {
   page: Page;
   setPage: (page: Page) => void;
   answers: Partial<UserAnswers>;
-  setAnswer: (key: keyof UserAnswers, value: string | string[] | WorkEntry[]) => void;
+  setAnswer: (
+    key: keyof UserAnswers,
+    value: string | string[] | WorkEntry[] | Record<string, string | string[]>,
+  ) => void;
   setAnswers: (answers: Partial<UserAnswers>) => void;
   authToken: string | null;
   setAuthToken: (token: string) => void;
@@ -82,7 +85,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   setSelectedTemplate: (selectedTemplate) => set({ selectedTemplate }),
   startNewResume: () =>
     set({
-      page: "template_pick",
+      page: "onboarding",
       onboardingMode: "create",
       previewReturnPage: "home",
       onboardingStep: 0,

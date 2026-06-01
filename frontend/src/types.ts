@@ -24,6 +24,9 @@ export interface UserAnswers {
   languages: string;
   certificates: string;
   achievements?: string;
+  work_schedule?: string[];
+  relocation?: string;
+  profession_extra?: Record<string, string | string[]>;
 }
 
 export interface ResumeData {
@@ -48,4 +51,7 @@ export interface ResumeData {
   languages: string[];
   salary: string;
   certificates?: string[];
+  work_schedule?: string[];
+  relocation?: string;
+  profession_extra?: Record<string, string | string[]>;
 }
