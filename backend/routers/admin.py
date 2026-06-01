@@ -101,10 +101,10 @@ async def admin_funnel_by_key(db=Depends(get_db)):
         "pay_clicked": db.count_analytics_events_since("pay_clicked", since),
         "payment_completed": db.count_analytics_events_since("payment_completed", since),
     }
-    started = steps["onboarding_started"] or 1
-    completed = steps["payment_completed"] or 0
-    conversion = round(100 * completed / started, 1)
-    return {**steps, "conversion_rate": f"{conversion}%"}
+    started = steps["onboarding_started"]
+    completed = steps["payment_completed"]
+    conversion = f"{round(100 * completed / started, 1)}%" if started else "0%"
+    return {**steps, "conversion_rate": conversion}
 
 
 @router.get("/stats", dependencies=[Depends(verify_admin_key)])
