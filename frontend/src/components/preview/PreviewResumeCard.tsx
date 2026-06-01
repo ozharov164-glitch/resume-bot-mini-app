@@ -1,5 +1,6 @@
 import { motion } from "motion/react";
 
+import { normalizeResumeData } from "../../lib/resumeNormalize";
 import type { ResumeData } from "../../types";
 import { HH_RU_BADGE } from "../../lib/marketingCopy";
 import { Icon } from "../ui/Icon";
@@ -15,7 +16,8 @@ interface PreviewResumeCardProps {
   resume: ResumeData;
 }
 
-export function PreviewResumeCard({ resume }: PreviewResumeCardProps) {
+export function PreviewResumeCard({ resume: raw }: PreviewResumeCardProps) {
+  const resume = normalizeResumeData(raw);
   const contactParts = [resume.city, resume.phone, resume.email].filter(Boolean);
 
   return (

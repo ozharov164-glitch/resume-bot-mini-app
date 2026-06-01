@@ -7,6 +7,7 @@ from typing import Any
 import httpx
 
 from config import settings
+from services.resume_schema import normalize_resume_data
 from services.text_facts import sanitize_experience_descriptions, sanitize_summary_claims
 
 logger = logging.getLogger(__name__)
@@ -635,7 +636,7 @@ def finalize_resume_data(resume_data: dict, user_data: dict) -> dict:
         if isinstance(edu_entry, dict) and edu_entry.get("institution"):
             edu_entry["institution"] = normalize_organization_name(edu_entry["institution"])
 
-    return resume_data
+    return normalize_resume_data(resume_data)
 
 
 async def generate_resume(user_data: dict) -> dict:

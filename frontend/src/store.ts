@@ -1,6 +1,7 @@
 import { create } from "zustand";
 
 import { readCachedAuthToken } from "./lib/authSession";
+import { normalizeResumeData } from "./lib/resumeNormalize";
 import type { ResumeData, UserAnswers, WorkEntry } from "./types";
 
 type Page =
@@ -68,7 +69,11 @@ export const useAppStore = create<AppState>((set, get) => ({
   resumeId: null,
   resumeData: null,
   setResumeResult: (resumeId, resumeData, isPaid) =>
-    set({ resumeId, resumeData, ...(isPaid !== undefined ? { isPaid } : {}) }),
+    set({
+      resumeId,
+      resumeData: normalizeResumeData(resumeData),
+      ...(isPaid !== undefined ? { isPaid } : {}),
+    }),
   isLoading: !readCachedAuthToken(),
   setLoading: (value) => set({ isLoading: value }),
   isPaid: false,

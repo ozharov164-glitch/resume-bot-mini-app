@@ -15,7 +15,7 @@ router = APIRouter(prefix="/api/analytics", tags=["analytics"])
 class AnalyticsEventBody(BaseModel):
     event: str = Field(min_length=1, max_length=80)
     telegram_id: int | str
-    step: int | None = None
+    step: int | str | None = None
     metadata: dict | None = None
 
 
@@ -26,13 +26,22 @@ async def track_event(body: AnalyticsEventBody, db=Depends(get_db)):
     except (TypeError, ValueError):
         return {"ok": False}
 
-    meta_json = json.dumps(body.metadata or {}, ensure_ascii=False)
+    meta = dict(body.metadata or {})
+    if body.step is not None and "step" not in meta:
+        meta["step"] = body.step
+    meta_json = json.dumps(meta, ensure_ascii=False)
+    step_value = body.step
+    step_db: int | None = None
+    if isinstance(step_value, int):
+        step_db = step_value
+    elif isinstance(step_value, str) and step_value.isdigit():
+        step_db = int(step_value)
     db.insert_analytics_event(
         {
             "id": str(uuid.uuid4()),
             "event": body.event.strip(),
             "telegram_id": tid,
-            "step": body.step,
+            "step": step_db,
             "metadata": meta_json,
             "created_at": datetime.utcnow().isoformat(),
         }

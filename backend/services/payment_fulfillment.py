@@ -6,6 +6,7 @@ from typing import Any
 from config import settings
 from services.admin_notify import PaymentNotifyInfo, notify_payment
 from services.pdf_async import generate_pdf_async
+from services.resume_schema import normalize_resume_data
 from services.telegram_service import send_document_to_user
 
 logger = logging.getLogger(__name__)
@@ -56,7 +57,7 @@ async def fulfill_paid_resume(
             await notify_payment(db, payment, first_payment=True)
 
     try:
-        resume_data = parse_resume_data(resume["data"])
+        resume_data = normalize_resume_data(parse_resume_data(resume["data"]))
     except (json.JSONDecodeError, ValueError) as exc:
         logger.exception("fulfill: invalid resume data for %s", resume_id)
         raise exc

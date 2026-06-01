@@ -87,7 +87,14 @@ export function OnboardingPage() {
   const [multiValues, setMultiValues] = useState<string[]>([]);
 
   const isEdit = onboardingMode === "edit";
-  const current = visibleSteps[step];
+  const current =
+    visibleSteps[step] ??
+    visibleSteps[0] ?? {
+      id: "name",
+      type: "text" as const,
+      title: "",
+      required: true,
+    };
   const isLast = step === visibleSteps.length - 1;
   const isContactsStep = current.type === "contacts_dual";
   const isSalaryStep = current.type === "options_with_input";
@@ -165,8 +172,10 @@ export function OnboardingPage() {
     if (current.type === "contacts_dual") return true;
     if (current.type === "options_with_input") return true;
     if (current.type === "work_history") return true;
+    if (current.type === "multi_select") return multiValues.length > 0;
+    if (current.type === "options") return value.trim().length > 0;
     return value.trim().length > 0;
-  }, [current.optional, current.required, current.type, value]);
+  }, [current.optional, current.required, current.type, multiValues.length, value]);
 
   const goToStep = useCallback(
     (nextStep: number) => {
@@ -341,6 +350,19 @@ export function OnboardingPage() {
       current.id === "relocation" ||
       isProfessionExtraStep(current) ||
       current.optional);
+
+  if (!visibleSteps.length) {
+    return (
+      <Screen className="px-4">
+        <p className="mt-8 text-center text-sm" style={{ color: "var(--text-muted)" }}>
+          Не удалось загрузить шаги анкеты.
+        </p>
+        <Button variant="brand" className="mt-4" onClick={() => setPage("home")}>
+          На главную
+        </Button>
+      </Screen>
+    );
+  }
 
   return (
     <Screen withBottomBar className="px-4">

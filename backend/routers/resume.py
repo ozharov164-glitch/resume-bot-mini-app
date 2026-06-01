@@ -10,6 +10,7 @@ from database import get_db
 from dependencies import get_current_user
 from models.schemas import GenerateResumeRequest, ResumeGenerationResponse, SetTemplateRequest
 from services.ai_service import generate_resume, generate_resume_snippet
+from services.resume_schema import normalize_resume_data
 from services.founder import is_founder
 from services.hh_text_service import format_hh_text, hh_text_preview_lines
 from services.payment_fulfillment import parse_resume_data
@@ -66,13 +67,8 @@ def _apply_user_meta_to_resume(resume_data: dict, user_data: GenerateResumeReque
 
 
 def _normalize_resume_fields(resume_data: dict) -> dict:
-    """AI JSON may return salary/year as numbers — normalize for PDF and storage."""
-    if "salary" in resume_data:
-        resume_data["salary"] = _as_str(resume_data.get("salary"))
-    for edu in resume_data.get("education") or []:
-        if isinstance(edu, dict) and "year" in edu:
-            edu["year"] = _as_str(edu.get("year"))
-    return resume_data
+    """AI JSON may return numbers/strings — normalize for PDF, API, and Mini App."""
+    return normalize_resume_data(resume_data)
 
 
 @router.post("/snippet", response_model=SnippetResponse)

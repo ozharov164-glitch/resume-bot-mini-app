@@ -26,14 +26,18 @@ export function SuccessPage() {
   const [adaptBusy, setAdaptBusy] = useState(false);
 
   useEffect(() => {
-    const accent = "#10b981";
-    const brand = "#006c49";
-    confetti({
-      particleCount: 100,
-      spread: 70,
-      origin: { y: 0.55 },
-      colors: [accent, brand, "#ffffff"],
-    });
+    try {
+      const accent = "#10b981";
+      const brand = "#006c49";
+      confetti({
+        particleCount: 100,
+        spread: 70,
+        origin: { y: 0.55 },
+        colors: [accent, brand, "#ffffff"],
+      });
+    } catch {
+      /* canvas-confetti may fail in some Telegram WebViews */
+    }
     getTg()?.HapticFeedback?.notificationOccurred("success");
     getTg()?.MainButton?.hide();
     trackEvent("payment_completed", { amount: 149 });
