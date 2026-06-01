@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 
-import { ensureAuthToken, suggestSkills } from "../api";
-import { OptionButton } from "../components/OptionButton";
+import { ensureAuthToken, fetchResumeSnippet, suggestSkills } from "../api";
+import { SkillPill } from "../components/SkillPill";
+import { trackEvent } from "../lib/analytics";
 import { AppHeader } from "../components/ui/AppHeader";
 import { Button } from "../components/ui/Button";
 import { FixedBottomBar } from "../components/ui/FixedBottomBar";
@@ -15,11 +16,22 @@ import { useAppStore } from "../store";
 import { getTg } from "../telegram";
 
 const SKILL_GROUPS: Array<{ key: string; title: string }> = [
-  { key: "hard", title: "💪 Профессиональные" },
-  { key: "tools", title: "🔧 Инструменты" },
-  { key: "soft", title: "🤝 Личные качества" },
-  { key: "documents", title: "📋 Документы" },
+  { key: "hard", title: "Профессиональные навыки" },
+  { key: "tools", title: "Инструменты" },
+  { key: "soft", title: "Личные качества" },
 ];
+
+function splitSkillsHeuristic(skills: string[]): Record<string, string[]> {
+  const n = skills.length;
+  if (n === 0) return { hard: [], tools: [], soft: [] };
+  const hardEnd = Math.max(1, Math.ceil(n * 0.4));
+  const toolsEnd = hardEnd + Math.max(1, Math.ceil(n * 0.3));
+  return {
+    hard: skills.slice(0, hardEnd),
+    tools: skills.slice(hardEnd, toolsEnd),
+    soft: skills.slice(toolsEnd),
+  };
+}
 
 const PHRASES = [
   "Анализируем профессию...",
@@ -44,6 +56,8 @@ export function SkillPickPage() {
     Array.isArray(answers.skills) ? [...answers.skills] : [],
   );
   const [customSkill, setCustomSkill] = useState("");
+  const [snippet, setSnippet] = useState("");
+  const [typedSnippet, setTypedSnippet] = useState("");
 
   useEffect(() => {
     if (phase !== "loading") return;
@@ -104,6 +118,40 @@ export function SkillPickPage() {
     };
   }, [position]);
 
+  useEffect(() => {
+    if (!position || phase !== "ready") return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const token = await ensureAuthToken();
+        const gender = String(answers.gender ?? "");
+        const result = await fetchResumeSnippet(token, position, gender);
+        if (!cancelled) setSnippet(result.snippet);
+      } catch {
+        if (!cancelled) {
+          setSnippet(
+            `Мотивированный специалист на позицию «${position}». Готов включиться в работу с первого дня.`,
+          );
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [position, phase, answers.gender]);
+
+  useEffect(() => {
+    if (!snippet) return;
+    setTypedSnippet("");
+    let index = 0;
+    const timer = window.setInterval(() => {
+      index += 1;
+      setTypedSnippet(snippet.slice(0, index));
+      if (index >= snippet.length) window.clearInterval(timer);
+    }, 40);
+    return () => window.clearInterval(timer);
+  }, [snippet]);
+
   const handleBack = useCallback(() => {
     getTg()?.HapticFeedback?.impactOccurred("light");
     setOnboardingStep(Math.max(0, onboardingStep - 1));
@@ -133,6 +181,7 @@ export function SkillPickPage() {
   const continueFlow = () => {
     getTg()?.HapticFeedback?.impactOccurred("light");
     setAnswer("skills", selectedSkills);
+    trackEvent("skills_confirmed", { count: selectedSkills.length });
     setPage("onboarding");
   };
 
@@ -142,20 +191,20 @@ export function SkillPickPage() {
     skills: (skillGroups[key] ?? []).filter(Boolean),
   })).filter((g) => g.skills.length > 0);
   const useGrouped = groupedEntries.length > 0;
+  const heuristicGroups = splitSkillsHeuristic(skillOptions);
+  const flatGroups = SKILL_GROUPS.map(({ key, title }) => ({
+    key,
+    title,
+    skills: heuristicGroups[key] ?? [],
+  })).filter((g) => g.skills.length > 0);
 
-  const renderSkillChip = (skill: string, index: number) => (
-    <motion.div
+  const renderSkillChip = (skill: string) => (
+    <SkillPill
       key={skill}
-      initial={{ opacity: 0, scale: 0.92, y: 8 }}
-      animate={{ opacity: 1, scale: 1, y: 0 }}
-      transition={{ delay: index * 0.03, duration: 0.22 }}
-    >
-      <OptionButton
-        label={skill}
-        selected={selectedSkills.includes(skill)}
-        onSelect={() => toggleSkill(skill)}
-      />
-    </motion.div>
+      label={skill}
+      selected={selectedSkills.includes(skill)}
+      onSelect={() => toggleSkill(skill)}
+    />
   );
 
   const showSkills = phase === "ready" || phase === "error";
@@ -210,6 +259,13 @@ export function SkillPickPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.35, ease: [0.25, 0.1, 0.25, 1] }}
           >
+            {snippet && (
+              <div className="skill-snippet-card">
+                <p className="skill-snippet-label">Так начнётся ваше резюме:</p>
+                <p className="skill-snippet-body">{typedSnippet}</p>
+              </div>
+            )}
+
             <div className="text-center">
               <h2 className="text-2xl font-bold leading-snug">Выберите свои навыки</h2>
               <p className="mt-2 text-base" style={{ color: "var(--text-muted)" }}>
@@ -222,22 +278,16 @@ export function SkillPickPage() {
               )}
             </div>
 
-            {useGrouped ? (
-              groupedEntries.map((group) => (
-                <div key={group.key} className="flex flex-col gap-2.5">
-                  <h3 className="text-sm font-semibold" style={{ color: "var(--text-secondary)" }}>
-                    {group.title}
-                  </h3>
-                  <div className="flex flex-wrap gap-2.5" role="group" aria-label={group.title}>
-                    {group.skills.map((skill, index) => renderSkillChip(skill, index))}
-                  </div>
+            {(useGrouped ? groupedEntries : flatGroups).map((group) => (
+              <div key={group.key} className="flex flex-col gap-2.5">
+                <h3 className="mb-2 mt-5 text-xs font-medium uppercase tracking-wide text-gray-400 first:mt-0">
+                  {group.title}
+                </h3>
+                <div className="flex flex-wrap gap-2.5" role="group" aria-label={group.title}>
+                  {group.skills.map((skill) => renderSkillChip(skill))}
                 </div>
-              ))
-            ) : (
-              <div className="flex flex-wrap gap-2.5" role="group" aria-label="Навыки">
-                {skillOptions.map((skill, index) => renderSkillChip(skill, index))}
               </div>
-            )}
+            ))}
 
             <div className="relative w-full">
               <TextInput

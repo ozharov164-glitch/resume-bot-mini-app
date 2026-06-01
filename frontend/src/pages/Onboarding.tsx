@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 
 import { ensureAuthToken, generateResume, HttpTimeoutError } from "../api";
@@ -25,6 +25,7 @@ import {
   professionOtherSelected,
   salaryFromOption,
 } from "../lib/onboardingSteps";
+import { trackEvent } from "../lib/analytics";
 import { useAppStore } from "../store";
 import { getTg } from "../telegram";
 import type { UserAnswers, WorkEntry } from "../types";
@@ -77,6 +78,13 @@ export function OnboardingPage() {
   const isSalaryStep = current.type === "options_with_input";
   const isWorkHistoryStep = current.type === "work_history";
   const salaryCustomMode = isSalaryStep && value === SALARY_CUSTOM_OPTION;
+  const stepsFromEnd = visibleSteps.length - step;
+  const progressHint =
+    stepsFromEnd <= 3 && stepsFromEnd > 0 ? "Почти готово..." : undefined;
+
+  useEffect(() => {
+    if (!isEdit) trackEvent("onboarding_started");
+  }, [isEdit]);
 
   const showTextInput =
     current.type === "text" ||
@@ -201,6 +209,7 @@ export function OnboardingPage() {
 
     getTg()?.HapticFeedback?.impactOccurred("light");
     persistCurrentStep();
+    trackEvent("step_completed", { step: current.id });
 
     if (current.id === "target_position") {
       setOnboardingStep(step + 1);
@@ -215,6 +224,7 @@ export function OnboardingPage() {
 
     setSubmitting(true);
     setPage("loading");
+    trackEvent("generate_started");
     try {
       const token = await ensureAuthToken();
       const state = useAppStore.getState();
@@ -248,7 +258,7 @@ export function OnboardingPage() {
       } else {
         alert(message || "Не удалось составить резюме. Проверьте соединение и попробуйте ещё раз.");
       }
-      console.error(error);
+      console.debug(error);
     } finally {
       setSubmitting(false);
     }
@@ -306,7 +316,11 @@ export function OnboardingPage() {
           </div>
         )}
 
-        <ProgressBar current={step + 1} total={visibleSteps.length} />
+        <ProgressBar
+          current={step + 1}
+          total={visibleSteps.length}
+          hint={progressHint}
+        />
 
         <AnimatePresence mode="wait">
           <motion.div

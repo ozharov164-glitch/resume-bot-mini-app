@@ -1,6 +1,15 @@
 import { useCallback, useEffect, useState } from "react";
 
-import { createStarsInvoice, createYookassaInvoice, fetchActivePromo, validatePromo, waitUntilPaid } from "../api";
+import {
+  createStarsInvoice,
+  createYookassaInvoice,
+  ensureAuthToken,
+  fetchActivePromo,
+  fetchMe,
+  validatePromo,
+  waitUntilPaid,
+} from "../api";
+import { trackEvent } from "../lib/analytics";
 import { useYookassaReturnPoll } from "../hooks/useYookassaReturnPoll";
 import { markYookassaPending } from "../lib/paymentReturn";
 import { AppHeader } from "../components/ui/AppHeader";
@@ -36,6 +45,8 @@ export function PaymentPage() {
   const [promoLoading, setPromoLoading] = useState(false);
   const [promoError, setPromoError] = useState<string | null>(null);
   const [promoReady, setPromoReady] = useState(false);
+  const [bonusStars, setBonusStars] = useState(0);
+  const [bonusApplied, setBonusApplied] = useState(false);
 
   const handleBack = useCallback(() => setPage("template_select"), [setPage]);
   useTelegramBackButton(handleBack);
@@ -62,6 +73,14 @@ export function PaymentPage() {
     };
   }, [authToken]);
 
+  useEffect(() => {
+    if (!authToken) return;
+    void ensureAuthToken()
+      .then(fetchMe)
+      .then((me) => setBonusStars(me.bonus_stars ?? 0))
+      .catch(() => setBonusStars(0));
+  }, [authToken]);
+
   if (!authToken || !resumeId) return null;
 
   const fullName =
@@ -73,8 +92,16 @@ export function PaymentPage() {
     ? `Резюме для ${fullName} (${position})`
     : `Резюме для ${fullName}`;
 
-  const starsPrice = applyDiscount(STARS_PRICE, promoDiscount);
+  let starsPrice = applyDiscount(STARS_PRICE, promoDiscount);
   const rubPrice = applyDiscount(RUB_PRICE, promoDiscount);
+  const bonusDiscount = bonusApplied ? Math.min(bonusStars, starsPrice - 1) : 0;
+  starsPrice = Math.max(1, starsPrice - bonusDiscount);
+
+  const PAYMENT_QUOTES = [
+    "Устроился через 5 дней после первого отклика. Водитель, Москва",
+    "Рекрутер позвонила в тот же день. Продавец-консультант, СПб",
+    "Дочка нашла работу охранником за неделю. Благодарна создателям",
+  ] as const;
 
   const applyPromo = async () => {
     const code = promoCode.trim();
@@ -102,9 +129,14 @@ export function PaymentPage() {
     }
 
     tg.HapticFeedback?.impactOccurred("medium");
+    trackEvent("pay_clicked", { method: "stars" });
     setPaying(true);
     try {
-      const { invoice_link: invoiceLink } = await createStarsInvoice(authToken, resumeId);
+      const { invoice_link: invoiceLink } = await createStarsInvoice(
+        authToken,
+        resumeId,
+        bonusApplied,
+      );
 
       await new Promise<void>((resolve, reject) => {
         let settled = false;
@@ -157,6 +189,7 @@ export function PaymentPage() {
 
   const payYookassa = async () => {
     getTg()?.HapticFeedback?.impactOccurred("light");
+    trackEvent("pay_clicked", { method: "yukassa" });
     setCardPaying(true);
     try {
       const response = (await createYookassaInvoice(authToken, resumeId)) as YookassaCreateResponse;
@@ -216,7 +249,31 @@ export function PaymentPage() {
               Скидка {promoDiscount}% применена{promoCode ? ` (промокод ${promoCode})` : ""}!
             </p>
           ) : null}
+          {PAYMENT_QUOTES.map((quote) => (
+            <p key={quote} className="payment-quote mt-3">
+              {quote}
+            </p>
+          ))}
         </section>
+
+        {bonusStars > 0 && !bonusApplied ? (
+          <section
+            className="rounded-xl border p-4"
+            style={{ background: "var(--surface-card)", borderColor: "var(--border-subtle)" }}
+          >
+            <p className="text-sm font-medium">У вас {bonusStars} бонусных Stars</p>
+            <Button
+              variant="outline"
+              className="mt-2 w-full"
+              onClick={() => {
+                setBonusApplied(true);
+                getTg()?.HapticFeedback?.selectionChanged();
+              }}
+            >
+              Применить скидку
+            </Button>
+          </section>
+        ) : null}
 
         {!showPromo && promoReady ? (
           <button

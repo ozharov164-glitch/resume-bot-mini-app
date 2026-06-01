@@ -79,7 +79,12 @@ export async function authWithTelegram(initData: string) {
 export { HttpTimeoutError };
 
 export async function fetchMe(token: string, timeoutMs = AUTH_TIMEOUT_MS) {
-  return http<{ telegram_id: number; is_founder: boolean; unlimited: boolean }>(
+  return http<{
+    telegram_id: number;
+    is_founder: boolean;
+    unlimited: boolean;
+    bonus_stars?: number;
+  }>(
     "/api/auth/me",
     {
       method: "GET",
@@ -117,9 +122,75 @@ export async function generateResume(
   );
 }
 
-export async function createStarsInvoice(token: string, resumeId: string) {
-  return http<{ status: string; invoice_link: string; provider: string }>(
-    "/api/payment/create-invoice/" + resumeId,
+export async function createStarsInvoice(
+  token: string,
+  resumeId: string,
+  useBonus = false,
+) {
+  return http<{
+    status: string;
+    invoice_link: string;
+    provider: string;
+    stars_amount?: number;
+    bonus_stars_applied?: number;
+  }>("/api/payment/create-invoice/" + resumeId, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ use_bonus: useBonus }),
+  });
+}
+
+export async function fetchResumeSnippet(
+  token: string,
+  targetPosition: string,
+  gender: string,
+) {
+  return http<{ snippet: string }>(
+    "/api/resume/snippet",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ target_position: targetPosition, gender }),
+    },
+    10_000,
+  );
+}
+
+export async function fetchTextExport(token: string, resumeId: string): Promise<string> {
+  const response = await fetchWithTimeout(
+    `${API_URL}/api/resume/${resumeId}/text-export`,
+    {
+      method: "GET",
+      headers: { Authorization: `Bearer ${token}` },
+    },
+    DEFAULT_TIMEOUT_MS,
+  );
+  if (!response.ok) {
+    throw new Error("Не удалось получить текст резюме");
+  }
+  return response.text();
+}
+
+export async function saveAdaptVacancy(token: string, resumeId: string, vacancyText: string) {
+  return http<{ ok: boolean }>(`/api/resume/${resumeId}/adapt`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ vacancy_text: vacancyText }),
+  });
+}
+
+export async function createAdaptInvoice(token: string, resumeId: string) {
+  return http<{ invoice_link: string; stars_amount: number }>(
+    `/api/payment/create-adapt-invoice/${resumeId}`,
     {
       method: "POST",
       headers: { Authorization: `Bearer ${token}` },
@@ -133,6 +204,7 @@ export interface ResumeListItem {
   target_position: string;
   is_paid: boolean;
   created_at: string;
+  template_id?: string;
 }
 
 export interface ResumeRecord {

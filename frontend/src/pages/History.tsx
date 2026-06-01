@@ -1,6 +1,14 @@
 import { useCallback, useEffect, useState } from "react";
 
-import { clearResumeHistory, ensureAuthToken, fetchResumeList, getResume, type ResumeListItem } from "../api";
+import {
+  clearResumeHistory,
+  ensureAuthToken,
+  fetchResumeList,
+  fetchTextExport,
+  getResume,
+  type ResumeListItem,
+} from "../api";
+import { trackEvent } from "../lib/analytics";
 import { AppHeader } from "../components/ui/AppHeader";
 import { Icon } from "../components/ui/Icon";
 import { PaidBadge } from "../components/ui/PaidBadge";
@@ -10,17 +18,26 @@ import { useAppStore } from "../store";
 import { getTg } from "../telegram";
 import type { ResumeData } from "../types";
 
-function formatDate(iso: string) {
+function formatRelative(iso: string) {
   try {
-    return new Intl.DateTimeFormat("ru-RU", {
-      day: "numeric",
-      month: "short",
-      year: "numeric",
-    }).format(new Date(iso));
+    const date = new Date(iso);
+    const diffMs = Date.now() - date.getTime();
+    const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    if (days < 1) return "сегодня";
+    if (days === 1) return "вчера";
+    if (days < 7) return `${days} дня назад`;
+    if (days < 30) return `${Math.floor(days / 7)} нед. назад`;
+    return new Intl.DateTimeFormat("ru-RU", { day: "numeric", month: "short" }).format(date);
   } catch {
     return "";
   }
 }
+
+const TEMPLATE_LABELS: Record<string, string> = {
+  classic: "classic",
+  modern: "modern",
+  compact: "compact",
+};
 
 export function HistoryPage() {
   const { setPage, openResumeFromHistory } = useAppStore();
@@ -62,6 +79,19 @@ export function HistoryPage() {
       alert("Не удалось открыть резюме. Попробуйте ещё раз.");
     } finally {
       setOpeningId(null);
+    }
+  };
+
+  const copyText = async (item: ResumeListItem, e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      const token = await ensureAuthToken();
+      const text = await fetchTextExport(token, item.id);
+      await navigator.clipboard.writeText(text);
+      trackEvent("text_exported", { source: "history" });
+      getTg()?.HapticFeedback?.notificationOccurred("success");
+    } catch {
+      alert("Не удалось скопировать текст.");
     }
   };
 
@@ -147,13 +177,31 @@ export function HistoryPage() {
               <div className="truncate text-sm" style={{ color: "var(--text-muted)" }}>
                 {item.target_position || "Должность не указана"}
               </div>
-              {item.created_at ? (
-                <div className="mt-1 text-xs" style={{ color: "var(--text-muted)" }}>
-                  {formatDate(item.created_at)}
-                </div>
-              ) : null}
+              <div className="mt-1 flex flex-wrap items-center gap-2">
+                {item.template_id ? (
+                  <span className="history-template-badge">
+                    {TEMPLATE_LABELS[item.template_id] ?? item.template_id}
+                  </span>
+                ) : null}
+                {item.created_at ? (
+                  <span className="text-xs" style={{ color: "var(--text-muted)" }}>
+                    {formatRelative(item.created_at)}
+                  </span>
+                ) : null}
+              </div>
             </div>
-            <Icon name="chevron_right" style={{ color: "var(--text-muted)" }} />
+            <div className="flex shrink-0 items-center gap-1">
+              <button
+                type="button"
+                className="flex h-9 w-9 items-center justify-center rounded-full"
+                style={{ background: "var(--surface-variant, #f3f4f6)" }}
+                aria-label="Скопировать текст"
+                onClick={(e) => void copyText(item, e)}
+              >
+                <Icon name="content_copy" size={18} style={{ color: "#6b7280" }} />
+              </button>
+              <Icon name="chevron_right" style={{ color: "var(--text-muted)" }} />
+            </div>
           </button>
         ))}
       </main>

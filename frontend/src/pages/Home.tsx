@@ -152,6 +152,20 @@ export function HomePage({ onStart, onHistory }: HomeProps) {
           </p>
         </div>
 
+        <div className="home-social-proof w-full px-2">
+          <div className="home-social-avatars" aria-hidden>
+            {["А", "М", "Е"].map((initial) => (
+              <span key={initial} className="home-social-avatar">
+                {initial}
+              </span>
+            ))}
+          </div>
+          <p className="text-sm text-gray-600">
+            Уже {statsCount > 0 ? displayCount.toLocaleString("ru-RU") : "1 200"}+ резюме отправлено на
+            hh.ru
+          </p>
+        </div>
+
         <div className="flex w-full flex-wrap justify-center gap-2">
           <div
             className="flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium"

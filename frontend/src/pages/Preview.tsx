@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 
+import { trackEvent } from "../lib/analytics";
+
 import { PreviewImageFrame } from "../components/preview/PreviewImageFrame";
 import { PreviewLoadingSkeleton } from "../components/preview/PreviewLoadingSkeleton";
 import { PreviewResumeCard } from "../components/preview/PreviewResumeCard";
@@ -29,6 +31,10 @@ export function PreviewPage() {
 
   const handleBack = useCallback(() => setPage(previewReturnPage), [setPage, previewReturnPage]);
   useTelegramBackButton(handleBack);
+
+  useEffect(() => {
+    trackEvent("preview_viewed");
+  }, []);
 
   useEffect(() => {
     if (!resumeId) return;
@@ -85,7 +91,17 @@ export function PreviewPage() {
       <main className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto overscroll-y-contain px-4 py-3 pb-2">
         <PreviewStatusHero />
         {previewUrl && !previewError ? (
-          <PreviewImageFrame src={previewUrl} locked={previewLocked} />
+          <>
+            <PreviewImageFrame src={previewUrl} locked={previewLocked} />
+            {previewLocked && (
+              <div className="preview-unlock-block">
+                <p className="preview-unlock-text">Полное резюме (2 стр.) — после оплаты</p>
+                <Button variant="brand" onClick={handlePdf} className="w-full">
+                  Получить PDF
+                </Button>
+              </div>
+            )}
+          </>
         ) : previewError ? (
           <PreviewResumeCard resume={resumeData} />
         ) : (
