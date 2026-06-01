@@ -1489,7 +1489,7 @@ textarea::-moz-placeholder {
   50% {
     height: 100%;
     opacity: 1;
-    box-shadow: 0 0 12px #10b981;
+    box-shadow: 0 0 8px #10b981;
   }
   100% {
     height: 0%;
@@ -1505,7 +1505,7 @@ textarea::-moz-placeholder {
   }
   50% {
     opacity: 1;
-    transform: scaleX(1.5);
+    transform: scaleX(1.2);
   }
 }
 
@@ -1571,6 +1571,60 @@ textarea::-moz-placeholder {
 
 .loading-assembly__status {
   transition: opacity 200ms ease-in-out;
+}
+
+/* Fixed layout — prevents scroll / vertical jump during loading animations */
+.loading-assembly-stage {
+  width: 200px;
+  height: 290px;
+  overflow: hidden;
+  contain: layout style paint;
+}
+
+.loading-screen {
+  overflow: hidden;
+}
+
+.loading-screen__main {
+  min-height: 0;
+  overflow: hidden;
+  padding-top: clamp(0.75rem, 5vh, 2rem);
+  padding-bottom: 1.5rem;
+  justify-content: flex-start;
+}
+
+.loading-screen__copy {
+  contain: layout style;
+}
+
+.loading-screen__phrase-slot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 5.25rem;
+}
+
+.loading-screen__phrase {
+  margin: 0;
+  width: 100%;
+  transition: opacity 200ms ease-in-out;
+}
+
+.loading-screen__secondary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 3rem;
+  margin: 0;
+}
+
+.loading-screen__progress {
+  height: 3px;
+  flex-shrink: 0;
+}
+
+.loading-assembly__progress {
+  will-change: width;
 }
 
 @media (prefers-reduced-motion: reduce) {

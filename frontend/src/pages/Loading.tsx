@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from "react";
-import { AnimatePresence, motion } from "motion/react";
 
 import { AppHeader } from "../components/ui/AppHeader";
 import { LoadingIllustration } from "../components/ui/LoadingIllustration";
@@ -20,6 +19,7 @@ const PROGRESS_TARGET = 85;
 
 export function LoadingPage() {
   const [phraseIndex, setPhraseIndex] = useState(0);
+  const [phraseVisible, setPhraseVisible] = useState(true);
   const [progress, setProgress] = useState(0);
   const generateStarted = useRef(false);
 
@@ -30,49 +30,68 @@ export function LoadingPage() {
   }, []);
 
   useEffect(() => {
-    const phraseTimer = window.setInterval(() => {
-      setPhraseIndex((i) => Math.min(i + 1, PHRASES.length - 1));
-    }, PHRASE_MS);
-    return () => window.clearInterval(phraseTimer);
+    let cancelled = false;
+    let index = 0;
+    let delayTimer = 0;
+    let fadeTimer = 0;
+
+    const scheduleNext = () => {
+      if (cancelled || index >= PHRASES.length - 1) return;
+      delayTimer = window.setTimeout(() => {
+        if (cancelled) return;
+        setPhraseVisible(false);
+        fadeTimer = window.setTimeout(() => {
+          if (cancelled) return;
+          index += 1;
+          setPhraseIndex(index);
+          setPhraseVisible(true);
+          scheduleNext();
+        }, 200);
+      }, PHRASE_MS);
+    };
+
+    scheduleNext();
+    return () => {
+      cancelled = true;
+      window.clearTimeout(delayTimer);
+      window.clearTimeout(fadeTimer);
+    };
   }, []);
 
   useEffect(() => {
     const start = performance.now();
-    const tick = (now: number) => {
-      const ratio = Math.min((now - start) / PROGRESS_MS, 1);
+    const timer = window.setInterval(() => {
+      const ratio = Math.min((performance.now() - start) / PROGRESS_MS, 1);
       setProgress(Math.round(ratio * PROGRESS_TARGET));
-      if (ratio < 1) requestAnimationFrame(tick);
-    };
-    const frame = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(frame);
+      if (ratio >= 1) window.clearInterval(timer);
+    }, 100);
+    return () => window.clearInterval(timer);
   }, []);
 
   return (
-    <Screen centered className="px-4">
+    <Screen className="loading-screen px-4">
       <AppHeader />
-      <main className="mx-auto flex w-full max-w-md flex-1 flex-col items-center justify-center px-2 py-8">
+      <main className="loading-screen__main mx-auto flex w-full max-w-md flex-1 flex-col items-center px-2">
         <LoadingIllustration />
 
-        <div className="w-full max-w-xs text-center">
-          <AnimatePresence mode="wait">
-            <motion.h2
-              key={phraseIndex}
-              className="loading-assembly__status mb-2 min-h-[56px] text-[22px] font-extrabold leading-7 tracking-tight text-[#161d19]"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2, ease: "easeOut" }}
+        <div className="loading-screen__copy w-full max-w-xs shrink-0 text-center">
+          <div className="loading-screen__phrase-slot">
+            <h2
+              className="loading-screen__phrase text-[22px] font-extrabold leading-7 tracking-tight text-[#161d19]"
+              style={{ opacity: phraseVisible ? 1 : 0 }}
               aria-live="polite"
             >
               {PHRASES[phraseIndex]}
-            </motion.h2>
-          </AnimatePresence>
+            </h2>
+          </div>
 
-          <p className="text-base leading-6 text-[#3f4943]">{SECONDARY}</p>
+          <p className="loading-screen__secondary mt-2 text-base leading-6 text-[#3f4943]">
+            {SECONDARY}
+          </p>
 
-          <div className="relative mt-6 w-full overflow-hidden rounded-full bg-[#f4f4f5]">
+          <div className="loading-screen__progress mt-6 w-full overflow-hidden rounded-full bg-[#f4f4f5]">
             <div
-              className="loading-assembly__progress relative h-[3px] rounded-full bg-[#10b981] transition-[width] duration-300 ease-out"
+              className="loading-assembly__progress relative h-[3px] rounded-full bg-[#10b981]"
               style={{ width: `${progress}%` }}
               role="progressbar"
               aria-valuenow={progress}
@@ -85,7 +104,7 @@ export function LoadingPage() {
           </div>
 
           <div className="mt-2 w-full text-right">
-            <span className="text-[11px] font-bold uppercase tracking-[0.05em] text-[#10b981]">
+            <span className="inline-block min-w-[2.5rem] text-[11px] font-bold tabular-nums uppercase tracking-[0.05em] text-[#10b981]">
               {progress}%
             </span>
           </div>
