@@ -97,14 +97,19 @@ async def admin_funnel_by_key(db=Depends(get_db)):
     steps = {
         "onboarding_started": db.count_analytics_events_since("onboarding_started", since),
         "generate_started": db.count_analytics_events_since("generate_started", since),
+        "template_selected": db.count_analytics_events_since("template_selected", since),
         "preview_viewed": db.count_analytics_events_since("preview_viewed", since),
         "pay_clicked": db.count_analytics_events_since("pay_clicked", since),
         "payment_completed": db.count_analytics_events_since("payment_completed", since),
+        "share_clicked": db.count_analytics_events_since("share_clicked", since),
     }
     started = steps["onboarding_started"]
     completed = steps["payment_completed"]
     conversion = f"{round(100 * completed / started, 1)}%" if started else "0%"
-    return {**steps, "conversion_rate": conversion}
+    previews = steps["preview_viewed"] or 0
+    shares = steps["share_clicked"]
+    share_rate = f"{round(100 * shares / previews, 1)}%" if previews else "0%"
+    return {**steps, "conversion_rate": conversion, "share_rate": share_rate}
 
 
 @router.get("/stats", dependencies=[Depends(verify_admin_key)])

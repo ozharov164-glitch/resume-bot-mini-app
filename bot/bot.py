@@ -690,10 +690,13 @@ async def adm_funnel_callback(update: Update, context: ContextTypes.DEFAULT_TYPE
             "📈 <b>Воронка (7 дней)</b>\n\n"
             f"Начали анкету: {d.get('onboarding_started', 0)}\n"
             f"Нажали «Сформировать»: {d.get('generate_started', 0)}\n"
+            f"Выбрали шаблон: {d.get('template_selected', 0)}\n"
             f"Открыли предпросмотр: {d.get('preview_viewed', 0)}\n"
             f"Нажали «Оплатить»: {d.get('pay_clicked', 0)}\n"
             f"Оплатили: {d.get('payment_completed', 0)}\n\n"
-            f"Конверсия: <b>{d.get('conversion_rate', '0%')}</b>"
+            f"Конверсия: <b>{d.get('conversion_rate', '0%')}</b>\n"
+            f"Поделились (Preview): {d.get('share_clicked', 0)}\n"
+            f"Share-rate: <b>{d.get('share_rate', '0%')}</b>"
         )
         keyboard = _admin_back_refresh("adm_funnel")
         await _edit_callback_message(query, text, reply_markup=keyboard)
