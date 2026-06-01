@@ -18,6 +18,11 @@ _DURATION_PHRASE_RE = re.compile(
     re.IGNORECASE,
 )
 _PRESENT_MARKERS = ("наст", "н.в", "сейчас", "по н")
+_WORD_YEARS_RE = re.compile(
+    r"\b(?:одно|двух|трех|трёх|четырех|четырёх|пяти|шести|семи|восьми|девяти|десяти|"
+    r"одиннадцати|двенадцати|тринадцати|четырнадцати|пятнадцати)\s*[-]?\s*летн(?:ий|яя|ее)\b",
+    re.IGNORECASE,
+)
 
 
 @dataclass(frozen=True)
@@ -163,3 +168,44 @@ def sanitize_experience_descriptions(experience: list, work_history: list) -> li
         if description and duties:
             job["description"] = sanitize_duration_claims(duties, description, period)
     return experience
+
+
+def sanitize_summary_claims(summary: str, user_data: dict) -> str:
+    """Remove invented duration claims from summary when source facts don't support them."""
+    summary = (summary or "").strip()
+    if not summary:
+        return ""
+
+    about = str(user_data.get("about") or "")
+    last_job = str(user_data.get("last_job") or "")
+    work_history = user_data.get("work_history") or []
+    duties_blob = " ".join(
+        str(entry.get("duties") or "")
+        for entry in work_history
+        if isinstance(entry, dict)
+    )
+    source_blob = f"{about} {last_job} {duties_blob}"
+
+    source_has_duration = bool(_DURATION_NUM_RE.search(source_blob) or _WORD_YEARS_RE.search(source_blob))
+    if source_has_duration:
+        return summary
+
+    sentences = re.split(r"(?<=[.!?])\s+", summary)
+    cleaned: list[str] = []
+    removed = 0
+    for sentence in sentences:
+        s = sentence.strip()
+        if not s:
+            continue
+        has_duration_claim = bool(_DURATION_NUM_RE.search(s) or _WORD_YEARS_RE.search(s))
+        if has_duration_claim:
+            removed += 1
+            continue
+        cleaned.append(s)
+
+    if not removed:
+        return summary
+
+    joined = " ".join(cleaned).strip()
+    logger.info("sanitize_summary_claims removed %s duration sentence(s)", removed)
+    return joined or "Внимательно отношусь к работе, быстро обучаюсь и готов(а) к развитию."

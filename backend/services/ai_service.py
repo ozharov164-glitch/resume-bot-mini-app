@@ -7,7 +7,7 @@ from typing import Any
 import httpx
 
 from config import settings
-from services.text_facts import sanitize_experience_descriptions
+from services.text_facts import sanitize_experience_descriptions, sanitize_summary_claims
 
 logger = logging.getLogger(__name__)
 
@@ -610,6 +610,7 @@ def normalize_organization_name(name: str) -> str:
 
 def finalize_resume_data(resume_data: dict, user_data: dict) -> dict:
     """Post-process AI output: fix hallucinations, preserve user facts."""
+    resume_data["summary"] = sanitize_summary_claims(resume_data.get("summary", ""), user_data)
     resume_data["skills"] = _merge_skills(resume_data.get("skills"), user_data)
     resume_data["languages"] = _sanitize_languages(resume_data.get("languages"), user_data)
 
