@@ -6,6 +6,7 @@ import {
   ensureAuthToken,
   fetchActivePromo,
   fetchMe,
+  fetchTodayCount,
   validatePromo,
   waitUntilPaid,
 } from "../api";
@@ -47,6 +48,7 @@ export function PaymentPage() {
   const [promoReady, setPromoReady] = useState(false);
   const [bonusStars, setBonusStars] = useState(0);
   const [bonusApplied, setBonusApplied] = useState(false);
+  const [todayCount, setTodayCount] = useState(0);
 
   const handleBack = useCallback(() => setPage("template_select"), [setPage]);
   useTelegramBackButton(handleBack);
@@ -80,6 +82,10 @@ export function PaymentPage() {
       .then((me) => setBonusStars(me.bonus_stars ?? 0))
       .catch(() => setBonusStars(0));
   }, [authToken]);
+
+  useEffect(() => {
+    void fetchTodayCount().then(setTodayCount);
+  }, []);
 
   if (!authToken || !resumeId) return null;
 
@@ -223,6 +229,11 @@ export function PaymentPage() {
             <Icon name="payments" filled size={32} style={{ color: "var(--brand)" }} />
           </div>
           <h2 className="text-2xl font-bold">Выберите способ оплаты</h2>
+          {todayCount > 3 && (
+            <p className="payment-today-count">
+              Сегодня {todayCount} человек уже создали резюме
+            </p>
+          )}
         </section>
 
         <section
@@ -267,6 +278,7 @@ export function PaymentPage() {
               className="mt-2 w-full"
               onClick={() => {
                 setBonusApplied(true);
+                trackEvent("bonus_applied", { bonus_stars: bonusStars });
                 getTg()?.HapticFeedback?.selectionChanged();
               }}
             >

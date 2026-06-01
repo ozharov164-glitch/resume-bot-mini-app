@@ -345,3 +345,14 @@ export async function fetchStatsCount(): Promise<number> {
     return 1200;
   }
 }
+
+export async function fetchTodayCount(): Promise<number> {
+  try {
+    const response = await fetchWithTimeout(`${API_URL}/api/stats/count`, {}, 5_000);
+    if (!response.ok) return 0;
+    const data = (await response.json()) as { today_count?: number };
+    return data.today_count ?? 0;
+  } catch {
+    return 0;
+  }
+}
