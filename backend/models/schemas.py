@@ -1,6 +1,6 @@
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class SetTemplateRequest(BaseModel):
@@ -34,6 +34,20 @@ class GenerateResumeRequest(BaseModel):
     gender: str = ""
     achievements: str = ""
     template_id: str = "classic"
+    work_schedule: list[str] = Field(default_factory=list)
+    relocation: str = ""
+    profession_extra: dict[str, Any] = Field(default_factory=dict)
+
+    @field_validator("work_schedule", mode="before")
+    @classmethod
+    def _coerce_work_schedule(cls, value: Any) -> list[str]:
+        if value is None:
+            return []
+        if isinstance(value, str):
+            return [value.strip()] if value.strip() else []
+        if isinstance(value, list):
+            return [str(v).strip() for v in value if str(v).strip()]
+        return []
 
 
 class SuggestSkillsRequest(BaseModel):

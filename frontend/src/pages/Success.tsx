@@ -49,6 +49,7 @@ export function SuccessPage() {
       const token = authToken || (await ensureAuthToken());
       const text = await fetchTextExport(token, resumeId);
       await navigator.clipboard.writeText(text);
+      getTg()?.HapticFeedback?.notificationOccurred("success");
       trackEvent("text_exported");
       showToast("Скопировано в буфер");
     } catch {

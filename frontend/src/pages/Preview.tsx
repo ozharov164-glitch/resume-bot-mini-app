@@ -6,7 +6,7 @@ import { PreviewImageFrame } from "../components/preview/PreviewImageFrame";
 import { PreviewLoadingSkeleton } from "../components/preview/PreviewLoadingSkeleton";
 import { PreviewResumeCard } from "../components/preview/PreviewResumeCard";
 import { PreviewStatusHero } from "../components/preview/PreviewStatusHero";
-import { ensureAuthToken, getResume } from "../api";
+import { ensureAuthToken, fetchHhText, getResume } from "../api";
 import { AppHeader } from "../components/ui/AppHeader";
 import { Button } from "../components/ui/Button";
 import { FixedBottomBar } from "../components/ui/FixedBottomBar";
@@ -30,6 +30,8 @@ export function PreviewPage() {
   const [previewError, setPreviewError] = useState(false);
   const [hydrating, setHydrating] = useState(false);
   const [hydrateError, setHydrateError] = useState(false);
+  const [hhPreview, setHhPreview] = useState<string | null>(null);
+  const [hhPaidText, setHhPaidText] = useState<string | null>(null);
   const previewLocked = !isPaid && !founderActive;
 
   const handleBack = useCallback(() => setPage(previewReturnPage), [setPage, previewReturnPage]);
@@ -100,6 +102,33 @@ export function PreviewPage() {
     };
   }, [authToken, resumeId]);
 
+  useEffect(() => {
+    if (!resumeId) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const token = authToken || (await ensureAuthToken());
+        const data = await fetchHhText(token, resumeId);
+        if (cancelled) return;
+        if (data.is_paid && data.text) {
+          setHhPaidText(data.text);
+          setHhPreview(null);
+        } else if (data.preview) {
+          setHhPreview(data.preview);
+          setHhPaidText(null);
+        }
+      } catch {
+        if (!cancelled) {
+          setHhPreview(null);
+          setHhPaidText(null);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [authToken, resumeId, isPaid, founderActive]);
+
   if (!resumeData) {
     return (
       <Screen centered className="px-4">
@@ -161,12 +190,15 @@ export function PreviewPage() {
             {previewLocked && (
               <div className="preview-unlock-block">
                 <div className="preview-unlock-header">
-                  <p className="preview-unlock-text">Полное резюме (2 стр.)</p>
+                  <p className="preview-unlock-text">PDF + полный текст для hh.ru</p>
                   <span className="preview-unlock-price">{STARS_PRICE} ⭐</span>
                 </div>
                 <p className="preview-unlock-sub">Один отклик — и первый оффер</p>
                 <Button variant="brand" onClick={handlePdf} className="w-full">
-                  Получить PDF
+                  Получить PDF + текст для hh.ru →
+                </Button>
+                <Button variant="secondary" onClick={handlePdf} className="w-full !min-h-[44px]">
+                  Сменить шаблон
                 </Button>
               </div>
             )}
@@ -175,6 +207,19 @@ export function PreviewPage() {
           <PreviewResumeCard resume={resumeData} />
         ) : (
           <PreviewLoadingSkeleton />
+        )}
+        {(hhPreview || hhPaidText) && (
+          <section className={`preview-hh-block${previewLocked ? " preview-hh-block--locked" : ""}`}>
+            <h3 className="text-sm font-semibold mb-2">📋 Текст для hh.ru</h3>
+            <pre className="preview-hh-preview-text">
+              {hhPaidText ?? hhPreview}
+            </pre>
+            {previewLocked && hhPreview && (
+              <div className="preview-hh-blur">
+                <p>Полный текст — после оплаты</p>
+              </div>
+            )}
+          </section>
         )}
         {founderActive && <FounderBadge />}
       </main>
@@ -219,7 +264,7 @@ export function PreviewPage() {
           >
             <span className="preview-btn-shimmer pointer-events-none absolute inset-0" aria-hidden />
             <Icon name="picture_as_pdf" size={20} />
-            Получить PDF в Telegram
+            {previewLocked ? "Получить PDF + текст hh.ru" : "Получить PDF в Telegram"}
           </Button>
         </div>
       </FixedBottomBar>

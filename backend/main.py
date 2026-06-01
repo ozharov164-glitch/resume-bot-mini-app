@@ -5,7 +5,22 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from config import settings
 from database import get_db, storage_mode
-from routers import admin, analytics, auth, enrich, export, payment, payment_return, promo, resume, skills, stats, voice
+from routers import (
+    admin,
+    affiliate_me,
+    analytics,
+    auth,
+    enrich,
+    export,
+    payment,
+    payment_return,
+    promo,
+    resume,
+    skills,
+    stats,
+    user_stats,
+    voice,
+)
 from services.pdf_service import ensure_fonts
 
 logging.basicConfig(
@@ -45,6 +60,8 @@ app.include_router(stats.router)
 app.include_router(admin.router)
 app.include_router(voice.router)
 app.include_router(enrich.router)
+app.include_router(user_stats.router)
+app.include_router(affiliate_me.router)
 
 
 @app.on_event("startup")

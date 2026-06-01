@@ -175,6 +175,19 @@ export async function fetchResumeSnippet(
   );
 }
 
+export async function fetchHhText(
+  token: string,
+  resumeId: string,
+): Promise<{ preview?: string; text?: string; is_paid: boolean }> {
+  return http<{ preview?: string; text?: string; is_paid: boolean }>(
+    `/api/resume/${resumeId}/hh-text`,
+    {
+      method: "GET",
+      headers: { Authorization: `Bearer ${token}` },
+    },
+  );
+}
+
 export async function fetchTextExport(token: string, resumeId: string): Promise<string> {
   const response = await fetchWithTimeout(
     `${API_URL}/api/resume/${resumeId}/text-export`,

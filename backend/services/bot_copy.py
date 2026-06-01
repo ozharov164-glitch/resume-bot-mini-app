@@ -19,7 +19,6 @@ def start_text(count: int, greeting: str | None = None) -> str:
         f"{intro}"
         f"{HOOK_LINE}\n\n"
         "<b>Как это работает</b>\n"
-        "🎨 Выберите шаблон PDF\n"
         "📝 Ответьте на простые вопросы\n"
         "🤖 ИИ составит текст и соберёт макет\n"
         "📄 Готовый PDF придёт в этот чат\n\n"
@@ -64,11 +63,11 @@ def how_it_works_text() -> str:
     return (
         "📌 <b>Как создать резюме</b>\n\n"
         "1️⃣ Нажмите «Создать резюме» — откроется мини-приложение\n"
-        "2️⃣ Выберите шаблон PDF: Classic, Modern или Compact\n"
-        "3️⃣ Ответьте на вопросы (можно голосом 🎤)\n"
-        "4️⃣ ИИ соберёт текст и оформление по вашим ответам\n"
-        "5️⃣ Оцените бесплатный предпросмотр\n"
-        f"6️⃣ Оплатите: {PAYMENT_SHORT} — PDF придёт в этот чат\n\n"
+        "2️⃣ Ответьте на вопросы (можно голосом 🎤)\n"
+        "3️⃣ ИИ соберёт текст для hh.ru и PDF\n"
+        "4️⃣ Оцените бесплатный предпросмотр\n"
+        f"5️⃣ Оплатите: {PAYMENT_SHORT} — PDF и полный текст придут в этот чат\n"
+        "6️⃣ При желании смените шаблон PDF перед оплатой\n\n"
         "⏱ Весь процесс занимает 3–5 минут.\n"
         f"{VALUE_LINE}\n"
         "📄 Итог — готовый PDF в выбранном шаблоне."
@@ -97,18 +96,35 @@ def examples_text() -> str:
     )
 
 
-def invite_text(invite_link: str, *, compact: bool = False) -> str:
+def invite_text(
+    invite_link: str,
+    *,
+    compact: bool = False,
+    invited: int = 0,
+    paid_referrals: int = 0,
+    bonus_stars: int = 0,
+) -> str:
     copy_hint = "" if compact else (
         "\n\nНажмите и удержите ссылку, чтобы скопировать, "
         "или воспользуйтесь кнопкой «Поделиться»."
     )
+    stats_block = ""
+    if invited or paid_referrals or bonus_stars:
+        stats_block = (
+            "\n\n<b>Ваша статистика</b>\n"
+            f"👥 Перешли по ссылке: <b>{invited}</b>\n"
+            f"💳 Оплатили резюме: <b>{paid_referrals}</b>\n"
+            f"⭐ Бонусные Stars на счёте: <b>{bonus_stars}</b>"
+        )
     return (
-        "🎁 <b>Пригласите друга — получите бесплатное резюме</b>\n\n"
+        "🎁 <b>Пригласите друга — получите бонусные Stars</b>\n\n"
         "<b>Как это работает</b>\n"
         "1. Отправьте другу личную ссылку\n"
         "2. Друг создаёт и оплачивает резюме\n"
-        "3. Вы получаете одно бесплатное резюме 🎉\n\n"
-        f"Ваша ссылка:\n<code>{html.escape(invite_link)}</code>{copy_hint}"
+        "3. Вы получаете <b>20% от его оплаты</b> в бонусных Stars "
+        "(минимум 1 ⭐) — списываются при следующей оплате через /my\n\n"
+        f"Ваша ссылка:\n<code>{html.escape(invite_link)}</code>"
+        f"{stats_block}{copy_hint}"
     )
 
 
@@ -124,7 +140,8 @@ def follow_up_after_payment_text(user_name: str | None, invite_link: str) -> str
     return (
         f"Как вам резюме{name_part}? 😊\n\n"
         "Если результат понравился — пригласите друга.\n"
-        "За каждого, кто оплатит резюме, вы получите <b>одно бесплатное</b>.\n\n"
+        "За каждого, кто оплатит резюме, на счёт придут <b>бонусные Stars (~20% от оплаты)</b> — "
+        "используйте при следующей покупке (/my).\n\n"
         f"Ваша ссылка:\n<code>{html.escape(invite_link)}</code>"
     )
 

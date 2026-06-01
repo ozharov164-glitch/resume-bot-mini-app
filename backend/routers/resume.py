@@ -11,7 +11,9 @@ from dependencies import get_current_user
 from models.schemas import GenerateResumeRequest, ResumeGenerationResponse, SetTemplateRequest
 from services.ai_service import generate_resume, generate_resume_snippet
 from services.founder import is_founder
+from services.hh_text_service import format_hh_text, hh_text_preview_lines
 from services.payment_fulfillment import parse_resume_data
+from services.share_image_service import generate_share_banner
 from services.pdf_async import PdfGenerationTimeoutError, generate_pdf_async
 from services.pdf_service import generate_preview_png
 from services.rate_limiter import RateLimitExceeded, check_rate_limit
@@ -50,6 +52,17 @@ def _build_full_name(name: str, patronymic: str = "") -> str:
     if patronymic and patronymic.lower() not in name.lower():
         return f"{name} {patronymic}"
     return name
+
+
+def _apply_user_meta_to_resume(resume_data: dict, user_data: GenerateResumeRequest | dict) -> None:
+    raw = user_data.model_dump() if hasattr(user_data, "model_dump") else dict(user_data)
+    for key in ("work_schedule", "relocation"):
+        value = raw.get(key)
+        if value:
+            resume_data[key] = value
+    profession_extra = raw.get("profession_extra")
+    if profession_extra:
+        resume_data["profession_extra"] = profession_extra
 
 
 def _normalize_resume_fields(resume_data: dict) -> dict:
@@ -113,6 +126,8 @@ async def create_resume(
             resume_data["certificates"] = [
                 c.strip() for c in certs_user.replace("\n", ",").split(",") if c.strip()
             ]
+        _apply_user_meta_to_resume(resume_data, user_data)
+        hh_text = format_hh_text(resume_data)
         resume_id = str(uuid.uuid4())
         founder = is_founder(current_user.get("telegram_id"))
         bonus = db.get_referral_bonus(current_user["telegram_id"])
@@ -129,6 +144,7 @@ async def create_resume(
                 "user_answers": user_data.model_dump(),
                 "is_paid": is_paid,
                 "template_id": template_id,
+                "hh_text": hh_text,
                 "created_at": datetime.utcnow().isoformat(),
             }
         )
@@ -190,6 +206,62 @@ async def get_resume(resume_id: str, current_user: dict = Depends(get_current_us
     if not resume:
         raise HTTPException(status_code=404, detail="Резюме не найдено.")
     return resume
+
+
+@router.get("/{resume_id}/hh-text")
+async def resume_hh_text(
+    resume_id: str,
+    current_user: dict = Depends(get_current_user),
+    db=Depends(get_db),
+):
+    resume = db.find_resume(resume_id, current_user["id"])
+    if not resume:
+        raise HTTPException(status_code=404, detail="Резюме не найдено.")
+
+    founder = is_founder(current_user.get("telegram_id"))
+    paid = bool(resume.get("is_paid") or founder)
+    full_text = (resume.get("hh_text") or "").strip()
+    if not full_text:
+        resume_data = parse_resume_data(resume["data"])
+        full_text = format_hh_text(resume_data)
+
+    if paid:
+        return {"text": full_text, "is_paid": True}
+
+    preview = hh_text_preview_lines(full_text, max_lines=8)
+    return {"preview": preview, "is_paid": False}
+
+
+@router.get("/{resume_id}/share-image")
+async def resume_share_image(
+    resume_id: str,
+    current_user: dict = Depends(get_current_user),
+    db=Depends(get_db),
+):
+    resume = db.find_resume(resume_id, current_user["id"])
+    if not resume:
+        raise HTTPException(status_code=404, detail="Резюме не найдено.")
+    if not resume.get("is_paid") and not is_founder(current_user.get("telegram_id")):
+        raise HTTPException(status_code=403, detail="Доступно после оплаты.")
+
+    resume_data = parse_resume_data(resume["data"])
+    try:
+        png_bytes = generate_share_banner(
+            full_name=str(resume_data.get("full_name") or ""),
+            target_position=str(resume_data.get("target_position") or ""),
+        )
+    except Exception as exc:
+        logger.exception("share image failed resume_id=%s", resume_id)
+        raise HTTPException(status_code=500, detail="Не удалось сформировать баннер.") from exc
+
+    return Response(
+        content=png_bytes,
+        media_type="image/png",
+        headers={
+            "Content-Disposition": "inline; filename=share.png",
+            "Cache-Control": "private, no-store",
+        },
+    )
 
 
 @router.get("/{resume_id}/preview-image")

@@ -91,6 +91,7 @@ class SQLiteBackend:
                 "ALTER TABLE resumes ADD COLUMN final_price_rub INTEGER DEFAULT NULL",
                 "ALTER TABLE resumes ADD COLUMN template_id TEXT DEFAULT 'classic'",
                 "ALTER TABLE users ADD COLUMN is_affiliate INTEGER DEFAULT 0",
+                "ALTER TABLE resumes ADD COLUMN hh_text TEXT DEFAULT NULL",
             ]:
                 try:
                     conn.execute(col_sql)
@@ -186,8 +187,8 @@ class SQLiteBackend:
         with self._connect() as conn:
             conn.execute(
                 """
-                INSERT INTO resumes (id, user_id, data, user_answers, is_paid, paid_at, created_at, template_id)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO resumes (id, user_id, data, user_answers, is_paid, paid_at, created_at, template_id, hh_text)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     record["id"],
@@ -198,6 +199,7 @@ class SQLiteBackend:
                     record.get("paid_at"),
                     record["created_at"],
                     record.get("template_id") or "classic",
+                    record.get("hh_text"),
                 ),
             )
 
@@ -216,6 +218,7 @@ class SQLiteBackend:
                 "final_price_stars",
                 "final_price_rub",
                 "template_id",
+                "hh_text",
             }
         }
         if not allowed:
@@ -623,6 +626,27 @@ class SQLiteBackend:
             ).fetchone()
         return int(row["c"]) if row else 0
 
+    def get_referral_stats(self, telegram_id: int) -> dict[str, int]:
+        with self._connect() as conn:
+            invited_row = conn.execute(
+                "SELECT COUNT(*) AS c FROM users WHERE referred_by = ?",
+                (telegram_id,),
+            ).fetchone()
+            paid_row = conn.execute(
+                """
+                SELECT COUNT(DISTINCT u.telegram_id) AS c
+                FROM users u
+                INNER JOIN resumes r ON r.user_id = u.id AND r.is_paid = 1
+                WHERE u.referred_by = ?
+                """,
+                (telegram_id,),
+            ).fetchone()
+        return {
+            "invited": int(invited_row["c"] if invited_row else 0),
+            "paid_referrals": int(paid_row["c"] if paid_row else 0),
+            "bonus_stars": self.get_bonus_stars(telegram_id),
+        }
+
     def get_bonus_stars(self, telegram_id: int) -> int:
         with self._connect() as conn:
             row = conn.execute(
@@ -795,6 +819,44 @@ class SupabaseBackend:
             return int(result.count or 0)
         except Exception:
             return 0
+
+    def get_referral_stats(self, telegram_id: int) -> dict[str, int]:
+        try:
+            invited_result = (
+                self.client.table("users")
+                .select("telegram_id", count="exact")
+                .eq("referred_by", telegram_id)
+                .execute()
+            )
+            invited = int(invited_result.count or 0)
+            refs = (
+                self.client.table("users")
+                .select("id")
+                .eq("referred_by", telegram_id)
+                .execute()
+            )
+            user_ids = [str(r["id"]) for r in (refs.data or []) if r.get("id")]
+            paid_referrals = 0
+            if user_ids:
+                paid_rows = (
+                    self.client.table("resumes")
+                    .select("user_id")
+                    .eq("is_paid", True)
+                    .in_("user_id", user_ids)
+                    .execute()
+                )
+                paid_referrals = len(
+                    {str(r["user_id"]) for r in (paid_rows.data or []) if r.get("user_id")}
+                )
+        except Exception as exc:
+            logger.warning("get_referral_stats failed telegram_id=%s: %s", telegram_id, exc)
+            invited = 0
+            paid_referrals = 0
+        return {
+            "invited": invited,
+            "paid_referrals": paid_referrals,
+            "bonus_stars": self.get_bonus_stars(telegram_id),
+        }
 
     def get_bonus_stars(self, telegram_id: int) -> int:
         user = self.find_user_by_telegram_id(telegram_id)

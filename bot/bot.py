@@ -1044,20 +1044,56 @@ async def my_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     user_id = update.message.from_user.id
     db = get_db()
-    bonus = db.get_bonus_stars(user_id)
+    stats = db.get_referral_stats(user_id)
+    bonus = int(stats.get("bonus_stars") or 0)
     referral = db.get_referral_bonus(user_id)
-    lines = [f"💎 Бонусный счёт: {bonus} Stars"]
+    lines = [
+        f"💎 Бонусный счёт: {bonus} Stars",
+        "Списываются при оплате резюме в Mini App (кнопка «Применить скидку»).",
+        "",
+        f"👥 Друзей по вашей ссылке: {stats.get('invited', 0)}",
+        f"💳 Из них оплатили: {stats.get('paid_referrals', 0)}",
+    ]
     if referral > 0:
-        lines.append(f"Бесплатных резюме по рефералке: {referral}")
+        lines.append(f"🎁 Бесплатных резюме (старый бонус): {referral}")
     await update.message.reply_text("\n".join(lines))
+
+
+async def cabinet_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not update.message:
+        return
+    user = update.message.from_user
+    if not user or not _is_user_affiliate(user.id):
+        await update.message.reply_text(
+            "Кабинет траффера доступен только партнёрам с промокодом.\n"
+            "Если вы траффер — напишите в поддержку."
+        )
+        return
+    stats = await _fetch_affiliate_stats(user.id)
+    if not stats:
+        await update.message.reply_text("Не удалось загрузить статистику. Попробуйте позже.")
+        return
+    await update.message.reply_text(
+        _format_affiliate_panel_text(stats),
+        reply_markup=_affiliate_panel_keyboard(),
+        parse_mode="HTML",
+        disable_web_page_preview=True,
+    )
 
 
 async def invite_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.message.from_user.id
     invite_link = f"https://t.me/{settings.BOT_USERNAME}?start=ref_{user_id}"
+    db = get_db()
+    ref_stats = db.get_referral_stats(user_id)
 
     await update.message.reply_text(
-        invite_text(invite_link),
+        invite_text(
+            invite_link,
+            invited=int(ref_stats.get("invited") or 0),
+            paid_referrals=int(ref_stats.get("paid_referrals") or 0),
+            bonus_stars=int(ref_stats.get("bonus_stars") or 0),
+        ),
         reply_markup=InlineKeyboardMarkup(
             [
                 [
@@ -1115,8 +1151,15 @@ async def invite_prompt_callback(update: Update, context: ContextTypes.DEFAULT_T
     await query.answer()
     user_id = query.from_user.id
     invite_link = f"https://t.me/{settings.BOT_USERNAME}?start=ref_{user_id}"
+    ref_stats = get_db().get_referral_stats(user_id)
     await query.edit_message_text(
-        invite_text(invite_link, compact=True),
+        invite_text(
+            invite_link,
+            compact=True,
+            invited=int(ref_stats.get("invited") or 0),
+            paid_referrals=int(ref_stats.get("paid_referrals") or 0),
+            bonus_stars=int(ref_stats.get("bonus_stars") or 0),
+        ),
         reply_markup=InlineKeyboardMarkup(
             [
                 [
@@ -1287,7 +1330,7 @@ async def follow_up_after_payment(context: ContextTypes.DEFAULT_TYPE):
 
     keyboard = InlineKeyboardMarkup(
         [
-            [InlineKeyboardButton("🎁 Получить бесплатное резюме", callback_data="invite_prompt")],
+            [InlineKeyboardButton("🎁 Пригласить друга (+Stars)", callback_data="invite_prompt")],
             [InlineKeyboardButton("📝 Создать ещё резюме", web_app=WebAppInfo(url=MINI_APP_URL))],
         ]
     )
@@ -1385,6 +1428,7 @@ def main():
     app.add_handler(CommandHandler("trust", trust_command))
     app.add_handler(CommandHandler("my", my_command))
     app.add_handler(CommandHandler("invite", invite_command))
+    app.add_handler(CommandHandler("cabinet", cabinet_command))
     app.add_handler(CommandHandler("support", support_command))
     app.add_handler(CommandHandler("founder", founder_command))
     app.add_handler(CommandHandler("admin", admin_command))
