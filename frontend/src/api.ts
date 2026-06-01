@@ -156,25 +156,6 @@ export async function createStarsInvoice(
   });
 }
 
-export async function fetchResumeSnippet(
-  token: string,
-  targetPosition: string,
-  gender: string,
-) {
-  return http<{ snippet: string }>(
-    "/api/resume/snippet",
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({ target_position: targetPosition, gender }),
-    },
-    10_000,
-  );
-}
-
 export async function fetchHhText(
   token: string,
   resumeId: string,

@@ -14,7 +14,6 @@ logger = logging.getLogger(__name__)
 
 SKILLS_CACHE_TTL_SEC = 24 * 3600
 _skills_cache: dict[str, tuple[float, dict[str, Any]]] = {}
-_snippet_cache: dict[str, tuple[float, str]] = {}
 
 JOB_CONTEXT: dict[str, str] = {
     "водитель": (
@@ -395,41 +394,6 @@ def _block_no_experience_hallucination(resume_data: dict, user_data: dict) -> di
     return resume_data
 
 
-async def _call_openrouter_text(
-    messages: list[dict],
-    model: str | None = None,
-    temperature: float = 0.7,
-    max_tokens: int = 120,
-    *,
-    timeout: float = 6.0,
-) -> str:
-    model = model or settings.OPENROUTER_MODEL
-    body = {
-        "model": model,
-        "messages": messages,
-        "temperature": temperature,
-        "max_tokens": max_tokens,
-        "provider": _provider_routing(),
-    }
-    async with httpx.AsyncClient(timeout=timeout) as client:
-        response = await client.post(
-            "https://openrouter.ai/api/v1/chat/completions",
-            headers={
-                "Authorization": f"Bearer {settings.OPENROUTER_API_KEY}",
-                "Content-Type": "application/json",
-                "HTTP-Referer": settings.OPENROUTER_APP_URL,
-                "X-Title": "ResumeBot",
-            },
-            json=body,
-        )
-        response.raise_for_status()
-        data = response.json()
-    choices = data.get("choices") or []
-    if not choices:
-        raise ValueError("OpenRouter returned empty completion")
-    return str(choices[0].get("message", {}).get("content") or "").strip()
-
-
 async def _call_openrouter(
     messages: list[dict],
     model: str | None = None,
@@ -661,39 +625,6 @@ async def generate_resume(user_data: dict) -> dict:
             raise
     result = finalize_resume_data(raw, user_data)
     return _block_no_experience_hallucination(result, user_data)
-
-
-async def generate_resume_snippet(target_position: str, gender: str = "") -> str:
-    position = _truncate(target_position.strip(), MAX_FIELD_LEN["target_position"])
-    if not position:
-        return ""
-    cache_key = hashlib.sha256(f"{position.lower()}|{gender.lower()}".encode()).hexdigest()
-    now = time.time()
-    cached = _snippet_cache.get(cache_key)
-    if cached and cached[0] > now:
-        return cached[1]
-
-    gender_hint = f" Пол: {gender}." if gender else ""
-    messages = [
-        {
-            "role": "user",
-            "content": (
-                f"Напиши 2 предложения раздела «О себе» для резюме на должность «{position}»."
-                f"{gender_hint} Только текст, без JSON, без вступлений."
-            ),
-        },
-    ]
-    try:
-        text = await _call_openrouter_text(messages, temperature=0.7, max_tokens=120, timeout=6.0)
-    except Exception as exc:
-        logger.warning("snippet generation failed: %s", exc)
-        text = (
-            f"Мотивированный специалист на позицию «{position}». "
-            "Готов применить сильные стороны и быстро включиться в работу."
-        )
-    text = text.strip().strip('"')
-    _snippet_cache[cache_key] = (now + SKILLS_CACHE_TTL_SEC, text)
-    return text
 
 
 def _fallback_skills(position: str) -> dict[str, Any]:

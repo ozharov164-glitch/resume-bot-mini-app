@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field
 from database import get_db
 from dependencies import get_current_user
 from models.schemas import GenerateResumeRequest, ResumeGenerationResponse, SetTemplateRequest
-from services.ai_service import generate_resume, generate_resume_snippet
+from services.ai_service import generate_resume
 from services.resume_schema import normalize_resume_data
 from services.founder import is_founder
 from services.hh_text_service import format_hh_text, hh_text_preview_lines
@@ -24,15 +24,6 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/resume", tags=["resume"])
 
 VALID_TEMPLATES = frozenset({"classic", "modern", "compact"})
-
-
-class SnippetRequest(BaseModel):
-    target_position: str = Field(min_length=1, max_length=150)
-    gender: str = ""
-
-
-class SnippetResponse(BaseModel):
-    snippet: str
 
 
 class AdaptVacancyRequest(BaseModel):
@@ -69,26 +60,6 @@ def _apply_user_meta_to_resume(resume_data: dict, user_data: GenerateResumeReque
 def _normalize_resume_fields(resume_data: dict) -> dict:
     """AI JSON may return numbers/strings — normalize for PDF, API, and Mini App."""
     return normalize_resume_data(resume_data)
-
-
-@router.post("/snippet", response_model=SnippetResponse)
-async def resume_snippet(
-    body: SnippetRequest,
-    current_user: dict = Depends(get_current_user),
-):
-    try:
-        check_rate_limit("skills_suggest", current_user.get("telegram_id"))
-    except RateLimitExceeded as exc:
-        return JSONResponse(
-            status_code=429,
-            content={
-                "error": "rate_limit",
-                "retry_after_hours": exc.retry_after_hours,
-                "message": "Лимит запросов исчерпан",
-            },
-        )
-    snippet = await generate_resume_snippet(body.target_position, body.gender)
-    return SnippetResponse(snippet=snippet)
 
 
 @router.post("/generate", response_model=ResumeGenerationResponse)

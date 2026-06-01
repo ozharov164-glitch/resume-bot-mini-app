@@ -570,27 +570,6 @@ body {
   color: #ffffff;
 }
 
-.skill-snippet-card {
-  border-radius: 12px;
-  padding: 16px;
-  background: var(--surface-variant, #f3f4f6);
-}
-
-.skill-snippet-label {
-  font-size: 12px;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: #6b7280;
-  margin-bottom: 8px;
-}
-
-.skill-snippet-body {
-  font-size: 15px;
-  line-height: 1.5;
-  color: var(--text-primary, #111827);
-  min-height: 3.2em;
-}
-
 .home-social-proof {
   display: flex;
   align-items: center;

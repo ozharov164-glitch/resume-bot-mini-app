@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 
-import { ensureAuthToken, fetchResumeSnippet, suggestSkills } from "../api";
+import { ensureAuthToken, suggestSkills } from "../api";
 import { SkillPill } from "../components/SkillPill";
 import { trackEvent } from "../lib/analytics";
 import { AppHeader } from "../components/ui/AppHeader";
@@ -56,8 +56,6 @@ export function SkillPickPage() {
     Array.isArray(answers.skills) ? [...answers.skills] : [],
   );
   const [customSkill, setCustomSkill] = useState("");
-  const [snippet, setSnippet] = useState("");
-  const [typedSnippet, setTypedSnippet] = useState("");
 
   useEffect(() => {
     if (phase !== "loading") return;
@@ -117,43 +115,6 @@ export function SkillPickPage() {
       cancelled = true;
     };
   }, [position]);
-
-  useEffect(() => {
-    if (!position || phase !== "ready") return;
-    let cancelled = false;
-    (async () => {
-      try {
-        const token = await ensureAuthToken();
-        const gender = String(answers.gender ?? "");
-        const result = await fetchResumeSnippet(token, position, gender);
-        if (!cancelled) {
-          setSnippet(result.snippet);
-          trackEvent("snippet_shown", { position });
-        }
-      } catch {
-        if (!cancelled) {
-          setSnippet(
-            `Мотивированный специалист на позицию «${position}». Готов включиться в работу с первого дня.`,
-          );
-        }
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [position, phase, answers.gender]);
-
-  useEffect(() => {
-    if (!snippet) return;
-    setTypedSnippet("");
-    let index = 0;
-    const timer = window.setInterval(() => {
-      index += 1;
-      setTypedSnippet(snippet.slice(0, index));
-      if (index >= snippet.length) window.clearInterval(timer);
-    }, 40);
-    return () => window.clearInterval(timer);
-  }, [snippet]);
 
   const handleBack = useCallback(() => {
     getTg()?.HapticFeedback?.impactOccurred("light");
@@ -262,13 +223,6 @@ export function SkillPickPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.35, ease: [0.25, 0.1, 0.25, 1] }}
           >
-            {snippet && (
-              <div className="skill-snippet-card">
-                <p className="skill-snippet-label">Так начнётся ваше резюме:</p>
-                <p className="skill-snippet-body">{typedSnippet}</p>
-              </div>
-            )}
-
             <div className="text-center">
               <h2 className="text-2xl font-bold leading-snug">Выберите свои навыки</h2>
               <p className="mt-2 text-base" style={{ color: "var(--text-muted)" }}>
