@@ -1,3 +1,4 @@
+import { capitalizePersonName } from "./formatPersonName";
 import type { ResumeData } from "../types";
 
 function asStr(v: unknown): string {
@@ -21,7 +22,7 @@ function asStrList(v: unknown): string[] {
 export function normalizeResumeData(raw: ResumeData): ResumeData {
   return {
     ...raw,
-    full_name: asStr(raw.full_name),
+    full_name: capitalizePersonName(asStr(raw.full_name)),
     target_position: asStr(raw.target_position),
     city: asStr(raw.city),
     phone: asStr(raw.phone),

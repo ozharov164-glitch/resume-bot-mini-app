@@ -25,6 +25,7 @@ import {
   salaryFromOption,
 } from "../lib/onboardingSteps";
 import { trackEvent } from "../lib/analytics";
+import { capitalizePersonName, isPersonNameField } from "../lib/formatPersonName";
 import { useAppStore } from "../store";
 import { getTg } from "../telegram";
 import type { UserAnswers, WorkEntry } from "../types";
@@ -152,7 +153,8 @@ export function OnboardingPage() {
       return;
     }
     if (id !== "contacts") {
-      setAnswer(id as keyof UserAnswers, value);
+      const stored = isPersonNameField(id) ? capitalizePersonName(value) : value;
+      setAnswer(id as keyof UserAnswers, stored);
     }
   }, [
     contactEmail,
@@ -225,7 +227,10 @@ export function OnboardingPage() {
         setMultiValues([]);
         setOtherProfession(false);
       } else {
-        const saved = readStringAnswer(answers, next.id);
+        let saved = readStringAnswer(answers, next.id);
+        if (isPersonNameField(next.id)) {
+          saved = capitalizePersonName(saved);
+        }
         setValue(saved);
         if (next.type === "profession") {
           setOtherProfession(professionOtherSelected(saved));
@@ -518,6 +523,11 @@ export function OnboardingPage() {
                   onChange={(e) => {
                     setFieldError(null);
                     setValue(e.target.value);
+                  }}
+                  onBlur={() => {
+                    if (!isPersonNameField(current.id)) return;
+                    const formatted = capitalizePersonName(value);
+                    if (formatted !== value) setValue(formatted);
                   }}
                   placeholder={current.placeholder}
                   inputMode="text"

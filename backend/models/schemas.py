@@ -2,6 +2,8 @@ from typing import Any
 
 from pydantic import BaseModel, Field, field_validator
 
+from services.name_format import capitalize_person_name
+
 
 class SetTemplateRequest(BaseModel):
     template_id: str
@@ -37,6 +39,11 @@ class GenerateResumeRequest(BaseModel):
     work_schedule: list[str] = Field(default_factory=list)
     relocation: str = ""
     profession_extra: dict[str, Any] = Field(default_factory=dict)
+
+    @field_validator("name", "patronymic", mode="before")
+    @classmethod
+    def _capitalize_person_names(cls, value: Any) -> str:
+        return capitalize_person_name(str(value or ""))
 
     @field_validator("work_schedule", mode="before")
     @classmethod

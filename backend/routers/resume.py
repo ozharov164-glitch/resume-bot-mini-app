@@ -10,6 +10,7 @@ from database import get_db
 from dependencies import get_current_user
 from models.schemas import GenerateResumeRequest, ResumeGenerationResponse, SetTemplateRequest
 from services.ai_service import generate_resume
+from services.name_format import build_full_name
 from services.resume_schema import normalize_resume_data
 from services.founder import is_founder
 from services.hh_text_service import format_hh_text, hh_text_preview_lines
@@ -37,13 +38,7 @@ def _as_str(value: object) -> str:
 
 
 def _build_full_name(name: str, patronymic: str = "") -> str:
-    name = _as_str(name)
-    patronymic = _as_str(patronymic)
-    if not name:
-        return patronymic
-    if patronymic and patronymic.lower() not in name.lower():
-        return f"{name} {patronymic}"
-    return name
+    return build_full_name(_as_str(name), _as_str(patronymic))
 
 
 def _apply_user_meta_to_resume(resume_data: dict, user_data: GenerateResumeRequest | dict) -> None:

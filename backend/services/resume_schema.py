@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from services.name_format import capitalize_person_name
+
 
 def _as_str(value: object) -> str:
     if value is None:
@@ -60,7 +62,7 @@ def _normalize_education(value: object) -> list[dict[str, str]]:
 def normalize_resume_data(resume_data: dict[str, Any]) -> dict[str, Any]:
     """Coerce lists/scalars so PDF renderer and Mini App never crash on bad AI shapes."""
     data = dict(resume_data)
-    data["full_name"] = _as_str(data.get("full_name"))
+    data["full_name"] = capitalize_person_name(_as_str(data.get("full_name")))
     data["target_position"] = _as_str(data.get("target_position"))
     data["city"] = _as_str(data.get("city"))
     data["phone"] = _as_str(data.get("phone"))

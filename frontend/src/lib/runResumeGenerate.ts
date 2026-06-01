@@ -1,4 +1,5 @@
 import { ensureAuthToken, generateResume, HttpTimeoutError } from "../api";
+import { capitalizePersonName } from "./formatPersonName";
 import { buildLastJobFromWorkHistory, deriveExperienceLevel } from "./onboardingSteps";
 import { trackEvent } from "./analytics";
 import { useAppStore } from "../store";
@@ -11,6 +12,12 @@ export async function runResumeGenerate(): Promise<ResumeGenerateOutcome> {
     const token = await ensureAuthToken();
     const state = useAppStore.getState();
     const payload = { ...state.answers };
+    if (typeof payload.name === "string") {
+      payload.name = capitalizePersonName(payload.name);
+    }
+    if (typeof payload.patronymic === "string") {
+      payload.patronymic = capitalizePersonName(payload.patronymic);
+    }
     const last_job = buildLastJobFromWorkHistory(state.answers.work_history);
     payload.experience_level = deriveExperienceLevel(state.answers.work_history);
     state.setAnswer("experience_level", payload.experience_level);
