@@ -3,9 +3,9 @@ import { useCallback, useEffect, useState } from "react";
 import { trackEvent } from "../lib/analytics";
 
 import { PreviewImageFrame } from "../components/preview/PreviewImageFrame";
+import { PreviewStatusHero } from "../components/preview/PreviewStatusHero";
 import { PreviewLoadingSkeleton } from "../components/preview/PreviewLoadingSkeleton";
 import { PreviewResumeCard } from "../components/preview/PreviewResumeCard";
-import { PreviewStatusHero } from "../components/preview/PreviewStatusHero";
 import { ensureAuthToken, fetchHhText, getResume } from "../api";
 import { AppHeader } from "../components/ui/AppHeader";
 import { Button } from "../components/ui/Button";
@@ -16,7 +16,6 @@ import { Screen } from "../components/ui/Screen";
 import { useFounderStatus } from "../hooks/useFounderStatus";
 import { useTelegramBackButton } from "../hooks/useTelegramBackButton";
 import { PREVIEW_CHECKLIST } from "../lib/marketingCopy";
-import { STARS_PRICE } from "../lib/pricing";
 import { PDF_TEMPLATES } from "../lib/templates";
 import { useAppStore } from "../store";
 import { getTg } from "../telegram";
@@ -187,13 +186,21 @@ export function PreviewPage() {
     );
   };
 
-  return (
-    <Screen withBottomBar bottomBarButtons={2} className="preview-page">
-      <AppHeader onBack={handleBack} showBack title="Предпросмотр" />
-      <main className="preview-page-main">
-        <PreviewStatusHero />
+  const mainClass = previewLocked
+    ? "preview-page-main preview-page-main--fit"
+    : "preview-page-main";
 
-        <section className="preview-template-bar">
+  return (
+    <Screen
+      withBottomBar
+      bottomBarButtons={2}
+      className={previewLocked ? "preview-page preview-page--fit" : "preview-page"}
+    >
+      <AppHeader onBack={handleBack} showBack title="Предпросмотр" />
+      <main className={mainClass}>
+        {!previewLocked ? <PreviewStatusHero /> : null}
+
+        <section className="preview-template-bar preview-template-bar--compact">
           <div className="preview-template-bar-copy">
             <span className="preview-template-bar-label">Шаблон PDF</span>
             <strong className="preview-template-bar-name">{templateName}</strong>
@@ -203,27 +210,17 @@ export function PreviewPage() {
           </button>
         </section>
 
-        {previewUrl && !previewError ? (
-          <PreviewImageFrame src={previewUrl} locked={previewLocked} />
-        ) : previewError ? (
-          <PreviewResumeCard resume={resumeData} />
-        ) : (
-          <PreviewLoadingSkeleton />
-        )}
+        <div className="preview-preview-slot">
+          {previewUrl && !previewError ? (
+            <PreviewImageFrame src={previewUrl} locked={previewLocked} />
+          ) : previewError ? (
+            <PreviewResumeCard resume={resumeData} />
+          ) : (
+            <PreviewLoadingSkeleton />
+          )}
+        </div>
 
-        {previewLocked ? (
-          <section className="preview-offer-card" aria-label="Стоимость полной версии">
-            <div className="preview-offer-row">
-              <div>
-                <p className="preview-offer-title">PDF + полный текст для hh.ru</p>
-                <p className="preview-offer-sub">Нижняя часть PDF и текст hh.ru откроются после оплаты</p>
-              </div>
-              <span className="preview-offer-price">{STARS_PRICE} ⭐</span>
-            </div>
-          </section>
-        ) : null}
-
-        {(hhPreview || hhPaidText) && (
+        {!previewLocked && (hhPreview || hhPaidText) && (
           <section className={`preview-hh-block${previewLocked ? " preview-hh-block--locked" : ""}`}>
             <h3 className="preview-hh-title">Текст для hh.ru</h3>
             <pre className="preview-hh-preview-text">{hhPaidText ?? hhPreview}</pre>
@@ -239,7 +236,7 @@ export function PreviewPage() {
       </main>
 
       <FixedBottomBar>
-        <div className="preview-bottom-stack">
+        <div className={`preview-bottom-stack${previewLocked ? " preview-bottom-stack--compact" : ""}`}>
           {previewLocked ? (
             <div className="preview-share-hint">
               <span>Знаете кого-то, кто ищет работу?</span>

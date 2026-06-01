@@ -16,8 +16,11 @@ class NameFormatTest(unittest.TestCase):
     def test_build_full_name(self):
         self.assertEqual(
             build_full_name("алексей ежелев", "витальевич"),
-            "Алексей Ежелев Витальевич",
+            "Ежелев Алексей Витальевич",
         )
+
+    def test_build_full_name_single_given(self):
+        self.assertEqual(build_full_name("иван", "иванович"), "Иван Иванович")
 
     def test_empty(self):
         self.assertEqual(capitalize_person_name(""), "")

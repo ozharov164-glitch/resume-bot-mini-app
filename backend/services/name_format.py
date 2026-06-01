@@ -31,11 +31,22 @@ def capitalize_person_name(value: str) -> str:
 
 
 def build_full_name(name: str, patronymic: str = "") -> str:
-    """Merge name + patronymic with title case (user answers override AI full_name)."""
+    """Фамилия Имя Отчество — from onboarding «Имя Фамилия» + отчество."""
     name = capitalize_person_name(name)
     patronymic = capitalize_person_name(patronymic)
-    if not name:
+    parts = [p for p in name.split() if p]
+    if not parts:
         return patronymic
-    if patronymic and patronymic.lower() not in name.lower():
-        return f"{name} {patronymic}"
-    return name
+    if len(parts) == 1:
+        given = parts[0]
+        if patronymic and patronymic.lower() not in given.lower():
+            return f"{given} {patronymic}"
+        return given
+    surname = parts[-1]
+    given = " ".join(parts[:-1])
+    if patronymic and patronymic.lower() in name.lower():
+        patronymic = ""
+    chunks = [surname, given]
+    if patronymic:
+        chunks.append(patronymic)
+    return " ".join(chunks)

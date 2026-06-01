@@ -18,14 +18,21 @@ export function capitalizePersonName(value: string): string {
     .join("");
 }
 
+/** Фамилия Имя Отчество from onboarding «Имя Фамилия» + отчество. */
 export function buildFullName(name: string, patronymic?: string): string {
   const n = capitalizePersonName(name);
-  const p = capitalizePersonName(patronymic ?? "");
-  if (!n) return p;
-  if (p && !n.toLowerCase().includes(p.toLowerCase())) {
-    return `${n} ${p}`;
+  let p = capitalizePersonName(patronymic ?? "");
+  const parts = n.split(/\s+/).filter(Boolean);
+  if (!parts.length) return p;
+  if (parts.length === 1) {
+    const given = parts[0];
+    if (p && !given.toLowerCase().includes(p.toLowerCase())) return `${given} ${p}`;
+    return given;
   }
-  return n;
+  const surname = parts[parts.length - 1];
+  const given = parts.slice(0, -1).join(" ");
+  if (p && n.toLowerCase().includes(p.toLowerCase())) p = "";
+  return [surname, given, p].filter(Boolean).join(" ");
 }
 
 export function isPersonNameField(fieldId: string): boolean {

@@ -1,4 +1,4 @@
-import { isTelegramMiniApp, getTg } from "../../telegram";
+import { getTg } from "../../telegram";
 import { Icon } from "./Icon";
 
 export const APP_TITLE = "Конструктор резюме";
@@ -11,7 +11,7 @@ interface AppHeaderProps {
 
 export function AppHeader({ title = APP_TITLE, showBack = false, onBack }: AppHeaderProps) {
   const close = () => getTg()?.close?.();
-  const showHeaderBack = showBack && Boolean(onBack) && !isTelegramMiniApp();
+  const showHeaderBack = showBack && Boolean(onBack);
 
   return (
     <>
