@@ -1447,38 +1447,154 @@ textarea::-moz-placeholder {
   animation: glow-pulse 2.4s ease-in-out infinite;
 }
 
-/* ── Stitch Loading screen animations ── */
-.loading-illustration__glow {
-  background: var(--brand-muted);
-  animation: loading-pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+/* ── Stitch Premium AI Resume Assembly (loading screen) ── */
+@keyframes loading-assembly-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
 }
 
-.loading-illustration__doc {
-  background: #ffffff;
-  border-color: #bbcabf;
+@keyframes loading-assembly-drift {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  50% {
+    transform: translateX(-2px);
+  }
 }
 
-.loading-illustration__line {
-  background: #dde4dd;
+@keyframes loading-assembly-fade-in-up {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
-.loading-illustration__line-accent {
-  background: rgba(16, 185, 129, 0.3);
+@keyframes loading-assembly-fill-pill {
+  to {
+    background: rgba(16, 185, 129, 0.15);
+  }
 }
 
-.loading-illustration__scan {
-  top: 0;
-  background: #006c49;
-  box-shadow: 0 0 8px #006c49;
-  animation: loading-scan 2s linear infinite;
+@keyframes loading-assembly-grow-cursor {
+  0% {
+    height: 0%;
+    opacity: 0.5;
+  }
+  50% {
+    height: 100%;
+    opacity: 1;
+    box-shadow: 0 0 12px #10b981;
+  }
+  100% {
+    height: 0%;
+    opacity: 0.5;
+  }
 }
 
-.loading-illustration__star {
-  animation: loading-bounce 1s ease-in-out infinite;
+@keyframes loading-assembly-pulse-edge {
+  0%,
+  100% {
+    opacity: 0.5;
+    transform: scaleX(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scaleX(1.5);
+  }
 }
 
-.loading-illustration__check {
-  animation: loading-pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+.loading-assembly__float {
+  animation: loading-assembly-float 4s ease-in-out infinite;
+}
+
+.loading-assembly__back {
+  top: 5px;
+  left: 5px;
+}
+
+.loading-assembly__drift {
+  animation: loading-assembly-drift 4s ease-in-out infinite;
+}
+
+.loading-assembly__stagger {
+  opacity: 0;
+  transform: translateY(10px);
+  animation: loading-assembly-fade-in-up 0.5s ease-out forwards;
+}
+
+.loading-assembly__stagger--1 {
+  animation-delay: 450ms;
+}
+
+.loading-assembly__stagger--2 {
+  animation-delay: 900ms;
+}
+
+.loading-assembly__stagger--3 {
+  animation-delay: 1350ms;
+}
+
+.loading-assembly__stagger--4 {
+  animation-delay: 1800ms;
+}
+
+.loading-assembly__pill {
+  background: #ececec;
+  animation: loading-assembly-fill-pill 0.8s ease-out forwards;
+}
+
+.loading-assembly__pill--1 {
+  animation-delay: 2200ms;
+}
+
+.loading-assembly__pill--2 {
+  animation-delay: 2500ms;
+}
+
+.loading-assembly__pill--3 {
+  animation-delay: 2800ms;
+}
+
+.loading-assembly__cursor {
+  animation: loading-assembly-grow-cursor 2.5s ease-in-out infinite;
+}
+
+.loading-assembly__progress-pulse {
+  animation: loading-assembly-pulse-edge 1.5s ease-in-out infinite;
+}
+
+.loading-assembly__status {
+  transition: opacity 200ms ease-in-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .loading-assembly__float,
+  .loading-assembly__drift,
+  .loading-assembly__cursor,
+  .loading-assembly__progress-pulse,
+  .loading-assembly__pill {
+    animation: none !important;
+  }
+
+  .loading-assembly__stagger {
+    opacity: 1;
+    transform: none;
+  }
+
+  .loading-assembly__pill {
+    background: rgba(16, 185, 129, 0.15);
+  }
+
+  .loading-assembly__cursor {
+    height: 100%;
+    opacity: 1;
+  }
 }
 
 .loading-progress-track {

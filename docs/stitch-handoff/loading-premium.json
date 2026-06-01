@@ -1,0 +1,272 @@
+{
+  "screenshot": {
+    "name": "projects/17728584795721097694/files/a1645df1d66142c797482f9acd55074f",
+    "downloadUrl": "https://lh3.googleusercontent.com/aida/ADBb0uheFG6J5J0139Z7xTmCphJAveOUHSFOWC6Ldc-SFJpmaIE1f--ZH1MGufE0fLTn5YitqSGc0qeiXx_IbMQmHf_5n8jubqQYte9xdjAZofKRZTUb4zTY6CoVQ3MDnjcsWDo7JYf0rGS6VEGyrMQ2i0YbnrxqLGpqSGypUtKw1EumiMVfDcor9zFepqYwgn1dfYzDXZiUXtFUenjlpnM1TiEqxQMg4fV4HtZ95ZuaOqWRcAxHI32NqoFTqsw"
+  },
+  "htmlCode": {
+    "name": "projects/17728584795721097694/files/34114a20064b48a082d07d7209a601c6",
+    "downloadUrl": "https://contribution.usercontent.google.com/download?c=CgthaWRhX2NvZGVmeBJ8Eh1hcHBfY29tcGFuaW9uX2dlbmVyYXRlZF9maWxlcxpbCiVodG1sXzM1NDY0ZmNmNTZjMzQ0N2ZhOWEyOTA3N2ZhZWFlYmZkEgsSBxCOk9jx7RYYAZIBJAoKcHJvamVjdF9pZBIWQhQxNzcyODU4NDc5NTcyMTA5NzY5NA&filename=&opi=89354086",
+    "mimeType": "text/html"
+  },
+  "id": "f1e017ffc3a84a008e539f0a4eb32329",
+  "generatedBy": "HatterAgent",
+  "width": "780",
+  "height": "1768",
+  "title": "Animated Premium AI Resume Assembly",
+  "prompt": "Add premium micro-interactions and smooth transitions to this loading screen.\n1. Document Animation:\n- Add a floating/breathing effect to the entire resume card using a 4s ease-in-out 'translateY(0 to -4px to 0)' loop.\n- The back ghost layer should have a subtle horizontal parallax drift opposite to the front sheet.\n2. Writing Simulation:\n- Implement staggered entry animations for the resume content: Name line, subtitle, Experience rows, and Skills. Use a 450ms stagger between elements.\n- Add the vertical emerald cursor (#10B981) on the right edge of the document that grows from 0 to 100% height in a 2.5s loop with a soft emerald glow.\n- Skill pills should fill from left-to-right sequentially (#ECECEC to rgba(16,185,129,0.15)).\n3. Interactive Polish:\n- Add a simple JavaScript loop to rotate the primary status phrases every 3 seconds with a 200ms opacity crossfade.\n- Phrases to rotate: \"Анализирую ваш опыт...\", \"Подбираю правильные формулировки...\", \"Адаптирую под алгоритмы hh.ru...\", \"Почти готово...\".\n- The progress bar should smoothly animate from 0 to 85% over 12 seconds with a subtle pulse on the leading edge.\n4. Styling: Ensure all Nunito Sans typography, #FFFFFF background, and #10B981 accents are preserved. No external libraries. Use only vanilla CSS and JS. Include prefers-reduced-motion.",
+  "name": "projects/17728584795721097694/screens/f1e017ffc3a84a008e539f0a4eb32329",
+  "theme": {
+    "colorMode": "LIGHT",
+    "font": "NUNITO_SANS",
+    "roundness": "ROUND_EIGHT",
+    "customColor": "#006c49",
+    "headlineFont": "NUNITO_SANS",
+    "bodyFont": "NUNITO_SANS",
+    "labelFont": "NUNITO_SANS",
+    "namedColors": {
+      "on_primary_fixed": "#002113",
+      "tertiary_container": "#5c5e5f",
+      "on_secondary_fixed_variant": "#005236",
+      "on_error": "#ffffff",
+      "on_surface": "#161d19",
+      "surface_container_low": "#eef6ef",
+      "secondary_fixed_dim": "#4edea3",
+      "error_container": "#ffdad6",
+      "on_tertiary": "#ffffff",
+      "secondary": "#006c49",
+      "surface_container": "#e8f0e9",
+      "on_primary_fixed_variant": "#005236",
+      "primary_fixed": "#9df4c8",
+      "on_tertiary_fixed_variant": "#454748",
+      "outline_variant": "#bec9c0",
+      "on_secondary": "#ffffff",
+      "primary": "#005136",
+      "on_primary_container": "#93eabe",
+      "inverse_on_surface": "#ebf3ec",
+      "surface_dim": "#d4dcd5",
+      "error": "#ba1a1a",
+      "surface": "#f4fbf4",
+      "on_error_container": "#93000a",
+      "on_surface_variant": "#3f4943",
+      "inverse_primary": "#81d8ad",
+      "on_secondary_fixed": "#002113",
+      "surface_bright": "#f4fbf4",
+      "tertiary_fixed_dim": "#c5c7c8",
+      "primary_fixed_dim": "#81d8ad",
+      "secondary_container": "#6cf8bb",
+      "surface_tint": "#006c49",
+      "on_background": "#161d19",
+      "on_primary": "#ffffff",
+      "secondary_fixed": "#6ffbbe",
+      "tertiary": "#444748",
+      "surface_container_high": "#e3eae3",
+      "on_secondary_container": "#00714d",
+      "surface_variant": "#dde4de",
+      "surface_container_highest": "#dde4de",
+      "tertiary_fixed": "#e1e3e4",
+      "on_tertiary_fixed": "#191c1d",
+      "primary_container": "#006c49",
+      "surface_container_lowest": "#ffffff",
+      "inverse_surface": "#2b322e",
+      "on_tertiary_container": "#d6d8d9",
+      "background": "#f4fbf4",
+      "outline": "#6f7a72"
+    },
+    "designMd": "---\nname: Premium Fintech Utility\ncolors:\n  surface: '#f4fbf4'\n  surface-dim: '#d4dcd5'\n  surface-bright: '#f4fbf4'\n  surface-container-lowest: '#ffffff'\n  surface-container-low: '#eef6ef'\n  surface-container: '#e8f0e9'\n  surface-container-high: '#e3eae3'\n  surface-container-highest: '#dde4de'\n  on-surface: '#161d19'\n  on-surface-variant: '#3f4943'\n  inverse-surface: '#2b322e'\n  inverse-on-surface: '#ebf3ec'\n  outline: '#6f7a72'\n  outline-variant: '#bec9c0'\n  surface-tint: '#006c49'\n  primary: '#005136'\n  on-primary: '#ffffff'\n  primary-container: '#006c49'\n  on-primary-container: '#93eabe'\n  inverse-primary: '#81d8ad'\n  secondary: '#006c49'\n  on-secondary: '#ffffff'\n  secondary-container: '#6cf8bb'\n  on-secondary-container: '#00714d'\n  tertiary: '#444748'\n  on-tertiary: '#ffffff'\n  tertiary-container: '#5c5e5f'\n  on-tertiary-container: '#d6d8d9'\n  error: '#ba1a1a'\n  on-error: '#ffffff'\n  error-container: '#ffdad6'\n  on-error-container: '#93000a'\n  primary-fixed: '#9df4c8'\n  primary-fixed-dim: '#81d8ad'\n  on-primary-fixed: '#002113'\n  on-primary-fixed-variant: '#005236'\n  secondary-fixed: '#6ffbbe'\n  secondary-fixed-dim: '#4edea3'\n  on-secondary-fixed: '#002113'\n  on-secondary-fixed-variant: '#005236'\n  tertiary-fixed: '#e1e3e4'\n  tertiary-fixed-dim: '#c5c7c8'\n  on-tertiary-fixed: '#191c1d'\n  on-tertiary-fixed-variant: '#454748'\n  background: '#f4fbf4'\n  on-background: '#161d19'\n  surface-variant: '#dde4de'\ntypography:\n  display:\n    fontFamily: Nunito Sans\n    fontSize: 22px\n    fontWeight: '800'\n    lineHeight: 28px\n    letterSpacing: -0.02em\n  header-title:\n    fontFamily: Nunito Sans\n    fontSize: 16px\n    fontWeight: '700'\n    lineHeight: 24px\n    letterSpacing: -0.01em\n  body-base:\n    fontFamily: Nunito Sans\n    fontSize: 16px\n    fontWeight: '400'\n    lineHeight: 24px\n    letterSpacing: '0'\n  body-semibold:\n    fontFamily: Nunito Sans\n    fontSize: 16px\n    fontWeight: '600'\n    lineHeight: 24px\n    letterSpacing: '0'\n  caption:\n    fontFamily: Nunito Sans\n    fontSize: 14px\n    fontWeight: '400'\n    lineHeight: 20px\n    letterSpacing: '0'\n  label-caps:\n    fontFamily: Nunito Sans\n    fontSize: 11px\n    fontWeight: '700'\n    lineHeight: 14px\n    letterSpacing: 0.05em\nrounded:\n  sm: 0.25rem\n  DEFAULT: 0.5rem\n  md: 0.75rem\n  lg: 1rem\n  xl: 1.5rem\n  full: 9999px\nspacing:\n  unit: 4px\n  margin-mobile: 16px\n  gutter: 16px\n  stack-sm: 12px\n  stack-md: 16px\n  stack-lg: 24px\n---\n\n## Brand & Style\n\nThe design system is a sophisticated blend of **Corporate Modern** and **Tactile** design movements, specifically tailored for the Telegram Mini App ecosystem. It evokes a \"Premium Fintech Polish\"—combining the high-trust, structured feel of a banking application with the warm, approachable utility of a career assistant.\n\nThe brand personality is professional yet encouraging. It uses generous whitespace and a \"locked\" light-mode aesthetic to ensure document fidelity. On desktop, the UI is presented within a centered mobile frame (480px) over a soft organic background, maintaining an editorial, high-end presentation style. The emotional response should be one of \"calm confidence\"—the user feels they are using a precise, professional tool that is nonetheless easy to navigate.\n\n## Colors\n\nThe palette avoids clinical blues in favor of organic, high-trust greens and warm carbon tones.\n\n- **Primary (#006c49):** Deep Forest Green. Used for core branding, section headings, and high-trust elements.\n- **Secondary (#10b981):** Emerald Green. The active accent for CTAs, focus states, and success indicators.\n- **Surface (#f8f9fa, #f5f5f5):** Warm neutrals used for elevated cards and container layering.\n- **Text (#161d19):** Carbon Charcoal. Provides high legibility without the harshness of pure black.\n- **Muted Text (#707579):** Standard Telegram-inspired slate gray for secondary metadata.\n- **Desktop Backdrop (#e4ebe6):** A soft sage used to frame the app in wide-screen environments.\n\n## Typography\n\nThis design system utilizes **Nunito Sans** to project a geometric but human voice. \n\nHeadlines use heavy weights (800) and tight letter-spacing to ensure impact and prevent awkward wrapping on narrow Telegram viewports. Body text maintains a relaxed line-height (1.5) for high readability in content-heavy CV previews. A specialized `label-caps` style is used for micro-metadata, providing a professional, \"architectural\" feel to technical details.\n\n## Layout & Spacing\n\nThe system follows a **Fixed Grid** philosophy for the core app container, constrained to a `480px` max-width. \n\n- **Horizontal Rhythm:** A consistent 16px (`px-4`) margin is applied to all page content.\n- **Vertical Rhythm:** Built on a 4px baseline. Components are stacked with 12px or 16px gaps to maintain a tight, utility-focused flow.\n- **Sticky Elements:** The header (56px) and footer are fixed. The footer includes a `10px` backdrop blur and accounts for iOS safe area insets (`env(safe-area-inset-bottom)`) to ensure the primary CTA is always accessible and visually anchored.\n\n## Elevation & Depth\n\nDepth is achieved through **Tonal Layers** and **Ambient Shadows**.\n\n- **Layering:** The base canvas is white. Content modules use a hierarchy of surfaces (`#f8f9fa` for primary cards, `#f5f5f5` for nested cards).\n- **Shadows:** Shadows are highly diffused and tinted with the primary brand color (e.g., `rgba(16, 185, 129, 0.2)`). This creates a \"glow\" effect rather than a traditional drop shadow, reinforcing the fintech polish.\n- **Borders:** Low-contrast outlines (`#bbcabf` at 12% opacity) define element boundaries without adding visual noise, keeping the UI clean and airy.\n- **Blur:** The footer and specific \"locked\" preview panels use a `10px` backdrop blur to create a sense of physical layering and premium texture.\n\n## Shapes\n\nThe design system uses a **Rounded** shape language to appear friendly and modern.\n\n- **Primary Cards:** Use `rounded-2xl` (16px) for a soft, friendly frame.\n- **Buttons & Inputs:** Use `rounded-xl` (12px) to provide a distinct, clickable feel that is softer than standard corporate apps but more structured than playful consumer apps.\n- **Interactive Toggles:** Segmented controllers use organic pill-shaped indicators for a tactile, physical look.\n\n## Components\n\n### Buttons\n- **Primary CTA:** Filled `#10b981` with white text. Features a 52px height for high touch-priority and a soft emerald glow shadow.\n- **Secondary:** Surface-colored (`#f8f9fa`) with a subtle 1px border and charcoal text.\n- **Interaction:** All buttons utilize a spring-based scale effect (`scale: 0.98`) on tap to provide tactile feedback.\n\n### Form Fields\n- **Inputs & Textareas:** Pure white background with a 12px corner radius. Focus states are indicated by a 2px emerald ring. Textareas are fixed-height (140px) with no resize handle to maintain layout integrity.\n\n### Cards & Modules\n- **Benefit Cards:** Use a tinted brand background (`rgba(16, 185, 129, 0.12)`) and a darker emerald border to distinguish them from standard informational cards.\n\n### Navigation\n- **Segmented Switcher:** A gray track containing a white \"floating\" pill. The selection indicator uses a soft shadow to appear physically elevated above the track.\n\n### Domain-Specific\n- **Voice Recorder:** A horizontal pill with a symmetric green waveform visualizer and a pulsing red recording indicator, mimicking native Telegram voice messages.\n- **Preview Stack:** Mockup \"sheets\" of paper stacked with slight offsets and scales to communicate document packages.",
+    "colorVariant": "FIDELITY",
+    "overridePrimaryColor": "#006c49",
+    "overrideSecondaryColor": "#10b981",
+    "overrideTertiaryColor": "#f8f9fa",
+    "overrideNeutralColor": "#161d19",
+    "spacingScale": 2,
+    "typography": {
+      "display": {
+        "fontFamily": "Nunito Sans",
+        "fontSize": "22px",
+        "fontWeight": "800",
+        "lineHeight": "28px",
+        "letterSpacing": "-0.02em"
+      },
+      "caption": {
+        "fontFamily": "Nunito Sans",
+        "fontSize": "14px",
+        "fontWeight": "400",
+        "lineHeight": "20px",
+        "letterSpacing": "0"
+      },
+      "body-semibold": {
+        "fontFamily": "Nunito Sans",
+        "fontSize": "16px",
+        "fontWeight": "600",
+        "lineHeight": "24px",
+        "letterSpacing": "0"
+      },
+      "label-caps": {
+        "fontFamily": "Nunito Sans",
+        "fontSize": "11px",
+        "fontWeight": "700",
+        "lineHeight": "14px",
+        "letterSpacing": "0.05em"
+      },
+      "body-base": {
+        "fontFamily": "Nunito Sans",
+        "fontSize": "16px",
+        "fontWeight": "400",
+        "lineHeight": "24px",
+        "letterSpacing": "0"
+      },
+      "header-title": {
+        "fontFamily": "Nunito Sans",
+        "fontSize": "16px",
+        "fontWeight": "700",
+        "lineHeight": "24px",
+        "letterSpacing": "-0.01em"
+      }
+    },
+    "spacing": {
+      "unit": "4px",
+      "margin-mobile": "16px",
+      "gutter": "16px",
+      "stack-lg": "24px",
+      "stack-sm": "12px",
+      "stack-md": "16px"
+    },
+    "headlineFontFamily": "Nunito Sans",
+    "bodyFontFamily": "Nunito Sans",
+    "labelFontFamily": "Nunito Sans"
+  },
+  "deviceType": "MOBILE",
+  "screenType": "DESIGN",
+  "screenMetadata": {
+    "agentType": "PRO_AGENT",
+    "status": "COMPLETE"
+  },
+  "designSystem": {
+    "name": "assets/8919d9f6220e409f9104e23245a61b9d",
+    "designSystem": {
+      "displayName": "Premium Fintech Utility",
+      "styleGuidelines": "## Brand & Style\n\nThe design system is a sophisticated blend of **Corporate Modern** and **Tactile** design movements, specifically tailored for the Telegram Mini App ecosystem. It evokes a \"Premium Fintech Polish\"—combining the high-trust, structured feel of a banking application with the warm, approachable utility of a career assistant.\n\nThe brand personality is professional yet encouraging. It uses generous whitespace and a \"locked\" light-mode aesthetic to ensure document fidelity. On desktop, the UI is presented within a centered mobile frame (480px) over a soft organic background, maintaining an editorial, high-end presentation style. The emotional response should be one of \"calm confidence\"—the user feels they are using a precise, professional tool that is nonetheless easy to navigate.\n\n## Layout & Spacing\n\nThe system follows a **Fixed Grid** philosophy for the core app container, constrained to a `480px` max-width. \n\n- **Horizontal Rhythm:** A consistent 16px (`px-4`) margin is applied to all page content.\n- **Vertical Rhythm:** Built on a 4px baseline. Components are stacked with 12px or 16px gaps to maintain a tight, utility-focused flow.\n- **Sticky Elements:** The header (56px) and footer are fixed. The footer includes a `10px` backdrop blur and accounts for iOS safe area insets (`env(safe-area-inset-bottom)`) to ensure the primary CTA is always accessible and visually anchored.\n\n## Elevation & Depth\n\nDepth is achieved through **Tonal Layers** and **Ambient Shadows**.\n\n- **Layering:** The base canvas is white. Content modules use a hierarchy of surfaces (`#f8f9fa` for primary cards, `#f5f5f5` for nested cards).\n- **Shadows:** Shadows are highly diffused and tinted with the primary brand color (e.g., `rgba(16, 185, 129, 0.2)`). This creates a \"glow\" effect rather than a traditional drop shadow, reinforcing the fintech polish.\n- **Borders:** Low-contrast outlines (`#bbcabf` at 12% opacity) define element boundaries without adding visual noise, keeping the UI clean and airy.\n- **Blur:** The footer and specific \"locked\" preview panels use a `10px` backdrop blur to create a sense of physical layering and premium texture.\n\n## Components\n\n### Buttons\n- **Primary CTA:** Filled `#10b981` with white text. Features a 52px height for high touch-priority and a soft emerald glow shadow.\n- **Secondary:** Surface-colored (`#f8f9fa`) with a subtle 1px border and charcoal text.\n- **Interaction:** All buttons utilize a spring-based scale effect (`scale: 0.98`) on tap to provide tactile feedback.\n\n### Form Fields\n- **Inputs & Textareas:** Pure white background with a 12px corner radius. Focus states are indicated by a 2px emerald ring. Textareas are fixed-height (140px) with no resize handle to maintain layout integrity.\n\n### Cards & Modules\n- **Benefit Cards:** Use a tinted brand background (`rgba(16, 185, 129, 0.12)`) and a darker emerald border to distinguish them from standard informational cards.\n\n### Navigation\n- **Segmented Switcher:** A gray track containing a white \"floating\" pill. The selection indicator uses a soft shadow to appear physically elevated above the track.\n\n### Domain-Specific\n- **Voice Recorder:** A horizontal pill with a symmetric green waveform visualizer and a pulsing red recording indicator, mimicking native Telegram voice messages.\n- **Preview Stack:** Mockup \"sheets\" of paper stacked with slight offsets and scales to communicate document packages.",
+      "theme": {
+        "colorMode": "LIGHT",
+        "font": "NUNITO_SANS",
+        "roundness": "ROUND_EIGHT",
+        "customColor": "#006c49",
+        "headlineFont": "NUNITO_SANS",
+        "bodyFont": "NUNITO_SANS",
+        "labelFont": "NUNITO_SANS",
+        "namedColors": {
+          "surface": "#f4fbf4",
+          "error": "#ba1a1a",
+          "surface_dim": "#d4dcd5",
+          "on_error_container": "#93000a",
+          "inverse_primary": "#81d8ad",
+          "on_surface_variant": "#3f4943",
+          "on_primary_fixed_variant": "#005236",
+          "surface_container": "#e8f0e9",
+          "secondary": "#006c49",
+          "outline_variant": "#bec9c0",
+          "on_tertiary_fixed_variant": "#454748",
+          "primary_fixed": "#9df4c8",
+          "on_secondary": "#ffffff",
+          "inverse_on_surface": "#ebf3ec",
+          "on_primary_container": "#93eabe",
+          "primary": "#005136",
+          "error_container": "#ffdad6",
+          "secondary_fixed_dim": "#4edea3",
+          "surface_container_low": "#eef6ef",
+          "on_tertiary": "#ffffff",
+          "on_primary_fixed": "#002113",
+          "on_error": "#ffffff",
+          "on_surface": "#161d19",
+          "on_secondary_fixed_variant": "#005236",
+          "tertiary_container": "#5c5e5f",
+          "on_tertiary_container": "#d6d8d9",
+          "inverse_surface": "#2b322e",
+          "background": "#f4fbf4",
+          "outline": "#6f7a72",
+          "surface_variant": "#dde4de",
+          "on_tertiary_fixed": "#191c1d",
+          "surface_container_highest": "#dde4de",
+          "tertiary_fixed": "#e1e3e4",
+          "surface_container_lowest": "#ffffff",
+          "primary_container": "#006c49",
+          "surface_container_high": "#e3eae3",
+          "tertiary": "#444748",
+          "secondary_fixed": "#6ffbbe",
+          "on_primary": "#ffffff",
+          "on_secondary_container": "#00714d",
+          "tertiary_fixed_dim": "#c5c7c8",
+          "surface_bright": "#f4fbf4",
+          "on_secondary_fixed": "#002113",
+          "surface_tint": "#006c49",
+          "secondary_container": "#6cf8bb",
+          "primary_fixed_dim": "#81d8ad",
+          "on_background": "#161d19"
+        },
+        "designMd": "---\nname: Premium Fintech Utility\ncolors:\n  surface: '#f4fbf4'\n  surface-dim: '#d4dcd5'\n  surface-bright: '#f4fbf4'\n  surface-container-lowest: '#ffffff'\n  surface-container-low: '#eef6ef'\n  surface-container: '#e8f0e9'\n  surface-container-high: '#e3eae3'\n  surface-container-highest: '#dde4de'\n  on-surface: '#161d19'\n  on-surface-variant: '#3f4943'\n  inverse-surface: '#2b322e'\n  inverse-on-surface: '#ebf3ec'\n  outline: '#6f7a72'\n  outline-variant: '#bec9c0'\n  surface-tint: '#006c49'\n  primary: '#005136'\n  on-primary: '#ffffff'\n  primary-container: '#006c49'\n  on-primary-container: '#93eabe'\n  inverse-primary: '#81d8ad'\n  secondary: '#006c49'\n  on-secondary: '#ffffff'\n  secondary-container: '#6cf8bb'\n  on-secondary-container: '#00714d'\n  tertiary: '#444748'\n  on-tertiary: '#ffffff'\n  tertiary-container: '#5c5e5f'\n  on-tertiary-container: '#d6d8d9'\n  error: '#ba1a1a'\n  on-error: '#ffffff'\n  error-container: '#ffdad6'\n  on-error-container: '#93000a'\n  primary-fixed: '#9df4c8'\n  primary-fixed-dim: '#81d8ad'\n  on-primary-fixed: '#002113'\n  on-primary-fixed-variant: '#005236'\n  secondary-fixed: '#6ffbbe'\n  secondary-fixed-dim: '#4edea3'\n  on-secondary-fixed: '#002113'\n  on-secondary-fixed-variant: '#005236'\n  tertiary-fixed: '#e1e3e4'\n  tertiary-fixed-dim: '#c5c7c8'\n  on-tertiary-fixed: '#191c1d'\n  on-tertiary-fixed-variant: '#454748'\n  background: '#f4fbf4'\n  on-background: '#161d19'\n  surface-variant: '#dde4de'\ntypography:\n  display:\n    fontFamily: Nunito Sans\n    fontSize: 22px\n    fontWeight: '800'\n    lineHeight: 28px\n    letterSpacing: -0.02em\n  header-title:\n    fontFamily: Nunito Sans\n    fontSize: 16px\n    fontWeight: '700'\n    lineHeight: 24px\n    letterSpacing: -0.01em\n  body-base:\n    fontFamily: Nunito Sans\n    fontSize: 16px\n    fontWeight: '400'\n    lineHeight: 24px\n    letterSpacing: '0'\n  body-semibold:\n    fontFamily: Nunito Sans\n    fontSize: 16px\n    fontWeight: '600'\n    lineHeight: 24px\n    letterSpacing: '0'\n  caption:\n    fontFamily: Nunito Sans\n    fontSize: 14px\n    fontWeight: '400'\n    lineHeight: 20px\n    letterSpacing: '0'\n  label-caps:\n    fontFamily: Nunito Sans\n    fontSize: 11px\n    fontWeight: '700'\n    lineHeight: 14px\n    letterSpacing: 0.05em\nrounded:\n  sm: 0.25rem\n  DEFAULT: 0.5rem\n  md: 0.75rem\n  lg: 1rem\n  xl: 1.5rem\n  full: 9999px\nspacing:\n  unit: 4px\n  margin-mobile: 16px\n  gutter: 16px\n  stack-sm: 12px\n  stack-md: 16px\n  stack-lg: 24px\n---\n\n## Brand & Style\n\nThe design system is a sophisticated blend of **Corporate Modern** and **Tactile** design movements, specifically tailored for the Telegram Mini App ecosystem. It evokes a \"Premium Fintech Polish\"—combining the high-trust, structured feel of a banking application with the warm, approachable utility of a career assistant.\n\nThe brand personality is professional yet encouraging. It uses generous whitespace and a \"locked\" light-mode aesthetic to ensure document fidelity. On desktop, the UI is presented within a centered mobile frame (480px) over a soft organic background, maintaining an editorial, high-end presentation style. The emotional response should be one of \"calm confidence\"—the user feels they are using a precise, professional tool that is nonetheless easy to navigate.\n\n## Colors\n\nThe palette avoids clinical blues in favor of organic, high-trust greens and warm carbon tones.\n\n- **Primary (#006c49):** Deep Forest Green. Used for core branding, section headings, and high-trust elements.\n- **Secondary (#10b981):** Emerald Green. The active accent for CTAs, focus states, and success indicators.\n- **Surface (#f8f9fa, #f5f5f5):** Warm neutrals used for elevated cards and container layering.\n- **Text (#161d19):** Carbon Charcoal. Provides high legibility without the harshness of pure black.\n- **Muted Text (#707579):** Standard Telegram-inspired slate gray for secondary metadata.\n- **Desktop Backdrop (#e4ebe6):** A soft sage used to frame the app in wide-screen environments.\n\n## Typography\n\nThis design system utilizes **Nunito Sans** to project a geometric but human voice. \n\nHeadlines use heavy weights (800) and tight letter-spacing to ensure impact and prevent awkward wrapping on narrow Telegram viewports. Body text maintains a relaxed line-height (1.5) for high readability in content-heavy CV previews. A specialized `label-caps` style is used for micro-metadata, providing a professional, \"architectural\" feel to technical details.\n\n## Layout & Spacing\n\nThe system follows a **Fixed Grid** philosophy for the core app container, constrained to a `480px` max-width. \n\n- **Horizontal Rhythm:** A consistent 16px (`px-4`) margin is applied to all page content.\n- **Vertical Rhythm:** Built on a 4px baseline. Components are stacked with 12px or 16px gaps to maintain a tight, utility-focused flow.\n- **Sticky Elements:** The header (56px) and footer are fixed. The footer includes a `10px` backdrop blur and accounts for iOS safe area insets (`env(safe-area-inset-bottom)`) to ensure the primary CTA is always accessible and visually anchored.\n\n## Elevation & Depth\n\nDepth is achieved through **Tonal Layers** and **Ambient Shadows**.\n\n- **Layering:** The base canvas is white. Content modules use a hierarchy of surfaces (`#f8f9fa` for primary cards, `#f5f5f5` for nested cards).\n- **Shadows:** Shadows are highly diffused and tinted with the primary brand color (e.g., `rgba(16, 185, 129, 0.2)`). This creates a \"glow\" effect rather than a traditional drop shadow, reinforcing the fintech polish.\n- **Borders:** Low-contrast outlines (`#bbcabf` at 12% opacity) define element boundaries without adding visual noise, keeping the UI clean and airy.\n- **Blur:** The footer and specific \"locked\" preview panels use a `10px` backdrop blur to create a sense of physical layering and premium texture.\n\n## Shapes\n\nThe design system uses a **Rounded** shape language to appear friendly and modern.\n\n- **Primary Cards:** Use `rounded-2xl` (16px) for a soft, friendly frame.\n- **Buttons & Inputs:** Use `rounded-xl` (12px) to provide a distinct, clickable feel that is softer than standard corporate apps but more structured than playful consumer apps.\n- **Interactive Toggles:** Segmented controllers use organic pill-shaped indicators for a tactile, physical look.\n\n## Components\n\n### Buttons\n- **Primary CTA:** Filled `#10b981` with white text. Features a 52px height for high touch-priority and a soft emerald glow shadow.\n- **Secondary:** Surface-colored (`#f8f9fa`) with a subtle 1px border and charcoal text.\n- **Interaction:** All buttons utilize a spring-based scale effect (`scale: 0.98`) on tap to provide tactile feedback.\n\n### Form Fields\n- **Inputs & Textareas:** Pure white background with a 12px corner radius. Focus states are indicated by a 2px emerald ring. Textareas are fixed-height (140px) with no resize handle to maintain layout integrity.\n\n### Cards & Modules\n- **Benefit Cards:** Use a tinted brand background (`rgba(16, 185, 129, 0.12)`) and a darker emerald border to distinguish them from standard informational cards.\n\n### Navigation\n- **Segmented Switcher:** A gray track containing a white \"floating\" pill. The selection indicator uses a soft shadow to appear physically elevated above the track.\n\n### Domain-Specific\n- **Voice Recorder:** A horizontal pill with a symmetric green waveform visualizer and a pulsing red recording indicator, mimicking native Telegram voice messages.\n- **Preview Stack:** Mockup \"sheets\" of paper stacked with slight offsets and scales to communicate document packages.",
+        "colorVariant": "FIDELITY",
+        "overridePrimaryColor": "#006c49",
+        "overrideSecondaryColor": "#10b981",
+        "overrideTertiaryColor": "#f8f9fa",
+        "overrideNeutralColor": "#161d19",
+        "spacingScale": 2,
+        "typography": {
+          "caption": {
+            "fontFamily": "Nunito Sans",
+            "fontSize": "14px",
+            "fontWeight": "400",
+            "lineHeight": "20px",
+            "letterSpacing": "0"
+          },
+          "display": {
+            "fontFamily": "Nunito Sans",
+            "fontSize": "22px",
+            "fontWeight": "800",
+            "lineHeight": "28px",
+            "letterSpacing": "-0.02em"
+          },
+          "label-caps": {
+            "fontFamily": "Nunito Sans",
+            "fontSize": "11px",
+            "fontWeight": "700",
+            "lineHeight": "14px",
+            "letterSpacing": "0.05em"
+          },
+          "body-semibold": {
+            "fontFamily": "Nunito Sans",
+            "fontSize": "16px",
+            "fontWeight": "600",
+            "lineHeight": "24px",
+            "letterSpacing": "0"
+          },
+          "body-base": {
+            "fontFamily": "Nunito Sans",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "lineHeight": "24px",
+            "letterSpacing": "0"
+          },
+          "header-title": {
+            "fontFamily": "Nunito Sans",
+            "fontSize": "16px",
+            "fontWeight": "700",
+            "lineHeight": "24px",
+            "letterSpacing": "-0.01em"
+          }
+        },
+        "spacing": {
+          "gutter": "16px",
+          "stack-lg": "24px",
+          "stack-md": "16px",
+          "stack-sm": "12px",
+          "unit": "4px",
+          "margin-mobile": "16px"
+        },
+        "headlineFontFamily": "Nunito Sans",
+        "bodyFontFamily": "Nunito Sans",
+        "labelFontFamily": "Nunito Sans"
+      }
+    },
+    "version": "1"
+  }
+}
