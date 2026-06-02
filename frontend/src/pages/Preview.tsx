@@ -17,7 +17,6 @@ import { Screen } from "../components/ui/Screen";
 import { useFounderStatus } from "../hooks/useFounderStatus";
 import { useTelegramBackButton } from "../hooks/useTelegramBackButton";
 import { PREVIEW_CHECKLIST } from "../lib/marketingCopy";
-import { PDF_TEMPLATES } from "../lib/templates";
 import { useAppStore } from "../store";
 import { getTg } from "../telegram";
 
@@ -32,7 +31,6 @@ export function PreviewPage() {
     startEditResume,
     previewReturnPage,
     isPaid,
-    selectedTemplate,
     openHhTextView,
   } = useAppStore();
   const founderActive = useFounderStatus();
@@ -43,8 +41,6 @@ export function PreviewPage() {
   const previewLocked = !isPaid && !founderActive;
   const previewPaid = isPaid || founderActive;
   const useFitLayout = previewLocked || previewPaid;
-  const templateName = PDF_TEMPLATES.find((tmpl) => tmpl.id === selectedTemplate)?.name ?? "Классический";
-
   const handleBack = useCallback(() => setPage(previewReturnPage), [setPage, previewReturnPage]);
   useTelegramBackButton(handleBack);
 
@@ -147,7 +143,7 @@ export function PreviewPage() {
       alert("Резюме не найдено. Сформируйте его заново.");
       return;
     }
-    setPage("template_select");
+    setPage("payment");
   };
 
   const handleShare = () => {
@@ -178,16 +174,6 @@ export function PreviewPage() {
       <AppHeader onBack={handleBack} showBack title="Предпросмотр" />
       <main className={mainClass}>
         {previewPaid ? <PreviewPaidHero /> : null}
-
-        <section className="preview-template-bar preview-template-bar--compact">
-          <div className="preview-template-bar-copy">
-            <span className="preview-template-bar-label">Шаблон PDF</span>
-            <strong className="preview-template-bar-name">{templateName}</strong>
-          </div>
-          <button type="button" onClick={() => setPage("template_select")} className="preview-share-link">
-            Изменить
-          </button>
-        </section>
 
         <div className="preview-preview-slot">
           {previewUrl && !previewError ? (

@@ -6,12 +6,10 @@ import type { ResumeData, UserAnswers, WorkEntry } from "./types";
 
 type Page =
   | "home"
-  | "template_pick"
   | "onboarding"
   | "skill_pick"
   | "loading"
   | "preview"
-  | "template_select"
   | "payment"
   | "success"
   | "history"
@@ -99,7 +97,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   setSelectedTemplate: (selectedTemplate) => set({ selectedTemplate }),
   startNewResume: () =>
     set({
-      page: "template_pick",
+      page: "onboarding",
       onboardingMode: "create",
       previewReturnPage: "home",
       onboardingStep: 0,

@@ -49,7 +49,7 @@ export function PaymentPage() {
   const [bonusApplied, setBonusApplied] = useState(false);
   const [todayCount, setTodayCount] = useState(0);
 
-  const handleBack = useCallback(() => setPage("template_select"), [setPage]);
+  const handleBack = useCallback(() => setPage("preview"), [setPage]);
   useTelegramBackButton(handleBack);
   useYookassaReturnPoll(true);
 

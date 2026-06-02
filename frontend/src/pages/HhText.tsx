@@ -77,7 +77,7 @@ export function HhTextPage() {
   };
 
   const goToPayment = () => {
-    setPage("template_select");
+    setPage("payment");
   };
 
   return (
