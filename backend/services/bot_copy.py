@@ -25,8 +25,7 @@ def start_text(count: int, greeting: str | None = None) -> str:
         f"{TEMPLATE_LINE}\n"
         "✅ Формат hh.ru — привычен рекрутёрам\n"
         "🎤 Можно отвечать голосом\n"
-        f"📊 Уже создано <b>{n}+</b> резюме\n\n"
-        f"💳 Стоимость: <b>{PAYMENT_LINE}</b>"
+        f"📊 Уже создано <b>{n}+</b> резюме"
     )
 
 

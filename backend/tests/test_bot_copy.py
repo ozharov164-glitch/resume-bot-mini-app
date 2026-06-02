@@ -29,7 +29,7 @@ def test_trust_mentions_card_and_5000():
 def test_start_text_payment_options():
     text = start_text(5000, "Анна")
     assert "Анна" in text
-    assert PAYMENT_LINE in text
+    assert PAYMENT_LINE not in text
     assert "Classic" in text
     assert "hh.ru" in text
 
