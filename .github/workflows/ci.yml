@@ -1,0 +1,34 @@
+name: CI
+
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+
+jobs:
+  backend-bot:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Syntax check
+        run: python3 -m compileall -q backend bot scripts
+      - name: Install test dependencies
+        run: pip install -q -r backend/requirements.txt pytest pytest-asyncio
+      - name: Unit tests
+        env:
+          BOT_TOKEN: "0:test"
+          OPENROUTER_API_KEY: test
+          SUPABASE_URL: https://example.supabase.co
+          SUPABASE_KEY: test
+          JWT_SECRET: test
+          APP_URL: https://example.test
+          FRONTEND_URL: https://example.test/app
+          BOT_USERNAME: resumeez_bot
+        run: |
+          PYTHONPATH=backend pytest -q \
+            backend/tests/test_bot_copy.py \
+            backend/tests/test_payment_fulfillment.py \
+            backend/tests/test_invoice_payload.py
