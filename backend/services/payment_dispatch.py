@@ -18,6 +18,7 @@ async def fulfill_from_invoice_payload(
     telegram_id: int,
     *,
     payment: PaymentNotifyInfo | None = None,
+    send_document: bool = True,
 ) -> bool:
     resume_id = str(payload.get("resume_id") or "")
     if not resume_id:
@@ -37,4 +38,5 @@ async def fulfill_from_invoice_payload(
         telegram_id,
         payment=payment,
         bonus_stars_applied=bonus_applied,
+        send_document=send_document,
     )

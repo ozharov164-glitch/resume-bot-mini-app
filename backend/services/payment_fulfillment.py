@@ -38,6 +38,8 @@ async def fulfill_paid_resume(
     *,
     payment: PaymentNotifyInfo | None = None,
     bonus_stars_applied: int = 0,
+    send_document: bool = True,
+    template_name: str | None = None,
 ) -> bool:
     """Mark resume paid and send PDF to user's Telegram chat. Idempotent."""
     resume = db.find_resume(resume_id)
@@ -62,26 +64,35 @@ async def fulfill_paid_resume(
         logger.exception("fulfill: invalid resume data for %s", resume_id)
         raise exc
 
-    template_name = resume.get("template_id") or "classic"
+    valid_templates = {"classic", "modern", "compact"}
+    selected_template = (template_name or resume.get("template_id") or "classic").strip().lower()
+    if selected_template not in valid_templates:
+        selected_template = "classic"
+    if template_name and selected_template != (resume.get("template_id") or "classic"):
+        db.update_resume(resume_id, {"template_id": selected_template})
+        resume["template_id"] = selected_template
     if bonus_stars_applied > 0:
         db.use_bonus_stars(telegram_id, bonus_stars_applied)
 
-    try:
-        pdf_bytes = await generate_pdf_async(resume_data, template_name)
-    except Exception:
-        logger.exception("fulfill: pdf generation failed resume_id=%s", resume_id)
-        raise
-    safe_name = resume_data.get("full_name", "resume").replace(" ", "_")[:80]
-    filename = f"resume_{safe_name}.pdf"
-    name = (resume_data.get("full_name") or "").strip()
-    caption = f"Готово! Ваше резюме в PDF уже в чате. Удачи в поиске работы{f', {name}' if name else ''}!"
-    await send_document_to_user(
-        user_telegram_id=telegram_id,
-        document=pdf_bytes,
-        filename=filename,
-        caption=caption.strip(),
-    )
-    logger.info("fulfill: PDF sent for resume %s to telegram_id=%s", resume_id, telegram_id)
+    if send_document:
+        try:
+            pdf_bytes = await generate_pdf_async(resume_data, selected_template)
+        except Exception:
+            logger.exception("fulfill: pdf generation failed resume_id=%s", resume_id)
+            raise
+        safe_name = resume_data.get("full_name", "resume").replace(" ", "_")[:80]
+        filename = f"resume_{safe_name}.pdf"
+        name = (resume_data.get("full_name") or "").strip()
+        caption = f"Готово! Ваше резюме в PDF уже в чате. Удачи в поиске работы{f', {name}' if name else ''}!"
+        await send_document_to_user(
+            user_telegram_id=telegram_id,
+            document=pdf_bytes,
+            filename=filename,
+            caption=caption.strip(),
+        )
+        logger.info("fulfill: PDF sent for resume %s to telegram_id=%s", resume_id, telegram_id)
+    else:
+        logger.info("fulfill: payment confirmed without PDF send resume_id=%s", resume_id)
 
     if first_payment:
         try:

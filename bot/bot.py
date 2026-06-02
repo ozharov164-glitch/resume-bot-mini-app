@@ -73,6 +73,34 @@ API_URL = settings.APP_URL.rstrip("/")
 _ADMIN_KEY = settings.ADMIN_SECRET_KEY
 _STATS_TTL_SEC = 60.0
 _stats_cache: tuple[int, float] | None = None
+PDF_TEMPLATE_LABELS = {
+    "classic": "Classic",
+    "modern": "Modern",
+    "compact": "Compact",
+}
+
+
+def _paid_template_keyboard(resume_id: str) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        [
+            [
+                InlineKeyboardButton(
+                    f"🖼 {PDF_TEMPLATE_LABELS['classic']}",
+                    callback_data=f"paid_tpl:{resume_id}:classic",
+                ),
+                InlineKeyboardButton(
+                    f"✨ {PDF_TEMPLATE_LABELS['modern']}",
+                    callback_data=f"paid_tpl:{resume_id}:modern",
+                ),
+            ],
+            [
+                InlineKeyboardButton(
+                    f"📄 {PDF_TEMPLATE_LABELS['compact']}",
+                    callback_data=f"paid_tpl:{resume_id}:compact",
+                )
+            ],
+        ]
+    )
 
 
 def _founder_ids() -> list[int]:
@@ -1372,7 +1400,27 @@ async def successful_payment(update: Update, context: ContextTypes.DEFAULT_TYPE)
         )
         from services.payment_dispatch import fulfill_from_invoice_payload
 
-        await fulfill_from_invoice_payload(db, payload, telegram_id, payment=pay_info)
+        payment_type = str(payload.get("type") or "single_pdf")
+        if payment_type == "single_pdf":
+            paid = await fulfill_from_invoice_payload(
+                db,
+                payload,
+                telegram_id,
+                payment=pay_info,
+                send_document=False,
+            )
+            if not paid:
+                raise RuntimeError("payment fulfilled state was not saved")
+            resume_id = str(payload.get("resume_id") or "")
+            if not resume_id:
+                raise RuntimeError("payment payload missing resume_id")
+            await update.message.reply_text(
+                "✅ Оплата прошла!\n\n"
+                "Теперь выберите шаблон PDF. После выбора сразу отправлю готовое резюме в этот чат.",
+                reply_markup=_paid_template_keyboard(resume_id),
+            )
+        else:
+            await fulfill_from_invoice_payload(db, payload, telegram_id, payment=pay_info)
 
         if context.job_queue:
             context.job_queue.run_once(
@@ -1387,6 +1435,66 @@ async def successful_payment(update: Update, context: ContextTypes.DEFAULT_TYPE)
     except Exception:
         logger.exception("successful_payment handler failed")
         await update.message.reply_text(payment_error_text())
+
+
+async def paid_template_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    if not query:
+        return
+    parts = (query.data or "").split(":")
+    if len(parts) != 3:
+        await query.answer("Некорректный выбор шаблона", show_alert=True)
+        return
+    _, resume_id, template_id = parts
+    if template_id not in PDF_TEMPLATE_LABELS:
+        await query.answer("Шаблон не найден", show_alert=True)
+        return
+    user = update.effective_user
+    if not user:
+        await query.answer("Не удалось определить пользователя", show_alert=True)
+        return
+
+    db = get_db()
+    user_record = db.find_user_by_telegram_id(user.id)
+    if not user_record:
+        await query.answer("Пользователь не найден", show_alert=True)
+        return
+    resume = db.find_resume(resume_id, user_record["id"])
+    if not resume:
+        await query.answer("Резюме не найдено", show_alert=True)
+        return
+    if not resume.get("is_paid"):
+        await query.answer("Сначала завершите оплату", show_alert=True)
+        return
+
+    await _edit_callback_message(
+        query,
+        f"⏳ Готовлю PDF в шаблоне <b>{PDF_TEMPLATE_LABELS[template_id]}</b>...",
+    )
+    try:
+        await fulfill_paid_resume(
+            db,
+            resume_id,
+            user.id,
+            bonus_stars_applied=0,
+            template_name=template_id,
+        )
+    except Exception:
+        logger.exception(
+            "paid template callback failed resume_id=%s telegram_id=%s template=%s",
+            resume_id,
+            user.id,
+            template_id,
+        )
+        await query.message.reply_text(payment_error_text())
+        return
+
+    await _edit_callback_message(
+        query,
+        f"✅ Отправил PDF в шаблоне <b>{PDF_TEMPLATE_LABELS[template_id]}</b>.\n"
+        "Если хотите, можете выбрать другой шаблон и получить ещё один вариант.",
+        reply_markup=_paid_template_keyboard(resume_id),
+    )
 
 
 async def post_init(application: Application) -> None:
@@ -1467,6 +1575,7 @@ def main():
     app.add_handler(CallbackQueryHandler(founder_dm_hint_callback, pattern="^founder_dm_hint$"))
     app.add_handler(CallbackQueryHandler(back_to_start_callback, pattern="^back_to_start$"))
     app.add_handler(CallbackQueryHandler(invite_prompt_callback, pattern="^invite_prompt$"))
+    app.add_handler(CallbackQueryHandler(paid_template_callback, pattern=r"^paid_tpl:[0-9a-f-]{36}:(classic|modern|compact)$"))
 
     app.add_handler(PreCheckoutQueryHandler(pre_checkout))
     app.add_handler(MessageHandler(filters.SUCCESSFUL_PAYMENT, successful_payment))
