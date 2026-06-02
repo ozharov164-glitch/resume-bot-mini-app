@@ -4,6 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from config import settings
+from middleware.request_metrics import RequestMetricsMiddleware
 from middleware.security_headers import SecurityHeadersMiddleware
 from database import get_db, storage_mode
 from routers import (
@@ -22,7 +23,10 @@ from routers import (
     user_stats,
     voice,
 )
+from services.http_clients import close_http_clients
+from services.pdf_async import start_pdf_workers, stop_pdf_workers
 from services.pdf_service import ensure_fonts
+from services.redis_client import close_redis, ping_redis, redis_available
 
 logging.basicConfig(
     level=logging.INFO if not settings.DEBUG else logging.DEBUG,
@@ -41,6 +45,7 @@ _github_pages_origins = [
     "https://ozharov164-glitch.github.io/resume-bot-mini-app",
 ]
 
+app.add_middleware(RequestMetricsMiddleware)
 app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(
     CORSMiddleware,
@@ -69,13 +74,25 @@ app.include_router(affiliate_me.router)
 @app.on_event("startup")
 async def startup_event():
     ensure_fonts()
+    redis_available()
+    await start_pdf_workers()
+
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    await stop_pdf_workers()
+    await close_http_clients()
+    await close_redis()
 
 
 @app.get("/health")
 async def health():
+    payload: dict = {"status": "ok", "storage": storage_mode()}
     try:
         get_db()
-        return {"status": "ok", "storage": storage_mode()}
     except Exception:
         logging.getLogger(__name__).exception("health check storage failed")
         return {"status": "degraded", "storage": "error"}
+    if (settings.REDIS_URL or "").strip():
+        payload["redis"] = "ok" if await ping_redis() else "unavailable"
+    return payload

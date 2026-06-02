@@ -57,6 +57,11 @@ if grep -q '^ADMIN_GROUP_CHAT_ID=' .env 2>/dev/null; then
 else
   echo 'ADMIN_GROUP_CHAT_ID=1003959501619' >> .env
 fi
+set_env PDF_MAX_CONCURRENT 2
+set_env PDF_QUEUE_ENABLED true
+if command -v redis-cli >/dev/null 2>&1 && redis-cli ping 2>/dev/null | grep -q PONG; then
+  set_env REDIS_URL redis://127.0.0.1:6379/0
+fi
 systemctl restart resumebot-api resumebot-bot
 sleep 4
 systemctl is-active resumebot-api resumebot-bot

@@ -4,6 +4,7 @@ from typing import Any
 import httpx
 
 from config import settings
+from services.http_clients import get_api_client, get_groq_client
 from services.text_facts import build_polish_user_message, sanitize_duration_claims
 
 logger = logging.getLogger(__name__)
@@ -57,11 +58,6 @@ def _groq_keys() -> list[str]:
     return [k.strip() for k in settings.GROQ_API_KEYS.split(",") if k.strip()]
 
 
-def _groq_client(timeout: float = 60.0) -> httpx.AsyncClient:
-    proxy = (settings.GROQ_PROXY_URL or "").strip() or None
-    return httpx.AsyncClient(timeout=timeout, proxy=proxy)
-
-
 def _retryable_status(code: int) -> bool:
     return code in (401, 403, 429, 500, 502, 503, 504)
 
@@ -76,37 +72,37 @@ async def _groq_request(
         raise RuntimeError("Groq API keys not configured")
 
     last_error: Exception | None = None
-    async with _groq_client() as client:
-        for index, key in enumerate(keys):
-            try:
-                request = build_request(key)
-                response = await client.send(request)
-                if response.status_code >= 400 and _retryable_status(response.status_code):
-                    logger.warning(
-                        "groq %s key #%s failed status=%s, trying next",
-                        operation,
-                        index + 1,
-                        response.status_code,
-                    )
-                    last_error = httpx.HTTPStatusError(
-                        f"Groq {operation} failed",
-                        request=response.request,
-                        response=response,
-                    )
-                    continue
-                response.raise_for_status()
-                return response
-            except httpx.HTTPStatusError as exc:
-                if exc.response is not None and _retryable_status(exc.response.status_code):
-                    logger.warning(
-                        "groq %s key #%s failed status=%s, trying next",
-                        operation,
-                        index + 1,
-                        exc.response.status_code,
-                    )
-                    last_error = exc
-                    continue
-                raise
+    client = await get_groq_client()
+    for index, key in enumerate(keys):
+        try:
+            request = build_request(key)
+            response = await client.send(request)
+            if response.status_code >= 400 and _retryable_status(response.status_code):
+                logger.warning(
+                    "groq %s key #%s failed status=%s, trying next",
+                    operation,
+                    index + 1,
+                    response.status_code,
+                )
+                last_error = httpx.HTTPStatusError(
+                    f"Groq {operation} failed",
+                    request=response.request,
+                    response=response,
+                )
+                continue
+            response.raise_for_status()
+            return response
+        except httpx.HTTPStatusError as exc:
+            if exc.response is not None and _retryable_status(exc.response.status_code):
+                logger.warning(
+                    "groq %s key #%s failed status=%s, trying next",
+                    operation,
+                    index + 1,
+                    exc.response.status_code,
+                )
+                last_error = exc
+                continue
+            raise
 
     raise last_error or RuntimeError(f"All Groq keys failed for {operation}")
 
@@ -150,45 +146,45 @@ async def transcribe_audio(audio_bytes: bytes, filename: str, content_type: str)
     last_error: Exception | None = None
     data: dict[str, Any] = {}
 
-    async with _groq_client() as client:
-        for index, key in enumerate(keys):
-            try:
-                response = await client.post(
-                    GROQ_TRANSCRIBE_URL,
-                    headers={"Authorization": f"Bearer {key}"},
-                    files={"file": (filename, audio_bytes, content_type or "audio/webm")},
-                    data={
-                        "model": settings.GROQ_STT_MODEL,
-                        "language": "ru",
-                        "response_format": "json",
-                        "temperature": "0",
-                    },
+    client = await get_groq_client()
+    for index, key in enumerate(keys):
+        try:
+            response = await client.post(
+                GROQ_TRANSCRIBE_URL,
+                headers={"Authorization": f"Bearer {key}"},
+                files={"file": (filename, audio_bytes, content_type or "audio/webm")},
+                data={
+                    "model": settings.GROQ_STT_MODEL,
+                    "language": "ru",
+                    "response_format": "json",
+                    "temperature": "0",
+                },
+            )
+            if response.status_code >= 400 and _retryable_status(response.status_code):
+                logger.warning(
+                    "groq transcribe key #%s failed status=%s, trying next",
+                    index + 1,
+                    response.status_code,
                 )
-                if response.status_code >= 400 and _retryable_status(response.status_code):
-                    logger.warning(
-                        "groq transcribe key #%s failed status=%s, trying next",
-                        index + 1,
-                        response.status_code,
-                    )
-                    last_error = httpx.HTTPStatusError(
-                        "Groq transcribe failed",
-                        request=response.request,
-                        response=response,
-                    )
-                    continue
-                response.raise_for_status()
-                data = response.json()
-                break
-            except httpx.HTTPStatusError as exc:
-                if exc.response is not None and _retryable_status(exc.response.status_code):
-                    logger.warning(
-                        "groq transcribe key #%s failed status=%s, trying next",
-                        index + 1,
-                        exc.response.status_code,
-                    )
-                    last_error = exc
-                    continue
-                raise
+                last_error = httpx.HTTPStatusError(
+                    "Groq transcribe failed",
+                    request=response.request,
+                    response=response,
+                )
+                continue
+            response.raise_for_status()
+            data = response.json()
+            break
+        except httpx.HTTPStatusError as exc:
+            if exc.response is not None and _retryable_status(exc.response.status_code):
+                logger.warning(
+                    "groq transcribe key #%s failed status=%s, trying next",
+                    index + 1,
+                    exc.response.status_code,
+                )
+                last_error = exc
+                continue
+            raise
         else:
             raise last_error or RuntimeError("All Groq keys failed for transcribe")
 
@@ -265,19 +261,19 @@ async def polish_experience_text(
         "max_tokens": 500,
     }
 
-    async with httpx.AsyncClient(timeout=30.0) as client:
-        response = await client.post(
-            "https://openrouter.ai/api/v1/chat/completions",
-            headers={
-                "Authorization": f"Bearer {settings.OPENROUTER_API_KEY}",
-                "Content-Type": "application/json",
-                "HTTP-Referer": settings.OPENROUTER_APP_URL,
-                "X-Title": "ResumeBot",
-            },
-            json=or_body,
-        )
-        response.raise_for_status()
-        data = response.json()
+    client = await get_api_client(timeout=30.0)
+    response = await client.post(
+        "https://openrouter.ai/api/v1/chat/completions",
+        headers={
+            "Authorization": f"Bearer {settings.OPENROUTER_API_KEY}",
+            "Content-Type": "application/json",
+            "HTTP-Referer": settings.OPENROUTER_APP_URL,
+            "X-Title": "ResumeBot",
+        },
+        json=or_body,
+    )
+    response.raise_for_status()
+    data = response.json()
 
     choices = data.get("choices") or []
     if not choices:

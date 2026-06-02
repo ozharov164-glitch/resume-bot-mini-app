@@ -7,6 +7,7 @@ from typing import Any
 import httpx
 
 from config import settings
+from services.http_clients import get_api_client
 from services.resume_schema import normalize_resume_data
 from services.text_facts import sanitize_experience_descriptions, sanitize_summary_claims
 
@@ -403,40 +404,36 @@ async def _call_openrouter(
     model = model or settings.OPENROUTER_MODEL
     body = _build_request_body(messages, model, temperature, max_tokens)
 
-    async with httpx.AsyncClient(timeout=90.0) as client:
+    client = await get_api_client(timeout=90.0)
+    headers = {
+        "Authorization": f"Bearer {settings.OPENROUTER_API_KEY}",
+        "Content-Type": "application/json",
+        "HTTP-Referer": settings.OPENROUTER_APP_URL,
+        "X-Title": "ResumeBot",
+    }
+    response = await client.post(
+        "https://openrouter.ai/api/v1/chat/completions",
+        headers=headers,
+        json=body,
+    )
+
+    if response.status_code == 400 and "response_format" in body:
+        body.pop("response_format", None)
         response = await client.post(
             "https://openrouter.ai/api/v1/chat/completions",
-            headers={
-                "Authorization": f"Bearer {settings.OPENROUTER_API_KEY}",
-                "Content-Type": "application/json",
-                "HTTP-Referer": settings.OPENROUTER_APP_URL,
-                "X-Title": "ResumeBot",
-            },
+            headers=headers,
             json=body,
         )
 
-        if response.status_code == 400 and "response_format" in body:
-            body.pop("response_format", None)
-            response = await client.post(
-                "https://openrouter.ai/api/v1/chat/completions",
-                headers={
-                    "Authorization": f"Bearer {settings.OPENROUTER_API_KEY}",
-                    "Content-Type": "application/json",
-                    "HTTP-Referer": settings.OPENROUTER_APP_URL,
-                    "X-Title": "ResumeBot",
-                },
-                json=body,
-            )
-
-        if response.status_code >= 400:
-            logger.error(
-                "openrouter error model=%s status=%s body=%s",
-                model,
-                response.status_code,
-                response.text[:500],
-            )
-        response.raise_for_status()
-        data = response.json()
+    if response.status_code >= 400:
+        logger.error(
+            "openrouter error model=%s status=%s body=%s",
+            model,
+            response.status_code,
+            response.text[:500],
+        )
+    response.raise_for_status()
+    data = response.json()
 
     usage = data.get("usage") or {}
     logger.info(

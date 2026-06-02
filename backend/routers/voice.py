@@ -21,7 +21,7 @@ async def transcribe_voice(
     if not data:
         raise HTTPException(status_code=400, detail="Пустой аудиофайл.")
     try:
-        check_rate_limit("voice_transcribe", current_user.get("telegram_id"))
+        await check_rate_limit("voice_transcribe", current_user.get("telegram_id"))
     except RateLimitExceeded as exc:
         return JSONResponse(
             status_code=429,
@@ -47,7 +47,7 @@ async def transcribe_voice(
 @router.post("/polish")
 async def polish_text(body: dict, current_user: dict = Depends(get_current_user)):
     try:
-        check_rate_limit("voice_polish", current_user.get("telegram_id"))
+        await check_rate_limit("voice_polish", current_user.get("telegram_id"))
     except RateLimitExceeded as exc:
         return JSONResponse(
             status_code=429,

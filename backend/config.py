@@ -73,6 +73,16 @@ class Settings(BaseSettings):
 
     DADATA_API_KEY: str = ""
 
+    # Optional Redis (rate limits across uvicorn workers). Empty = in-process memory only.
+    REDIS_URL: str = ""
+
+    PDF_MAX_CONCURRENT: int = 2
+    PDF_QUEUE_ENABLED: bool = True
+    PDF_QUEUE_MAX_PENDING: int = 32
+
+    # Log/metrics thresholds
+    SLOW_REQUEST_MS: int = 3000
+
     @model_validator(mode="after")
     def single_pdf_prices_match(self) -> "Settings":
         if self.STARS_PRICE_SINGLE_PDF != self.RUB_PRICE_SINGLE_PDF:

@@ -6,6 +6,7 @@ from yookassa.domain.notification import WebhookNotificationEventType, WebhookNo
 
 from config import settings
 from services.admin_notify import PaymentNotifyInfo
+from services.ops_metrics import record_yookassa_error
 
 logger = logging.getLogger(__name__)
 
@@ -54,6 +55,7 @@ async def handle_yookassa_webhook(db: Any, payload: dict) -> dict:
         verified = Payment.find_one(payment_id)
     except Exception:
         logger.exception("yookassa webhook: Payment.find_one failed id=%s", payment_id)
+        record_yookassa_error("verify_failed")
         return {"ok": False, "error": "verify_failed"}
 
     if verified.status != "succeeded":

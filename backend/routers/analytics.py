@@ -58,7 +58,7 @@ async def track_event(
         raise HTTPException(status_code=403, detail="Forbidden")
 
     try:
-        check_rate_limit("analytics_event", claimed_tid)
+        await check_rate_limit("analytics_event", claimed_tid)
     except RateLimitExceeded as exc:
         return {
             "ok": False,

@@ -12,6 +12,11 @@ async function boot() {
   initTelegramTheme();
   await ensureMaterialIconsReady();
 
+  if (import.meta.env.PROD && "serviceWorker" in navigator) {
+    const base = import.meta.env.BASE_URL || "/";
+    navigator.serviceWorker.register(`${base}sw.js`).catch(() => undefined);
+  }
+
   ReactDOM.createRoot(document.getElementById("root")!).render(
     <React.StrictMode>
       <App />

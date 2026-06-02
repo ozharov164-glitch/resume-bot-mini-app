@@ -18,6 +18,8 @@ from services.affiliate_service import (
     list_affiliates_with_stats,
     revoke_affiliate,
 )
+from services.ops_metrics import snapshot as ops_snapshot
+from services.redis_client import ping_redis
 from services.stats_display import public_resume_count
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
@@ -28,6 +30,15 @@ def verify_admin_key(x_admin_key: str = Header(..., alias="X-Admin-Key")) -> Non
     provided = x_admin_key or ""
     if len(provided) != len(expected) or not hmac.compare_digest(provided, expected):
         raise HTTPException(status_code=403, detail="Forbidden")
+
+
+@router.get("/metrics", dependencies=[Depends(verify_admin_key)])
+async def admin_metrics():
+    """Operational counters: 429/5xx, resume_generate latency, YooKassa errors."""
+    data = ops_snapshot()
+    if (settings.REDIS_URL or "").strip():
+        data["redis_ok"] = await ping_redis()
+    return data
 
 
 @router.get("/promos", dependencies=[Depends(verify_admin_key)])

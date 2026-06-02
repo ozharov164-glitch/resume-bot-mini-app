@@ -19,16 +19,13 @@ jobs:
         run: pip install -q -r backend/requirements.txt pytest pytest-asyncio
       - name: Unit tests
         env:
+          DEBUG: "true"
           BOT_TOKEN: "0:test"
           OPENROUTER_API_KEY: test
           SUPABASE_URL: https://example.supabase.co
           SUPABASE_KEY: test
-          JWT_SECRET: test
+          JWT_SECRET: test-jwt-secret-at-least-32-characters-long
           APP_URL: https://example.test
           FRONTEND_URL: https://example.test/app
           BOT_USERNAME: resumeez_bot
-        run: |
-          PYTHONPATH=backend pytest -q \
-            backend/tests/test_bot_copy.py \
-            backend/tests/test_payment_fulfillment.py \
-            backend/tests/test_invoice_payload.py
+        run: PYTHONPATH=backend pytest -q backend/tests

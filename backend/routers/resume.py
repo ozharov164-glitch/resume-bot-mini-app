@@ -1,4 +1,5 @@
 import logging
+import time
 import uuid
 from datetime import datetime
 
@@ -18,6 +19,7 @@ from services.payment_fulfillment import parse_resume_data
 from services.share_image_service import generate_share_banner
 from services.pdf_async import PdfGenerationTimeoutError, generate_pdf_async
 from services.pdf_service import generate_preview_png
+from services.ops_metrics import record_resume_generate_ms
 from services.rate_limiter import RateLimitExceeded, check_rate_limit
 from services.telegram_service import send_document_to_user
 
@@ -64,7 +66,7 @@ async def create_resume(
     db=Depends(get_db),
 ):
     try:
-        check_rate_limit("resume_generate", current_user.get("telegram_id"))
+        await check_rate_limit("resume_generate", current_user.get("telegram_id"))
     except RateLimitExceeded as exc:
         return JSONResponse(
             status_code=429,
@@ -74,6 +76,7 @@ async def create_resume(
                 "message": "Лимит запросов исчерпан",
             },
         )
+    gen_started = time.perf_counter()
     try:
         resume_data = await generate_resume(user_data.model_dump())
         resume_data = _normalize_resume_fields(resume_data)
@@ -132,8 +135,10 @@ async def create_resume(
                 resume_id,
                 {"is_paid": True, "paid_at": datetime.utcnow().isoformat()},
             )
+        record_resume_generate_ms((time.perf_counter() - gen_started) * 1000, ok=True)
         return ResumeGenerationResponse(resume_id=resume_id, resume=resume_data, paid=is_paid)
     except Exception as exc:
+        record_resume_generate_ms((time.perf_counter() - gen_started) * 1000, ok=False)
         logger.exception("resume generate failed user_id=%s", current_user.get("id"))
         raise HTTPException(status_code=500, detail="Не удалось сгенерировать резюме. Попробуйте ещё раз.") from exc
 
