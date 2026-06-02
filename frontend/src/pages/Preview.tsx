@@ -7,7 +7,7 @@ import { PreviewPaidHero } from "../components/preview/PreviewPaidHero";
 import { PreviewLoadingSkeleton } from "../components/preview/PreviewLoadingSkeleton";
 import { PreviewResumeCard } from "../components/preview/PreviewResumeCard";
 import { HhTextEntryCard } from "../components/hh/HhTextEntryCard";
-import { ensureAuthToken, getResume } from "../api";
+import { ensureAuthToken, getResume, requestPdf } from "../api";
 import { AppHeader } from "../components/ui/AppHeader";
 import { Button } from "../components/ui/Button";
 import { FixedBottomBar } from "../components/ui/FixedBottomBar";
@@ -45,11 +45,39 @@ export function PreviewPage() {
   const [previewError, setPreviewError] = useState(false);
   const [hydrating, setHydrating] = useState(false);
   const [hydrateError, setHydrateError] = useState(false);
+  const [resendingPdf, setResendingPdf] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
   const previewLocked = !isPaid && !founderActive;
   const previewPaid = isPaid || founderActive;
   const useFitLayout = previewLocked || previewPaid;
-  const handleBack = useCallback(() => setPage(previewReturnPage), [setPage, previewReturnPage]);
+  const handleBack = useCallback(() => {
+    getTg()?.HapticFeedback?.impactOccurred("light");
+    setPage(previewReturnPage);
+  }, [setPage, previewReturnPage]);
   useTelegramBackButton(handleBack);
+
+  const showToast = useCallback((message: string) => {
+    setToast(message);
+    window.setTimeout(() => setToast(null), 2500);
+  }, []);
+
+  const handleResendPdf = useCallback(async () => {
+    if (!resumeId || resendingPdf) return;
+    getTg()?.HapticFeedback?.impactOccurred("light");
+    setResendingPdf(true);
+    try {
+      const token = authToken || (await ensureAuthToken());
+      const result = await requestPdf(token, resumeId);
+      getTg()?.HapticFeedback?.notificationOccurred("success");
+      showToast(`PDF «${result.filename}» отправлен в чат с ботом`);
+      trackEvent("pdf_resent", { source: "preview" });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Не удалось отправить PDF";
+      alert(message);
+    } finally {
+      setResendingPdf(false);
+    }
+  }, [authToken, resumeId, resendingPdf, showToast]);
 
   useEffect(() => {
     trackEvent("preview_viewed");
@@ -184,7 +212,9 @@ export function PreviewPage() {
     >
       <AppHeader onBack={handleBack} showBack title="Предпросмотр" />
       <main className={mainClass}>
-        {previewPaid ? <PreviewPaidHero /> : null}
+        {previewPaid ? (
+          <PreviewPaidHero onResendPdf={() => void handleResendPdf()} resending={resendingPdf} />
+        ) : null}
 
         <div className="preview-preview-slot">
           {previewUrl && !previewError ? (
@@ -255,6 +285,8 @@ export function PreviewPage() {
           ) : null}
         </div>
       </FixedBottomBar>
+
+      {toast ? <div className="toast-copy">{toast}</div> : null}
     </Screen>
   );
 }

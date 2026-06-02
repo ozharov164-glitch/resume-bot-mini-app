@@ -38,6 +38,10 @@ export async function runResumeGenerate(): Promise<ResumeGenerateOutcome> {
     }
     if (state.onboardingMode === "create") {
       useAppStore.setState({ previewReturnPage: "home" });
+    } else {
+      useAppStore.setState((s) => ({
+        previewReturnPage: s.previewReturnPage === "history" ? "history" : s.previewReturnPage,
+      }));
     }
     state.setPage("preview");
     return "preview";

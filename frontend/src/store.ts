@@ -7,6 +7,7 @@ import type { ResumeData, UserAnswers, WorkEntry } from "./types";
 type Page =
   | "home"
   | "onboarding"
+  | "template_pick"
   | "skill_pick"
   | "loading"
   | "preview"

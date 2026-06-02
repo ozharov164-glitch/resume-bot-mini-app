@@ -47,7 +47,10 @@ export function Button({
       whileTap={disabled ? undefined : { scale: 0.98 }}
       transition={{ type: "spring", stiffness: 400, damping: 17 }}
       className={clsx(
-        "rounded-xl py-3.5 px-5 text-base font-semibold min-h-[48px]",
+        "btn",
+        "inline-flex items-center justify-center",
+        "rounded-xl px-5 py-3 text-base font-semibold",
+        "min-h-[3rem] leading-none",
         "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2",
         fullWidth && "w-full",
         disabled && "opacity-45 cursor-not-allowed",
@@ -59,7 +62,7 @@ export function Button({
       }}
       {...props}
     >
-      {children}
+      <span className="btn__content">{children}</span>
     </motion.button>
   );
 }

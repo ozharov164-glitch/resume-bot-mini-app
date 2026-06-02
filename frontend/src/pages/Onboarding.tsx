@@ -295,7 +295,7 @@ export function OnboardingPage() {
     }
 
     setSubmitting(true);
-    setPage("loading");
+    setPage("template_pick");
   };
 
   const skipOptional = () => {

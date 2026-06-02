@@ -13,26 +13,42 @@ import { useAppStore, type TemplateId } from "../store";
 import { getTg } from "../telegram";
 
 export function TemplatePickPage() {
-  const { selectedTemplate, setSelectedTemplate, setPage } = useAppStore();
+  const {
+    selectedTemplate,
+    setSelectedTemplate,
+    setPage,
+    onboardingStep,
+    setOnboardingStep,
+    onboardingMode,
+  } = useAppStore();
 
-  const handleBack = useCallback(() => setPage("home"), [setPage]);
+  const handleBack = useCallback(() => {
+    getTg()?.HapticFeedback?.impactOccurred("light");
+    setPage("onboarding");
+    setOnboardingStep(Math.max(0, onboardingStep));
+  }, [onboardingStep, setOnboardingStep, setPage]);
+
   useTelegramBackButton(handleBack);
 
   const continueFlow = () => {
     getTg()?.HapticFeedback?.impactOccurred("medium");
     trackEvent("template_selected", { template: selectedTemplate });
-    setPage("onboarding");
+    setPage("loading");
   };
 
+  const isEdit = onboardingMode === "edit";
+
   return (
-    <Screen withBottomBar>
-      <AppHeader onBack={handleBack} showBack title="Выберите дизайн" />
-      <main className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-4 py-3">
+    <Screen withBottomBar className="template-pick-page">
+      <AppHeader onBack={handleBack} showBack title="Дизайн PDF" />
+      <main className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto overscroll-y-contain px-4 py-3">
         <div className="template-pick-hero">
           <Icon name="palette" filled size={28} style={{ color: "var(--brand)" }} />
-          <h2 className="template-pick-title">Как будет выглядеть ваше резюме?</h2>
+          <h2 className="template-pick-title">
+            {isEdit ? "Выберите дизайн для новой версии" : "Как будет выглядеть PDF?"}
+          </h2>
           <p className="template-pick-sub">
-            Три готовых шаблона — выберите стиль. Перед оплатой можно сменить.
+            Три готовых шаблона — после оплаты PDF придёт в чат с ботом в выбранном стиле.
           </p>
         </div>
 
@@ -88,8 +104,8 @@ export function TemplatePickPage() {
       </main>
 
       <FixedBottomBar>
-        <Button variant="brand" onClick={continueFlow} className="flex items-center justify-center gap-2">
-          Продолжить
+        <Button variant="brand" onClick={continueFlow}>
+          Составить резюме
           <Icon name="arrow_forward" size={20} />
         </Button>
       </FixedBottomBar>

@@ -21,9 +21,11 @@ export function AppHeader({ title = APP_TITLE, showBack = false, onBack }: AppHe
             type="button"
             aria-label="Назад"
             onClick={onBack}
-            className="app-header-btn"
+            className="app-header-btn app-header-btn--back"
           >
-            <Icon name="arrow_back" />
+            <span className="app-header-back-glyph" aria-hidden>
+              ←
+            </span>
           </button>
         ) : (
           <span className="app-header-side" aria-hidden />

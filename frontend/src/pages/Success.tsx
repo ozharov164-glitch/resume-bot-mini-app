@@ -100,7 +100,7 @@ export function SuccessPage() {
   };
 
   return (
-    <Screen withBottomBar centered className="success-page px-4">
+    <Screen withBottomBar className="success-page px-4">
       <AppHeader />
       <main className="success-page__main">
         <header className="success-page__hero">

@@ -20,6 +20,9 @@ const PreviewPage = lazy(() => import("./pages/Preview").then((m) => ({ default:
 const PaymentPage = lazy(() => import("./pages/Payment").then((m) => ({ default: m.PaymentPage })));
 const SuccessPage = lazy(() => import("./pages/Success").then((m) => ({ default: m.SuccessPage })));
 const SkillPickPage = lazy(() => import("./pages/SkillPick").then((m) => ({ default: m.SkillPickPage })));
+const TemplatePickPage = lazy(() =>
+  import("./pages/TemplatePick").then((m) => ({ default: m.TemplatePickPage })),
+);
 const HhTextPage = lazy(() => import("./pages/HhText").then((m) => ({ default: m.HhTextPage })));
 
 function PageFallback() {
@@ -148,6 +151,7 @@ export default function App() {
         ) : null}
         {page === "history" ? <HistoryPage /> : null}
         {page === "skill_pick" ? <SkillPickPage /> : null}
+        {page === "template_pick" ? <TemplatePickPage /> : null}
         {page === "loading" ? <LoadingPage /> : null}
         {page === "preview" ? <PreviewPage /> : null}
         {page === "payment" ? <PaymentPage /> : null}

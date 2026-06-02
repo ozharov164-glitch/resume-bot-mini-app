@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
+import clsx from "clsx";
 
 import { ensureAuthToken, suggestSkills } from "../api";
 import { SkillPill } from "../components/SkillPill";
@@ -174,30 +175,40 @@ export function SkillPickPage() {
   const showSkills = phase === "ready" || phase === "error";
 
   return (
-    <Screen withBottomBar className="px-4">
-      <AppHeader onBack={handleBack} showBack />
-      <main className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto overscroll-y-contain py-4">
-        {!showSkills && (
-          <div className="mx-auto flex w-full max-w-md flex-1 flex-col items-center justify-center">
+    <Screen
+      withBottomBar
+      className={clsx("skill-pick-page px-4", !showSkills && "skill-pick-page--loading")}
+    >
+      <AppHeader onBack={handleBack} showBack title="Навыки" />
+      <main
+        className={clsx(
+          "skill-pick-main flex min-h-0 flex-1 flex-col gap-5 py-4",
+          showSkills ? "overflow-y-auto overscroll-y-contain" : "overflow-hidden",
+        )}
+      >
+        {!showSkills ? (
+          <div className="skill-pick-loading">
             <LoadingIllustration />
             <h2 className="mb-2 text-center text-2xl font-bold leading-snug">
               Подбираем навыки для «{position || "вашей должности"}»
             </h2>
-            <AnimatePresence mode="wait">
-              <motion.p
-                key={phraseIndex}
-                className="mb-6 min-h-[24px] text-center text-base"
-                style={{ color: "var(--text-variant, #3c4a42)" }}
-                initial={{ opacity: 0, y: 6 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -6 }}
-                transition={{ duration: 0.25 }}
-                aria-live="polite"
-              >
-                {PHRASES[phraseIndex]}
-              </motion.p>
-            </AnimatePresence>
-            <div className="mt-2 w-full max-w-xs">
+            <div className="skill-pick-loading__phrase">
+              <AnimatePresence mode="wait">
+                <motion.p
+                  key={phraseIndex}
+                  className="text-center text-base"
+                  style={{ color: "var(--text-variant, #3c4a42)" }}
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -6 }}
+                  transition={{ duration: 0.25 }}
+                  aria-live="polite"
+                >
+                  {PHRASES[phraseIndex]}
+                </motion.p>
+              </AnimatePresence>
+            </div>
+            <div className="w-full max-w-xs">
               <div
                 className="loading-progress-track h-2 w-full overflow-hidden rounded-full"
                 role="progressbar"
@@ -214,14 +225,12 @@ export function SkillPickPage() {
               </div>
             </div>
           </div>
-        )}
-
-        {showSkills && (
+        ) : (
           <motion.div
-            className="flex flex-1 flex-col gap-4"
-            initial={{ opacity: 0, y: 16 }}
+            className="flex flex-col gap-4"
+            initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.35, ease: [0.25, 0.1, 0.25, 1] }}
+            transition={{ duration: 0.3, ease: [0.25, 0.1, 0.25, 1] }}
           >
             <div className="text-center">
               <h2 className="text-2xl font-bold leading-snug">Выберите свои навыки</h2>
@@ -285,13 +294,17 @@ export function SkillPickPage() {
         )}
       </main>
 
-      {showSkills && (
-        <FixedBottomBar>
+      <FixedBottomBar>
+        {showSkills ? (
           <Button variant="brand" onClick={continueFlow}>
             {selectedSkills.length > 0 ? "Далее" : "Пропустить"}
           </Button>
-        </FixedBottomBar>
-      )}
+        ) : (
+          <div className="skill-pick-bottom-placeholder" aria-hidden>
+            Далее
+          </div>
+        )}
+      </FixedBottomBar>
     </Screen>
   );
 }
