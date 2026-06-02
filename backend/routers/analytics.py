@@ -28,6 +28,7 @@ _ALLOWED_EVENTS = frozenset(
         "text_exported",
         "bonus_applied",
         "adapt_purchased",
+        "pdf_resent",
     }
 )
 
