@@ -334,6 +334,10 @@ export function PaymentPage() {
             <Icon name="credit_card" size={20} />
             {cardPaying ? "Открываем оплату…" : `Оплатить картой — ${rubPrice} ₽`}
           </Button>
+
+          <p className="payment-guarantee">
+            🔒 Не устроит результат — вернём Stars без вопросов
+          </p>
         </div>
 
         <p className="payment-footer-note">

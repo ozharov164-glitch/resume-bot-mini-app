@@ -2,7 +2,7 @@ import json
 import logging
 import sqlite3
 import uuid
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -92,6 +92,7 @@ class SQLiteBackend:
                 "ALTER TABLE resumes ADD COLUMN template_id TEXT DEFAULT 'classic'",
                 "ALTER TABLE users ADD COLUMN is_affiliate INTEGER DEFAULT 0",
                 "ALTER TABLE resumes ADD COLUMN hh_text TEXT DEFAULT NULL",
+                "ALTER TABLE resumes ADD COLUMN re_engagement_sent INTEGER DEFAULT 0",
             ]:
                 try:
                     conn.execute(col_sql)
@@ -243,6 +244,13 @@ class SQLiteBackend:
         with self._connect() as conn:
             row = conn.execute("SELECT COUNT(*) AS c FROM users").fetchone()
         return int(row["c"]) if row else 0
+
+    def list_user_telegram_ids(self) -> list[int]:
+        with self._connect() as conn:
+            rows = conn.execute(
+                "SELECT telegram_id FROM users ORDER BY created_at ASC"
+            ).fetchall()
+        return [int(row["telegram_id"]) for row in rows]
 
     def count_paid_resumes(self, exclude_telegram_ids: list[int] | None = None) -> int:
         with self._connect() as conn:
@@ -687,6 +695,47 @@ class SQLiteBackend:
             conn.commit()
             return int(cur.rowcount or 0)
 
+    def list_unpaid_for_reengagement(
+        self, min_age_hours: int = 3, max_age_hours: int = 24
+    ) -> list[dict]:
+        created_after = (datetime.utcnow() - timedelta(hours=max_age_hours)).isoformat()
+        created_before = (datetime.utcnow() - timedelta(hours=min_age_hours)).isoformat()
+        with self._connect() as conn:
+            rows = conn.execute(
+                """
+                SELECT r.id AS resume_id,
+                       u.telegram_id AS telegram_id,
+                       json_extract(r.data, '$.target_position') AS target_position,
+                       r.created_at AS created_at
+                FROM resumes r
+                JOIN users u ON r.user_id = u.id
+                WHERE r.is_paid = 0
+                  AND COALESCE(r.re_engagement_sent, 0) = 0
+                  AND r.created_at >= ?
+                  AND r.created_at <= ?
+                ORDER BY r.created_at ASC
+                LIMIT 50
+                """,
+                (created_after, created_before),
+            ).fetchall()
+        out: list[dict] = []
+        for row in rows:
+            rec = dict(row)
+            position = rec.get("target_position")
+            if position is not None and not isinstance(position, str):
+                position = str(position)
+            rec["target_position"] = position or ""
+            out.append(rec)
+        return out
+
+    def mark_reengagement_sent(self, resume_id: str) -> None:
+        with self._connect() as conn:
+            conn.execute(
+                "UPDATE resumes SET re_engagement_sent = 1 WHERE id = ?",
+                (resume_id,),
+            )
+            conn.commit()
+
 
 class SupabaseBackend:
     def __init__(self, client: Any) -> None:
@@ -748,6 +797,27 @@ class SupabaseBackend:
         if result.count is not None:
             return int(result.count)
         return len(result.data or [])
+
+    def list_user_telegram_ids(self) -> list[int]:
+        page_size = 1000
+        offset = 0
+        ids: list[int] = []
+        while True:
+            result = (
+                self.client.table("users")
+                .select("telegram_id")
+                .order("created_at")
+                .range(offset, offset + page_size - 1)
+                .execute()
+            )
+            batch = result.data or []
+            if not batch:
+                break
+            ids.extend(int(row["telegram_id"]) for row in batch)
+            if len(batch) < page_size:
+                break
+            offset += page_size
+        return ids
 
     def count_paid_resumes(self, exclude_telegram_ids: list[int] | None = None) -> int:
         query = (
@@ -1238,3 +1308,66 @@ class SupabaseBackend:
         except Exception as e:
             logger.warning("list_affiliate_users failed: %s", e)
             return []
+
+    def list_unpaid_for_reengagement(
+        self, min_age_hours: int = 3, max_age_hours: int = 24
+    ) -> list[dict]:
+        created_after = (datetime.utcnow() - timedelta(hours=max_age_hours)).isoformat()
+        created_before = (datetime.utcnow() - timedelta(hours=min_age_hours)).isoformat()
+        try:
+            result = (
+                self.client.table("resumes")
+                .select("id, user_id, data, created_at, re_engagement_sent, is_paid, users(telegram_id)")
+                .eq("is_paid", False)
+                .eq("re_engagement_sent", 0)
+                .gte("created_at", created_after)
+                .lte("created_at", created_before)
+                .order("created_at")
+                .limit(50)
+                .execute()
+            )
+        except Exception as exc:
+            if "re_engagement_sent" in str(exc).lower():
+                logger.warning(
+                    "list_unpaid_for_reengagement: add column re_engagement_sent to resumes (default 0)"
+                )
+            else:
+                logger.warning("list_unpaid_for_reengagement failed: %s", exc)
+            return []
+
+        out: list[dict] = []
+        for row in result.data or []:
+            users = row.get("users")
+            telegram_id = None
+            if isinstance(users, dict):
+                telegram_id = users.get("telegram_id")
+            elif isinstance(users, list) and users:
+                telegram_id = users[0].get("telegram_id")
+
+            data = row.get("data") or {}
+            if isinstance(data, str):
+                try:
+                    data = json.loads(data)
+                except json.JSONDecodeError:
+                    data = {}
+
+            out.append(
+                {
+                    "resume_id": row.get("id"),
+                    "telegram_id": telegram_id,
+                    "target_position": (data.get("target_position") if isinstance(data, dict) else "") or "",
+                    "created_at": row.get("created_at"),
+                }
+            )
+        return [r for r in out if r.get("telegram_id") and r.get("resume_id")]
+
+    def mark_reengagement_sent(self, resume_id: str) -> None:
+        try:
+            self.client.table("resumes").update({"re_engagement_sent": 1}).eq("id", resume_id).execute()
+        except Exception as exc:
+            if "re_engagement_sent" in str(exc).lower():
+                logger.warning(
+                    "mark_reengagement_sent: add column re_engagement_sent to resumes (default 0)"
+                )
+            else:
+                logger.warning("mark_reengagement_sent failed resume_id=%s: %s", resume_id, exc)

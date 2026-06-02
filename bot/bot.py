@@ -55,6 +55,7 @@ from services.bot_copy import (  # noqa: E402
     promo_activated_text,
     promo_invalid_text,
     promo_prompt_text,
+    reengagement_text,
     resume_command_text,
     start_text,
     trust_text,
@@ -1557,6 +1558,30 @@ async def post_init(application: Application) -> None:
     )
 
 
+async def reengagement_job(context: ContextTypes.DEFAULT_TYPE) -> None:
+    db = get_db()
+    records = db.list_unpaid_for_reengagement(min_age_hours=3, max_age_hours=24)
+    for rec in records:
+        telegram_id = rec.get("telegram_id")
+        if not telegram_id:
+            continue
+        position = rec.get("target_position") or ""
+        try:
+            keyboard = InlineKeyboardMarkup(
+                [[InlineKeyboardButton("📄 Открыть резюме", url=MINI_APP_URL)]]
+            )
+            await context.bot.send_message(
+                chat_id=int(telegram_id),
+                text=reengagement_text(position),
+                reply_markup=keyboard,
+                parse_mode="HTML",
+            )
+            db.mark_reengagement_sent(rec["resume_id"])
+            await asyncio.sleep(0.3)
+        except Exception as e:
+            logger.warning("reengagement send failed tg_id=%s err=%s", telegram_id, e)
+
+
 def main():
     app = (
         Application.builder()
@@ -1564,6 +1589,9 @@ def main():
         .post_init(post_init)
         .build()
     )
+
+    if app.job_queue:
+        app.job_queue.run_repeating(reengagement_job, interval=3600, first=300)
 
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("resume", resume_command))

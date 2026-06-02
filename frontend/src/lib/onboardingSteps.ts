@@ -38,6 +38,32 @@ export const PROFESSION_PRESETS = [
 
 export const SALARY_CUSTOM_OPTION = "Укажу сам";
 
+function getAchievementsPlaceholder(position: string): string {
+  const p = position.toLowerCase();
+  if (p.includes("водител") || p.includes("экспедит")) {
+    return "40 заказов в день, 0 аварий за 3 года, план 120%";
+  }
+  if (p.includes("курьер") || p.includes("доставк")) {
+    return "35 заказов/день, рейтинг 4.9, 0 возвратов";
+  }
+  if (p.includes("охран")) {
+    return "8 лет без нарушений, провёл 50+ досмотров/смена";
+  }
+  if (p.includes("продав") || p.includes("кассир")) {
+    return "выполнение плана 115%, обслуживал 200 покупателей/день";
+  }
+  if (p.includes("повар") || p.includes("официант")) {
+    return "60 посадочных мест, выручка стола +20% к среднему";
+  }
+  if (p.includes("склад") || p.includes("грузчик") || p.includes("комплект")) {
+    return "500 позиций/смена, 0 расхождений при инвентаризации";
+  }
+  if (p.includes("электрик") || p.includes("сварщик")) {
+    return "сдал 200 м² проводки за месяц, 0 рекламаций";
+  }
+  return "выполнение плана 120%, снизил затраты на 15%, обучил 3 новых сотрудников";
+}
+
 export const ONBOARDING_STEPS: OnboardingStep[] = [
   {
     id: "name",
@@ -255,6 +281,87 @@ export const PROFESSION_EXTRA_STEPS: OnboardingStep[] = [
     optional: true,
     showIf: (a) => matchesPosition(a, ["маляр", "штукатур", "отделоч"]),
   },
+  {
+    id: "prof_seller_goods",
+    question: "Какой товар продавали?",
+    type: "options",
+    options: ["Продукты питания", "Одежда и обувь", "Электроника", "Стройматериалы", "Разное"],
+    showIf: (a) => matchesPosition(a, ["продав", "кассир", "мерчен", "консульт"]),
+    skipText: "Пропустить",
+    optional: true,
+  },
+  {
+    id: "prof_seller_systems",
+    question: "Программы/оборудование",
+    type: "multi_select",
+    options: ["1С Торговля", "Кассовый аппарат", "CRM", "Терминал оплаты", "Сканер штрихкодов"],
+    showIf: (a) => matchesPosition(a, ["продав", "кассир", "мерчен", "консульт"]),
+    skipText: "Пропустить",
+    optional: true,
+  },
+  {
+    id: "prof_loader_equipment",
+    question: "Спецтехника и оборудование",
+    type: "multi_select",
+    options: ["Вилочный погрузчик", "Рохля", "Штабелёр", "Конвейер", "Терминал сбора данных"],
+    showIf: (a) => matchesPosition(a, ["грузчик", "склад", "комплект", "сборщик", "операт"]),
+    skipText: "Пропустить",
+    optional: true,
+  },
+  {
+    id: "prof_loader_marketplace",
+    question: "Работали на маркетплейсе?",
+    type: "options",
+    options: ["Wildberries", "Ozon", "Яндекс.Маркет", "СДЭК", "Нет"],
+    showIf: (a) => matchesPosition(a, ["грузчик", "склад", "комплект", "сборщик"]),
+    skipText: "Пропустить",
+    optional: true,
+  },
+  {
+    id: "prof_catering_systems",
+    question: "Системы автоматизации",
+    type: "multi_select",
+    options: ["R-Keeper", "iiko", "1С Общепит", "Poster", "Tillypad"],
+    showIf: (a) => matchesPosition(a, ["официант", "повар", "бармен", "бариста", "администр"]),
+    skipText: "Пропустить",
+    optional: true,
+  },
+  {
+    id: "prof_catering_cuisine",
+    question: "Тип кухни / заведения",
+    type: "options",
+    options: ["Европейская", "Азиатская", "Фастфуд", "Кофейня", "Бар/ресторан", "Столовая"],
+    showIf: (a) => matchesPosition(a, ["официант", "повар", "бармен", "бариста"]),
+    skipText: "Пропустить",
+    optional: true,
+  },
+  {
+    id: "prof_tech_admission",
+    question: "Допуски и разряды",
+    type: "multi_select",
+    options: ["2 разряд", "3 разряд", "4 разряд", "5 разряд", "Допуск до 1000В", "НАКС (сварщик)"],
+    showIf: (a) => matchesPosition(a, ["электрик", "сварщик", "монтажник", "слесарь", "токарь", "механ"]),
+    skipText: "Пропустить",
+    optional: true,
+  },
+  {
+    id: "prof_medical_spec",
+    question: "Специализация / отделение",
+    type: "options",
+    options: ["Терапия", "Хирургия", "Скорая помощь", "Педиатрия", "Процедурный кабинет", "Другое"],
+    showIf: (a) => matchesPosition(a, ["медсест", "санитар", "фельдшер", "сиделк", "медбрат", "нянечк"]),
+    skipText: "Пропустить",
+    optional: true,
+  },
+  {
+    id: "prof_edu_subject",
+    question: "Предмет или направление",
+    type: "text",
+    placeholder: "Например: математика, начальные классы, логопедия",
+    showIf: (a) => matchesPosition(a, ["учитель", "педагог", "воспитат", "логопед", "тренер", "инструктор"]),
+    skipText: "Пропустить",
+    optional: true,
+  },
 ];
 
 export function isProfessionExtraStep(step: OnboardingStep): boolean {
@@ -262,7 +369,14 @@ export function isProfessionExtraStep(step: OnboardingStep): boolean {
 }
 
 export function getVisibleSteps(answers: Partial<UserAnswers>): OnboardingStep[] {
-  const base = ONBOARDING_STEPS.filter((s) => !s.showIf || s.showIf(answers));
+  const positionPlaceholder = answers?.target_position ? String(answers.target_position) : "";
+  const base = ONBOARDING_STEPS.filter((s) => !s.showIf || s.showIf(answers)).map((s) => {
+    if (s.id !== "achievements") return s;
+    return {
+      ...s,
+      placeholder: getAchievementsPlaceholder(positionPlaceholder),
+    };
+  });
   const extras = PROFESSION_EXTRA_STEPS.filter((s) => !s.showIf || s.showIf(answers));
   if (!extras.length) return base;
 

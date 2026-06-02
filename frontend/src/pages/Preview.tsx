@@ -22,6 +22,13 @@ import { getTg } from "../telegram";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
+function summaryTeaserText(summary: string, maxLen = 120): string {
+  const trimmed = summary.trim();
+  if (!trimmed) return "";
+  if (trimmed.length <= maxLen) return trimmed;
+  return `${trimmed.slice(0, maxLen).trimEnd()}…`;
+}
+
 export function PreviewPage() {
   const {
     resumeData,
@@ -158,6 +165,10 @@ export function PreviewPage() {
   };
 
   const mainClass = useFitLayout ? "preview-page-main preview-page-main--fit" : "preview-page-main";
+  const summaryTeaser =
+    previewLocked && resumeData.summary?.trim()
+      ? summaryTeaserText(resumeData.summary)
+      : "";
 
   return (
     <Screen
@@ -183,6 +194,13 @@ export function PreviewPage() {
           ) : (
             <PreviewLoadingSkeleton />
           )}
+
+          {summaryTeaser ? (
+            <div className="preview-summary-teaser">
+              <p className="preview-summary-teaser__label">Раздел «О себе» из вашего резюме:</p>
+              <p className="preview-summary-teaser__text">{summaryTeaser}</p>
+            </div>
+          ) : null}
         </div>
 
         {previewPaid ? (

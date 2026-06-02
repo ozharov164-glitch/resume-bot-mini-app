@@ -1250,6 +1250,35 @@ body {
   color: #dc2626;
 }
 
+.preview-summary-teaser {
+  background: var(--surface-variant);
+  border-left: 3px solid var(--brand);
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  margin-top: 12px;
+}
+
+.preview-summary-teaser__label {
+  margin: 0 0 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.preview-summary-teaser__text {
+  margin: 0;
+  line-height: 1.45;
+  color: var(--text);
+}
+
+.payment-guarantee {
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-muted);
+  margin: 8px 0 0;
+}
+
 .payment-actions {
   display: flex;
   flex-direction: column;

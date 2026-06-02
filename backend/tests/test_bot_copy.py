@@ -9,7 +9,7 @@ os.environ.setdefault("APP_URL", "https://example.test")
 os.environ.setdefault("FRONTEND_URL", "https://example.test/app")
 os.environ.setdefault("BOT_USERNAME", "resumeez_bot")
 
-from services.bot_copy import PAYMENT_LINE, start_text, trust_text  # noqa: E402
+from services.bot_copy import PAYMENT_LINE, broadcast_activation_text, start_text, trust_text  # noqa: E402
 from services.stats_display import DISPLAY_COUNT_FLOOR, public_resume_count  # noqa: E402
 
 
@@ -30,6 +30,15 @@ def test_start_text_payment_options():
     text = start_text(5000, "Анна")
     assert "Анна" in text
     assert PAYMENT_LINE not in text
+    assert "Classic" in text
+    assert "hh.ru" in text
+
+
+def test_broadcast_activation_text():
+    text = broadcast_activation_text(5123)
+    assert "5 123" in text
+    assert "бесплатный предпросмотр" in text
+    assert "149 ₽" in text
     assert "Classic" in text
     assert "hh.ru" in text
 
