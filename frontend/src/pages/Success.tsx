@@ -16,7 +16,6 @@ import { useAppStore } from "../store";
 import { getTg } from "../telegram";
 
 const BOT_USERNAME = "resumeez_bot";
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
 export function SuccessPage() {
   const { resumeId, authToken, openHhTextView } = useAppStore();
@@ -45,29 +44,6 @@ export function SuccessPage() {
   const showToast = (message: string) => {
     setToast(message);
     window.setTimeout(() => setToast(null), 2000);
-  };
-
-  const downloadShareBanner = async () => {
-    if (!resumeId || !authToken) return;
-    try {
-      const token = authToken || (await ensureAuthToken());
-      const res = await fetch(`${API_URL}/api/resume/${resumeId}/share-image`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) throw new Error("banner");
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const anchor = document.createElement("a");
-      anchor.href = url;
-      anchor.download = "resumebot-share.png";
-      anchor.click();
-      URL.revokeObjectURL(url);
-      getTg()?.HapticFeedback?.impactOccurred("light");
-      showToast("Баннер сохранён");
-      trackEvent("share_banner_downloaded");
-    } catch {
-      alert("Не удалось скачать баннер. Попробуйте позже.");
-    }
   };
 
   const shareInvite = () => {
@@ -118,45 +94,64 @@ export function SuccessPage() {
 
   const close = () => getTg()?.close?.();
 
+  const openHhText = () => {
+    getTg()?.HapticFeedback?.impactOccurred("light");
+    openHhTextView("success");
+  };
+
   return (
-    <Screen withBottomBar centered className="px-4">
+    <Screen withBottomBar centered className="success-page px-4">
       <AppHeader />
-      <main className="flex flex-1 flex-col gap-5 overflow-y-auto px-4 py-4">
-        <div className="flex flex-col items-center gap-3 text-center">
-          <div
-            className="flex h-24 w-24 items-center justify-center rounded-full shadow-brand"
-            style={{ background: "var(--brand-muted)" }}
-          >
-            <Icon name="check_circle" filled className="text-primary-container" size={64} />
+      <main className="success-page__main">
+        <header className="success-page__hero">
+          <div className="success-page__hero-icon" aria-hidden>
+            <Icon name="check_circle" filled size={56} style={{ color: "var(--brand)" }} />
           </div>
-          <h2 className="text-2xl font-bold">Ура! Ваше резюме готово</h2>
-          <p className="text-base" style={{ color: "var(--text-muted)" }}>
-            PDF отправлен в чат с ботом. Удачи в поиске работы!
+          <h2 className="success-page__title">Ура! Ваше резюме готово</h2>
+          <p className="success-page__lead">
+            PDF уже в чате с ботом. Осталось скопировать текст на hh.ru — ниже одна кнопка.
           </p>
+        </header>
+
+        <div className="success-page__primary">
+          <Button variant="brand" onClick={close} className="w-full">
+            <Icon name="chat" size={20} />
+            Вернуться в бот
+          </Button>
+
+          <button type="button" className="success-hh-card" onClick={openHhText}>
+            <span className="success-hh-card__badge">Включено в оплату</span>
+            <span className="success-hh-card__icon-wrap" aria-hidden>
+              <Icon name="content_paste" size={28} style={{ color: "var(--brand)" }} />
+            </span>
+            <span className="success-hh-card__title">Текст для hh.ru</span>
+            <span className="success-hh-card__desc">
+              Готовые блоки «О себе», опыт и навыки — откройте, скопируйте и вставьте в профиль на сайте
+            </span>
+            <span className="success-hh-card__cta">
+              Открыть и скопировать
+              <Icon name="chevron_right" size={20} />
+            </span>
+          </button>
         </div>
 
-        <Button variant="brand" onClick={close} className="w-full">
-          Вернуться в бот
-        </Button>
-
-        <Button variant="outline" onClick={() => openHhTextView("success")} className="w-full">
-          Текст для hh.ru
-        </Button>
-
-        <section className="flex flex-col gap-3 rounded-xl p-4" style={{ background: "#f3f4f6" }}>
-          <h3 className="font-medium" style={{ color: "#374151" }}>
-            Хотите ещё лучше?
-          </h3>
-          <p className="text-sm" style={{ color: "#6b7280" }}>
-            Адаптируем резюме под конкретную вакансию с hh.ru
-          </p>
+        <section className="success-section" aria-labelledby="success-adapt-heading">
+          <div className="success-section__head">
+            <span className="success-section__eyebrow">Дополнительно</span>
+            <h3 id="success-adapt-heading" className="success-section__title">
+              Хотите ещё лучше?
+            </h3>
+            <p className="success-section__text">
+              Подстроим резюме под текст конкретной вакансии с hh.ru
+            </p>
+          </div>
           <textarea
             value={vacancy}
             onChange={(e) => setVacancy(e.target.value)}
-            placeholder="Вставьте текст вакансии с hh.ru..."
+            placeholder="Вставьте текст вакансии с hh.ru…"
             rows={4}
-            className="w-full rounded-xl border px-3 py-2 text-sm"
-            style={{ borderColor: "#e5e7eb", background: "#fff" }}
+            className="success-section__textarea"
+            aria-label="Текст вакансии"
           />
           <Button
             variant="outline"
@@ -168,19 +163,19 @@ export function SuccessPage() {
           </Button>
         </section>
 
-        <section className="mt-2 flex flex-col gap-3 rounded-xl p-4" style={{ background: "#f3f4f6" }}>
-          <p className="text-sm font-medium" style={{ color: "#374151" }}>
-            Знаете кого-то, кто ищет работу?
-          </p>
+        <section className="success-section success-section--referral" aria-labelledby="success-referral-heading">
+          <div className="success-section__head">
+            <h3 id="success-referral-heading" className="success-section__title">
+              Знаете кого-то, кто ищет работу?
+            </h3>
+            <p className="success-section__text">
+              Пригласите друга — за его оплату начислим бонусные Stars (~20% от суммы)
+            </p>
+          </div>
           <Button variant="outline" onClick={shareInvite} className="w-full">
+            <Icon name="group_add" size={20} />
             Пригласить друга
           </Button>
-          <Button variant="outline" onClick={() => void downloadShareBanner()} className="w-full">
-            Скачать баннер для Stories
-          </Button>
-          <p className="text-xs" style={{ color: "#6b7280" }}>
-            За оплату друга — бонусные Stars (~20% от суммы) на ваш счёт
-          </p>
         </section>
       </main>
 
