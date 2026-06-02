@@ -46,6 +46,12 @@ class Settings(BaseSettings):
 
     ADMIN_SECRET_KEY: str = "change-me-in-production"
 
+    # Telegram setWebhook secret_token → header X-Telegram-Bot-Api-Secret-Token
+    TELEGRAM_WEBHOOK_SECRET: str = ""
+
+    # Reject Mini App initData older than this (seconds); mitigates replay.
+    INIT_DATA_MAX_AGE_SECONDS: int = 86_400
+
     # Supergroup for admin alerts (bare id 100… or full -100…).
     ADMIN_GROUP_CHAT_ID: str = "1003959501619"
 
@@ -71,6 +77,16 @@ class Settings(BaseSettings):
     def single_pdf_prices_match(self) -> "Settings":
         if self.STARS_PRICE_SINGLE_PDF != self.RUB_PRICE_SINGLE_PDF:
             self.STARS_PRICE_SINGLE_PDF = self.RUB_PRICE_SINGLE_PDF
+        return self
+
+    @model_validator(mode="after")
+    def production_secrets(self) -> "Settings":
+        if self.DEBUG:
+            return self
+        if self.ADMIN_SECRET_KEY.strip() in {"", "change-me-in-production"}:
+            raise ValueError("Set a strong ADMIN_SECRET_KEY in production (DEBUG=false).")
+        if len(self.JWT_SECRET.strip()) < 32:
+            raise ValueError("JWT_SECRET must be at least 32 characters when DEBUG=false.")
         return self
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")

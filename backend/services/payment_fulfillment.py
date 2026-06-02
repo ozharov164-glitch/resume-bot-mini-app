@@ -5,6 +5,7 @@ from typing import Any
 
 from config import settings
 from services.admin_notify import PaymentNotifyInfo, notify_payment
+from services.payment_validation import resume_belongs_to_telegram
 from services.pdf_async import generate_pdf_async
 from services.resume_schema import normalize_resume_data
 from services.telegram_service import send_document_to_user
@@ -42,6 +43,14 @@ async def fulfill_paid_resume(
     template_name: str | None = None,
 ) -> bool:
     """Mark resume paid and send PDF to user's Telegram chat. Idempotent."""
+    if not resume_belongs_to_telegram(db, resume_id, telegram_id):
+        logger.warning(
+            "fulfill: resume %s not owned by telegram_id=%s",
+            resume_id,
+            telegram_id,
+        )
+        return False
+
     resume = db.find_resume(resume_id)
     if not resume:
         logger.warning("fulfill: resume %s not found", resume_id)

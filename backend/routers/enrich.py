@@ -1,9 +1,10 @@
 import logging
 
 import httpx
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, HTTPException, Query, Request
 
 from config import settings
+from services.rate_limiter import RateLimitExceeded, check_rate_limit
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/enrich", tags=["enrich"])
@@ -72,8 +73,32 @@ def _looks_like_education(name: str, org_type: str) -> bool:
     return any(k in lowered for k in _EDU_KEYWORDS)
 
 
+def _client_ip(request: Request) -> str:
+    forwarded = (request.headers.get("x-forwarded-for") or "").split(",")[0].strip()
+    if forwarded:
+        return forwarded
+    if request.client and request.client.host:
+        return request.client.host
+    return "unknown"
+
+
+def _enforce_enrich_limit(request: Request) -> None:
+    try:
+        check_rate_limit("enrich_suggest", f"ip:{_client_ip(request)}")
+    except RateLimitExceeded as exc:
+        raise HTTPException(
+            status_code=429,
+            detail=f"Слишком много запросов. Повторите через ~{exc.retry_after_hours} ч.",
+        ) from exc
+
+
 @router.get("/company")
-async def suggest_company(q: str = Query(..., min_length=2), limit: int = 5):
+async def suggest_company(
+    request: Request,
+    q: str = Query(..., min_length=2, max_length=120),
+    limit: int = Query(5, ge=1, le=10),
+):
+    _enforce_enrich_limit(request)
     """
     Автодополнение работодателя — только официальные названия из ЕГРЮЛ (DaData).
     Без ключа DaData подсказок нет: пользователь вводит текст вручную.
@@ -83,7 +108,12 @@ async def suggest_company(q: str = Query(..., min_length=2), limit: int = 5):
 
 
 @router.get("/institution")
-async def suggest_institution(q: str = Query(..., min_length=2), limit: int = 5):
+async def suggest_institution(
+    request: Request,
+    q: str = Query(..., min_length=2, max_length=120),
+    limit: int = Query(5, ge=1, le=10),
+):
+    _enforce_enrich_limit(request)
     """
     Автодополнение учебного заведения — DaData party, отфильтровано по типу организации.
     """

@@ -1,3 +1,4 @@
+import hmac
 from datetime import datetime, timedelta
 
 from fastapi import APIRouter, Depends, Header, HTTPException
@@ -23,7 +24,9 @@ router = APIRouter(prefix="/api/admin", tags=["admin"])
 
 
 def verify_admin_key(x_admin_key: str = Header(..., alias="X-Admin-Key")) -> None:
-    if x_admin_key != settings.ADMIN_SECRET_KEY:
+    expected = settings.ADMIN_SECRET_KEY
+    provided = x_admin_key or ""
+    if len(provided) != len(expected) or not hmac.compare_digest(provided, expected):
         raise HTTPException(status_code=403, detail="Forbidden")
 
 

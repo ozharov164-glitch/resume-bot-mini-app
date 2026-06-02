@@ -10,6 +10,7 @@ from typing import Any
 
 from services.ai_service import adapt_resume_for_vacancy, finalize_resume_data
 from services.payment_fulfillment import parse_resume_data
+from services.payment_validation import resume_belongs_to_telegram
 from services.pdf_async import generate_pdf_async
 from services.telegram_service import send_document_to_user
 
@@ -21,6 +22,14 @@ async def fulfill_adapt_resume(
     source_resume_id: str,
     telegram_id: int,
 ) -> str | None:
+    if not resume_belongs_to_telegram(db, source_resume_id, telegram_id):
+        logger.warning(
+            "adapt: resume %s not owned by telegram_id=%s",
+            source_resume_id,
+            telegram_id,
+        )
+        return None
+
     resume = db.find_resume(source_resume_id)
     if not resume:
         logger.warning("adapt: source resume %s not found", source_resume_id)

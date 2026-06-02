@@ -4,6 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from config import settings
+from middleware.security_headers import SecurityHeadersMiddleware
 from database import get_db, storage_mode
 from routers import (
     admin,
@@ -40,12 +41,13 @@ _github_pages_origins = [
     "https://ozharov164-glitch.github.io/resume-bot-mini-app",
 ]
 
+app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_github_pages_origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "X-Admin-Key", "X-Telegram-Bot-Api-Secret-Token"],
 )
 
 app.include_router(auth.router)
@@ -74,5 +76,6 @@ async def health():
     try:
         get_db()
         return {"status": "ok", "storage": storage_mode()}
-    except Exception as exc:
-        return {"status": "degraded", "storage": "error", "detail": str(exc)[:120]}
+    except Exception:
+        logging.getLogger(__name__).exception("health check storage failed")
+        return {"status": "degraded", "storage": "error"}

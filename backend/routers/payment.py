@@ -1,7 +1,7 @@
 import json
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from telegram import Bot, Update
 
 from config import settings
@@ -13,6 +13,7 @@ from services.bonus_payment import apply_bonus_rub, apply_bonus_stars
 from services.payment_dispatch import fulfill_from_invoice_payload
 from services.payment_service import create_stars_invoice_link, create_yookassa_payment
 from services.promo_service import RUB_PRICE_SINGLE_PDF, activate_promo, discounted_prices, resolve_payment_promo
+from services.telegram_service import verify_telegram_webhook_secret
 from services.yookassa_webhook import handle_yookassa_webhook
 
 logger = logging.getLogger(__name__)
@@ -177,8 +178,16 @@ async def yookassa_webhook(request: Request, db=Depends(get_db)):
 
 
 @router.post("/telegram-webhook")
-async def telegram_payment_webhook(request: Request, db=Depends(get_db)):
+async def telegram_payment_webhook(
+    request: Request,
+    db=Depends(get_db),
+    x_telegram_bot_api_secret_token: str | None = Header(
+        default=None, alias="X-Telegram-Bot-Api-Secret-Token"
+    ),
+):
     """Optional HTTP webhook; primary path is bot polling + successful_payment handler."""
+    if not verify_telegram_webhook_secret(x_telegram_bot_api_secret_token):
+        raise HTTPException(status_code=403, detail="Forbidden")
     data = await request.json()
     update = Update.de_json(data, Bot(token=settings.BOT_TOKEN))
 

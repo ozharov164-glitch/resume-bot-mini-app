@@ -50,6 +50,8 @@ class DummyDB:
         return amount
 
     def find_user_by_telegram_id(self, telegram_id: int):
+        if int(telegram_id) == 123:
+            return {"id": "uid-1", "telegram_id": 123}
         return None
 
 

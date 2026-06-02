@@ -19,9 +19,12 @@ LIMITS: dict[str, tuple[int, str]] = {
     "resume_generate": (3, "24h"),
     "skills_suggest": (10, "24h"),
     "voice_transcribe": (5, "24h"),
+    "voice_polish": (30, "24h"),
+    "enrich_suggest": (120, "24h"),
+    "analytics_event": (200, "24h"),
 }
 
-_counters: dict[str, dict[int, int]] = defaultdict(dict)
+_counters: dict[str, dict[str, int]] = defaultdict(dict)
 _window_day: str | None = None
 
 
@@ -45,31 +48,35 @@ def retry_after_hours() -> int:
     return max(1, math.ceil(seconds / 3600))
 
 
-def check_rate_limit(endpoint_key: str, telegram_id: int | str | None) -> None:
-    """Raise dict suitable for HTTPException detail if limit exceeded."""
-    if telegram_id is None:
+def check_rate_limit(endpoint_key: str, identity: int | str | None) -> None:
+    """Raise RateLimitExceeded if limit exceeded. identity: telegram_id or client key."""
+    if identity is None:
         return
-    if is_founder(telegram_id):
-        return
+    if endpoint_key in {"resume_generate", "skills_suggest", "voice_transcribe", "voice_polish", "analytics_event"}:
+        try:
+            if is_founder(int(identity)):
+                return
+        except (TypeError, ValueError):
+            pass
 
     limit_cfg = LIMITS.get(endpoint_key)
     if not limit_cfg:
         return
 
     max_requests, _ = limit_cfg
-    tid = int(telegram_id)
+    bucket_key = str(identity)
     _ensure_window()
 
     bucket = _counters[endpoint_key]
-    count = bucket.get(tid, 0) + 1
-    bucket[tid] = count
+    count = bucket.get(bucket_key, 0) + 1
+    bucket[bucket_key] = count
 
     if count > max_requests:
         hours = retry_after_hours()
         logger.info(
-            "rate_limit exceeded endpoint=%s telegram_id=%s count=%s max=%s",
+            "rate_limit exceeded endpoint=%s identity=%s count=%s max=%s",
             endpoint_key,
-            tid,
+            bucket_key,
             count,
             max_requests,
         )

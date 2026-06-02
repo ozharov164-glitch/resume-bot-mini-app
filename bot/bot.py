@@ -1374,7 +1374,42 @@ async def follow_up_after_payment(context: ContextTypes.DEFAULT_TYPE):
 
 
 async def pre_checkout(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.pre_checkout_query.answer(ok=True)
+    query = update.pre_checkout_query
+    if not query or not query.from_user:
+        return
+    try:
+        from services.invoice_payload import parse_invoice_payload
+        from services.payment_validation import expected_stars_amount
+
+        payload = parse_invoice_payload(query.invoice_payload or "")
+        resume_id = str(payload.get("resume_id") or "").strip()
+        if not resume_id:
+            await query.answer(ok=False, error_message="Некорректный счёт. Создайте оплату заново.")
+            return
+
+        payment_type = str(payload.get("type") or "single_pdf")
+        bonus = int(payload.get("bonus_stars_applied") or 0)
+        db = get_db()
+        expected = expected_stars_amount(
+            db,
+            resume_id=resume_id,
+            telegram_id=query.from_user.id,
+            payment_type=payment_type,
+            bonus_stars_applied=bonus,
+        )
+        if expected is None:
+            await query.answer(ok=False, error_message="Резюме не найдено или счёт устарел.")
+            return
+        if int(query.total_amount) != expected:
+            await query.answer(
+                ok=False,
+                error_message="Сумма счёта изменилась. Откройте оплату снова в приложении.",
+            )
+            return
+        await query.answer(ok=True)
+    except Exception:
+        logger.exception("pre_checkout validation failed")
+        await query.answer(ok=False, error_message="Не удалось проверить оплату. Попробуйте снова.")
 
 
 async def successful_payment(update: Update, context: ContextTypes.DEFAULT_TYPE):
