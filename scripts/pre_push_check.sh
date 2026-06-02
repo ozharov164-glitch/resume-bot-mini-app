@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Run the same gates as CI before git push. Used by .githooks/pre-push.
+# Run the same gates as .github/workflows/ci-and-deploy.yml before git push.
+# Used by .githooks/pre-push.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
