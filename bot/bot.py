@@ -58,7 +58,11 @@ from services.bot_copy import (  # noqa: E402
     reengagement_text,
     resume_command_text,
     start_text,
+    trust_hub_text,
+    trust_price_text,
+    trust_proof_text,
     trust_text,
+    trust_vs_ai_text,
 )
 from services.payment_fulfillment import fulfill_paid_resume  # noqa: E402
 from services.stats_display import public_resume_count  # noqa: E402
@@ -1000,22 +1004,52 @@ async def examples_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(examples_text(), reply_markup=keyboard)
 
 
-async def trust_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    count = get_resume_count()
-    await update.message.reply_text(
-        trust_text(count),
-        reply_markup=InlineKeyboardMarkup(
+def _trust_hub_keyboard() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        [
+            [InlineKeyboardButton("📖 Полный обзор", callback_data="trust_main")],
             [
-                [InlineKeyboardButton("📝 Создать резюме", web_app=WebAppInfo(url=MINI_APP_URL))],
-                [
-                    InlineKeyboardButton(
-                        "🖼 Примеры", web_app=WebAppInfo(url=f"{MINI_APP_URL}#examples")
-                    )
-                ],
-            ]
-        ),
-        parse_mode="HTML",
+                InlineKeyboardButton("🤖 vs ChatGPT", callback_data="trust_vs_ai"),
+                InlineKeyboardButton("💰 Цена", callback_data="trust_price"),
+            ],
+            [InlineKeyboardButton("⭐ Отзывы", callback_data="trust_proof")],
+            [InlineKeyboardButton("📝 Создать резюме", web_app=WebAppInfo(url=MINI_APP_URL))],
+            [
+                InlineKeyboardButton(
+                    "🖼 Примеры", web_app=WebAppInfo(url=f"{MINI_APP_URL}#examples")
+                )
+            ],
+            [InlineKeyboardButton("◀️ В меню", callback_data="back_to_start")],
+        ]
     )
+
+
+def _trust_detail_keyboard() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        [
+            [InlineKeyboardButton("📝 Создать резюме", web_app=WebAppInfo(url=MINI_APP_URL))],
+            [InlineKeyboardButton("◀️ К разделу «Почему мы»", callback_data="trust")],
+            [InlineKeyboardButton("◀️ В меню", callback_data="back_to_start")],
+        ]
+    )
+
+
+async def _send_trust_hub(update: Update, *, edit: bool = False) -> None:
+    count = get_resume_count()
+    text = trust_hub_text(count)
+    markup = _trust_hub_keyboard()
+    if edit and update.callback_query:
+        await update.callback_query.edit_message_text(
+            text, reply_markup=markup, parse_mode="HTML"
+        )
+        return
+    message = update.effective_message
+    if message:
+        await message.reply_text(text, reply_markup=markup, parse_mode="HTML")
+
+
+async def trust_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await _send_trust_hub(update)
 
 
 async def support_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -1157,20 +1191,46 @@ async def how_it_works_callback(update: Update, context: ContextTypes.DEFAULT_TY
 async def trust_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
+    await _send_trust_hub(update, edit=True)
+
+
+async def trust_main_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
     count = get_resume_count()
     await query.edit_message_text(
         trust_text(count),
-        reply_markup=InlineKeyboardMarkup(
-            [
-                [InlineKeyboardButton("📝 Создать резюме", web_app=WebAppInfo(url=MINI_APP_URL))],
-                [
-                    InlineKeyboardButton(
-                        "🖼 Примеры", web_app=WebAppInfo(url=f"{MINI_APP_URL}#examples")
-                    )
-                ],
-                [InlineKeyboardButton("◀️ Назад", callback_data="back_to_start")],
-            ]
-        ),
+        reply_markup=_trust_detail_keyboard(),
+        parse_mode="HTML",
+    )
+
+
+async def trust_vs_ai_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    await query.edit_message_text(
+        trust_vs_ai_text(),
+        reply_markup=_trust_detail_keyboard(),
+        parse_mode="HTML",
+    )
+
+
+async def trust_price_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    await query.edit_message_text(
+        trust_price_text(),
+        reply_markup=_trust_detail_keyboard(),
+        parse_mode="HTML",
+    )
+
+
+async def trust_proof_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    await query.edit_message_text(
+        trust_proof_text(),
+        reply_markup=_trust_detail_keyboard(),
         parse_mode="HTML",
     )
 
@@ -1634,6 +1694,10 @@ def main():
 
     app.add_handler(CallbackQueryHandler(how_it_works_callback, pattern="^how_it_works$"))
     app.add_handler(CallbackQueryHandler(trust_callback, pattern="^trust$"))
+    app.add_handler(CallbackQueryHandler(trust_main_callback, pattern="^trust_main$"))
+    app.add_handler(CallbackQueryHandler(trust_vs_ai_callback, pattern="^trust_vs_ai$"))
+    app.add_handler(CallbackQueryHandler(trust_price_callback, pattern="^trust_price$"))
+    app.add_handler(CallbackQueryHandler(trust_proof_callback, pattern="^trust_proof$"))
     app.add_handler(CallbackQueryHandler(support_hub_callback, pattern="^support_hub$"))
     app.add_handler(CallbackQueryHandler(founder_dm_hint_callback, pattern="^founder_dm_hint$"))
     app.add_handler(CallbackQueryHandler(back_to_start_callback, pattern="^back_to_start$"))

@@ -9,7 +9,16 @@ os.environ.setdefault("APP_URL", "https://example.test")
 os.environ.setdefault("FRONTEND_URL", "https://example.test/app")
 os.environ.setdefault("BOT_USERNAME", "resumeez_bot")
 
-from services.bot_copy import PAYMENT_LINE, broadcast_activation_text, start_text, trust_text  # noqa: E402
+from services.bot_copy import (  # noqa: E402
+    PAYMENT_LINE,
+    broadcast_activation_text,
+    start_text,
+    trust_hub_text,
+    trust_price_text,
+    trust_proof_text,
+    trust_text,
+    trust_vs_ai_text,
+)
 from services.stats_display import DISPLAY_COUNT_FLOOR, public_resume_count  # noqa: E402
 
 
@@ -23,7 +32,37 @@ def test_trust_mentions_card_and_5000():
     assert "банковской картой" in text
     assert "Telegram Stars" in text
     assert "без карты" not in text
-    assert "лучше конкурентов" in text
+    assert "ChatGPT" in text
+    assert "текст для hh.ru" in text
+    assert "предпросмотр" in text.lower()
+    assert "вернём Stars" in text
+
+
+def test_trust_hub_text():
+    text = trust_hub_text(5000)
+    assert "5 000" in text
+    assert "Почему ResumeBot" in text
+    assert "149" in text
+
+
+def test_trust_vs_ai_text():
+    text = trust_vs_ai_text()
+    assert "ChatGPT" in text
+    assert "PDF" in text
+    assert "предпросмотр" in text.lower()
+
+
+def test_trust_price_text():
+    text = trust_price_text()
+    assert PAYMENT_LINE in text
+    assert "вернём Stars" in text
+    assert "300" in text
+
+
+def test_trust_proof_text():
+    text = trust_proof_text()
+    assert "Водитель" in text
+    assert "hh.ru" in text
 
 
 def test_start_text_payment_options():
