@@ -1,6 +1,6 @@
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Response
 from fastapi.responses import JSONResponse
 
 from dependencies import get_current_user
@@ -15,6 +15,7 @@ router = APIRouter(prefix="/api/skills", tags=["skills"])
 @router.post("/suggest", response_model=SuggestSkillsResponse)
 async def suggest_skills_for_position(
     payload: SuggestSkillsRequest,
+    response: Response,
     current_user: dict = Depends(get_current_user),
 ):
     position = payload.position.strip()
@@ -33,6 +34,7 @@ async def suggest_skills_for_position(
         )
     try:
         result = await suggest_skills(position)
+        response.headers["Cache-Control"] = "private, max-age=3600"
         return SuggestSkillsResponse(skills=result["skills"], groups=result.get("groups", {}))
     except Exception as exc:
         logger.exception("skills suggest failed user_id=%s", current_user.get("id"))

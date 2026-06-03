@@ -1508,6 +1508,27 @@ async def successful_payment(update: Update, context: ContextTypes.DEFAULT_TYPE)
         telegram_id = update.message.from_user.id
         from_user = update.message.from_user
         db = get_db()
+        from services.payment_validation import expected_stars_amount
+
+        payment_type = str(payload.get("type") or "single_pdf")
+        bonus = int(payload.get("bonus_stars_applied") or 0)
+        expected = expected_stars_amount(
+            db,
+            resume_id=resume_id,
+            telegram_id=telegram_id,
+            payment_type=payment_type,
+            bonus_stars_applied=bonus,
+        )
+        if expected is None or int(payment.total_amount) != expected:
+            logger.warning(
+                "successful_payment amount mismatch resume_id=%s telegram_id=%s expected=%s paid=%s",
+                resume_id,
+                telegram_id,
+                expected,
+                payment.total_amount,
+            )
+            await update.message.reply_text(payment_error_text())
+            return
         pay_info = PaymentNotifyInfo(
             provider="telegram_stars",
             amount=str(payment.total_amount),
@@ -1519,7 +1540,6 @@ async def successful_payment(update: Update, context: ContextTypes.DEFAULT_TYPE)
         )
         from services.payment_dispatch import fulfill_from_invoice_payload
 
-        payment_type = str(payload.get("type") or "single_pdf")
         if payment_type == "single_pdf":
             paid = await fulfill_from_invoice_payload(
                 db,

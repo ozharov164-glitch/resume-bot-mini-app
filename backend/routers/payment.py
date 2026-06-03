@@ -196,9 +196,27 @@ async def telegram_payment_webhook(
         try:
             from services.invoice_payload import parse_invoice_payload
 
+            from services.payment_validation import expected_stars_amount
+
             payload = parse_invoice_payload(payment.invoice_payload)
+            resume_id = str(payload.get("resume_id") or "")
             from_user = update.message.from_user
             telegram_id = from_user.id
+            expected = expected_stars_amount(
+                db,
+                resume_id=resume_id,
+                telegram_id=telegram_id,
+                payment_type=str(payload.get("type") or "single_pdf"),
+                bonus_stars_applied=int(payload.get("bonus_stars_applied") or 0),
+            )
+            if expected is None or int(payment.total_amount) != expected:
+                logger.warning(
+                    "telegram-webhook payment amount mismatch resume_id=%s expected=%s paid=%s",
+                    resume_id,
+                    expected,
+                    payment.total_amount,
+                )
+                return {"ok": True}
             pay_info = PaymentNotifyInfo(
                 provider="telegram_stars",
                 amount=str(payment.total_amount),

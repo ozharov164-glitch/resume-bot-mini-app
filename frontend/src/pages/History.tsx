@@ -130,7 +130,7 @@ export function HistoryPage() {
             <Icon name="description" size={48} style={{ color: "var(--text-muted)" }} />
             <p className="text-base font-semibold">Пока нет сохранённых резюме</p>
             <p className="text-sm" style={{ color: "var(--text-muted)" }}>
-              Создай первое — оно появится здесь автоматически.
+              Создайте первое — оно появится здесь автоматически.
             </p>
           </div>
         )}

@@ -7,6 +7,7 @@ from yookassa.domain.notification import WebhookNotificationEventType, WebhookNo
 from config import settings
 from services.admin_notify import PaymentNotifyInfo
 from services.ops_metrics import record_yookassa_error
+from services.payment_validation import expected_rub_amount, payment_amount_matches
 
 logger = logging.getLogger(__name__)
 
@@ -79,9 +80,26 @@ async def handle_yookassa_webhook(db: Any, payload: dict) -> dict:
         return {"ok": True, "status": "ignored"}
 
     telegram_id = int(user["telegram_id"])
+    bonus_applied = int(_metadata_value(verified.metadata, "bonus_stars_applied") or 0)
+    expected_rub = expected_rub_amount(
+        db,
+        resume_id=resume_id,
+        telegram_id=telegram_id,
+        bonus_stars_applied=bonus_applied,
+    )
     amount = verified.amount
     amount_str = amount.value if amount else "?"
     currency = amount.currency if amount else "RUB"
+    if not payment_amount_matches(expected_rub, amount_str):
+        logger.warning(
+            "yookassa webhook: amount mismatch payment_id=%s resume_id=%s expected=%s paid=%s",
+            payment_id,
+            resume_id,
+            expected_rub,
+            amount_str,
+        )
+        record_yookassa_error("amount_mismatch")
+        return {"ok": True, "status": "ignored", "reason": "amount_mismatch"}
 
     pay_info = PaymentNotifyInfo(
         provider="yookassa",
@@ -99,7 +117,7 @@ async def handle_yookassa_webhook(db: Any, payload: dict) -> dict:
         "resume_id": resume_id,
         "user_id": user_id,
         "type": _metadata_value(verified.metadata, "type") or "single_pdf",
-        "bonus_stars_applied": int(_metadata_value(verified.metadata, "bonus_stars_applied") or 0),
+        "bonus_stars_applied": bonus_applied,
     }
     await fulfill_from_invoice_payload(db, payload, telegram_id, payment=pay_info)
     logger.info("yookassa webhook: fulfilled resume_id=%s payment_id=%s", resume_id, payment_id)
