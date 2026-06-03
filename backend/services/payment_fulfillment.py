@@ -103,7 +103,7 @@ async def fulfill_paid_resume(
         )
         try:
             docx_bytes = generate_docx_bytes(resume_data, selected_template)
-            docx_name = docx_filename(resume_data)
+            docx_name = docx_filename(resume_data, selected_template)
             await send_document_to_user(
                 user_telegram_id=telegram_id,
                 document=docx_bytes,

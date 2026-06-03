@@ -62,8 +62,25 @@ def test_classic_docx_has_two_column_table() -> None:
 def test_docx_filename_hh_prefix() -> None:
     from services.docx_service import docx_filename
 
-    assert docx_filename({"full_name": "Иван Петров"}).startswith("Rezyume_")
-    assert docx_filename({"full_name": "Иван Петров"}).endswith("_hh.docx")
+    assert docx_filename({"full_name": "Иван Петров"}, "classic").startswith("Rezyume_")
+    assert docx_filename({"full_name": "Иван Петров"}, "classic").endswith("_classic_hh.docx")
+    assert docx_filename({"full_name": "Иван Петров"}, "modern").endswith("_modern_hh.docx")
+
+
+@pytest.mark.parametrize("template", ["classic", "modern", "compact"])
+def test_template_docx_structure(template: str) -> None:
+    from services.docx_service import _cell_all_text
+
+    raw = generate_docx_bytes(SAMPLE, template)
+    doc = Document(io.BytesIO(raw))
+    if template in ("classic", "compact"):
+        assert len(doc.tables) >= 1
+        assert len(doc.tables[0].columns) == 2
+        main_text = _cell_all_text(doc.tables[0].rows[0].cells[1])
+    else:
+        main_text = "\n".join(p.text for p in doc.paragraphs)
+    assert "Иван Петров" in main_text or "Иван" in main_text
+    assert "Tech Corp" in main_text or "Backend" in main_text
 
 
 def test_embedded_fonts_increase_size() -> None:

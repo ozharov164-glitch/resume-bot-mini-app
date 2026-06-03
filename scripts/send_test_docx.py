@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate a sample hh.ru DOCX (classic) and optionally send to founder via Telegram."""
+"""Generate sample hh.ru DOCX for all templates and send to founder via Telegram."""
 
 from __future__ import annotations
 
@@ -15,6 +15,7 @@ sys.path.insert(0, str(ROOT / "backend"))
 EXAMPLE_PATH = ROOT / "frontend" / "src" / "data" / "resumeExamples.json"
 OUT_DIR = ROOT / "tmp"
 ENV_PATH = ROOT / "backend" / ".env"
+TEMPLATES = ("classic", "modern", "compact")
 
 
 def _load_backend_env() -> None:
@@ -47,22 +48,25 @@ def _load_driver_example() -> dict:
     return normalize_resume_data(resume)
 
 
-def generate_sample_docx() -> tuple[bytes, str, dict]:
+def generate_all_samples() -> list[tuple[str, bytes, str]]:
     from services.docx_service import docx_filename, generate_docx_bytes
     from services.font_assets import ensure_fonts
 
     ensure_fonts()
     data = _load_driver_example()
-    docx_bytes = generate_docx_bytes(data, "classic")
-    filename = docx_filename(data)
     OUT_DIR.mkdir(parents=True, exist_ok=True)
-    out_path = OUT_DIR / filename
-    out_path.write_bytes(docx_bytes)
-    print(f"Saved: {out_path} ({len(docx_bytes):,} bytes)")
-    return docx_bytes, filename, data
+    out: list[tuple[str, bytes, str]] = []
+    for template in TEMPLATES:
+        docx_bytes = generate_docx_bytes(data, template)
+        filename = docx_filename(data, template)
+        path = OUT_DIR / filename
+        path.write_bytes(docx_bytes)
+        print(f"Saved: {path} ({len(docx_bytes):,} bytes)")
+        out.append((template, docx_bytes, filename))
+    return out
 
 
-async def _send_telegram(docx_bytes: bytes, filename: str) -> None:
+async def _send_all(samples: list[tuple[str, bytes, str]]) -> None:
     _load_backend_env()
     from config import settings
     from services.telegram_service import send_document_to_user
@@ -76,26 +80,29 @@ async def _send_telegram(docx_bytes: bytes, filename: str) -> None:
         print("No FOUNDER_TELEGRAM_IDS — skip Telegram send")
         return
     target = founder_ids[0]
-    caption = (
-        "Тестовое резюме DOCX (classic, hh.ru)\n"
-        "Nunito Sans встроен · вёрстка как PDF"
-    )
-    await send_document_to_user(
-        user_telegram_id=target,
-        document=docx_bytes,
-        filename=filename,
-        caption=caption,
-    )
-    print(f"Sent to Telegram chat_id={target}")
+    labels = {
+        "classic": "Classic — тёмный sidebar, mint акценты",
+        "modern": "Modern — синий single-column, chips",
+        "compact": "Compact — фиолетовый sidebar 32%",
+    }
+    for template, docx_bytes, filename in samples:
+        caption = f"Тест DOCX · {labels.get(template, template)}\nNunito Sans · hh.ru"
+        await send_document_to_user(
+            user_telegram_id=target,
+            document=docx_bytes,
+            filename=filename,
+            caption=caption,
+        )
+        print(f"Sent {template} → chat_id={target}")
 
 
 def main() -> None:
-    docx_bytes, filename, _ = generate_sample_docx()
+    samples = generate_all_samples()
     _load_backend_env()
     if os.environ.get("BOT_TOKEN"):
-        asyncio.run(_send_telegram(docx_bytes, filename))
+        asyncio.run(_send_all(samples))
     else:
-        print("BOT_TOKEN not set — file saved locally only (run on VPS after deploy to send)")
+        print("BOT_TOKEN not set — files saved locally only (run on VPS to send)")
 
 
 if __name__ == "__main__":

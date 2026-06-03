@@ -42,7 +42,7 @@ async def _send_docx_best_effort(
         await send_document_to_user(
             user_telegram_id=telegram_id,
             document=docx_bytes,
-            filename=docx_filename(resume_data),
+            filename=docx_filename(resume_data, template_id),
             caption="Файл DOCX для загрузки на hh.ru или в ATS",
         )
     except Exception:
