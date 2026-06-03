@@ -9,7 +9,6 @@ import { AppHeader } from "../components/ui/AppHeader";
 import { Button } from "../components/ui/Button";
 import { FixedBottomBar } from "../components/ui/FixedBottomBar";
 import { LoadingIllustration } from "../components/ui/LoadingIllustration";
-import { LoadingProgressStrip } from "../components/ui/LoadingProgressStrip";
 import { Screen } from "../components/ui/Screen";
 import { TextInput } from "../components/ui/TextField";
 import { useTelegramBackButton } from "../hooks/useTelegramBackButton";
@@ -188,28 +187,42 @@ export function SkillPickPage() {
         )}
       >
         {!showSkills ? (
-          <div className="skill-pick-loading mx-auto flex w-full max-w-md flex-col items-center px-2">
+          <div className="skill-pick-loading">
             <LoadingIllustration />
-            <div className="loading-screen__copy w-full max-w-xs shrink-0 text-center">
-              <h2 className="text-[22px] font-extrabold leading-7 tracking-tight text-[#161d19]">
-                Подбираем навыки для «{position || "вашей должности"}»
-              </h2>
-              <div className="skill-pick-loading__phrase mt-2">
-                <AnimatePresence mode="wait">
-                  <motion.p
-                    key={phraseIndex}
-                    className="text-base leading-6 text-[#3f4943]"
-                    initial={{ opacity: 0, y: 6 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -6 }}
-                    transition={{ duration: 0.25 }}
-                    aria-live="polite"
-                  >
-                    {PHRASES[phraseIndex]}
-                  </motion.p>
-                </AnimatePresence>
+            <h2 className="mb-2 text-center text-2xl font-bold leading-snug">
+              Подбираем навыки для «{position || "вашей должности"}»
+            </h2>
+            <div className="skill-pick-loading__phrase">
+              <AnimatePresence mode="wait">
+                <motion.p
+                  key={phraseIndex}
+                  className="text-center text-base"
+                  style={{ color: "var(--text-variant, #3c4a42)" }}
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -6 }}
+                  transition={{ duration: 0.25 }}
+                  aria-live="polite"
+                >
+                  {PHRASES[phraseIndex]}
+                </motion.p>
+              </AnimatePresence>
+            </div>
+            <div className="w-full max-w-xs">
+              <div
+                className="loading-progress-track h-2 w-full overflow-hidden rounded-full"
+                role="progressbar"
+                aria-valuenow={Math.round(progress)}
+                aria-valuemin={0}
+                aria-valuemax={100}
+              >
+                <div
+                  className="loading-progress-fill relative h-full rounded-full transition-[width] duration-700 ease-out"
+                  style={{ width: `${progress}%` }}
+                >
+                  <div className="loading-progress-shimmer absolute inset-0" aria-hidden />
+                </div>
               </div>
-              <LoadingProgressStrip progress={progress} label="Подбор навыков" />
             </div>
           </div>
         ) : (
