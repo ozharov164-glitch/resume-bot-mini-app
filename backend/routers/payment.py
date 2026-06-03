@@ -11,6 +11,7 @@ from services.founder import is_founder
 from services.admin_notify import PaymentNotifyInfo
 from services.bonus_payment import apply_bonus_rub, apply_bonus_stars
 from services.payment_dispatch import fulfill_from_invoice_payload
+from services.payment_fulfillment import fulfill_paid_resume
 from services.payment_service import create_stars_invoice_link, create_yookassa_payment
 from services.promo_service import RUB_PRICE_SINGLE_PDF, activate_promo, discounted_prices, resolve_payment_promo
 from services.telegram_service import verify_telegram_webhook_secret
@@ -48,6 +49,15 @@ async def create_invoice(
         raise HTTPException(status_code=404, detail="Резюме не найдено.")
 
     if is_founder(current_user.get("telegram_id")):
+        # Test mode: fulfil the resume for free (mark paid + send PDF & DOCX) so the
+        # founder walks the exact same funnel as a real user, paywall included.
+        await fulfill_paid_resume(
+            db,
+            resume_id,
+            int(current_user["telegram_id"]),
+            send_document=True,
+            template_name=resume.get("template_id"),
+        )
         return {
             "status": "founder_unlimited",
             "provider": "founder",
@@ -127,10 +137,19 @@ async def create_yookassa_invoice(
     if not resume:
         raise HTTPException(status_code=404, detail="Резюме не найдено.")
     if is_founder(current_user.get("telegram_id")):
-        raise HTTPException(
-            status_code=400,
-            detail="Для founder PDF бесплатный — скачайте из предпросмотра.",
+        # Test mode parity for the card button: fulfil for free, no real charge.
+        await fulfill_paid_resume(
+            db,
+            resume_id,
+            int(current_user["telegram_id"]),
+            send_document=True,
+            template_name=resume.get("template_id"),
         )
+        return {
+            "status": "founder_unlimited",
+            "provider": "founder",
+            "confirmation_url": None,
+        }
     _stars, rub = _prepare_resume_promo(db, resume_id, current_user["telegram_id"])
     use_bonus = bool((body or {}).get("use_bonus"))
     rub, bonus_applied = apply_bonus_rub(

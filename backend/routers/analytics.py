@@ -15,18 +15,21 @@ router = APIRouter(prefix="/api/analytics", tags=["analytics"])
 
 _ALLOWED_EVENTS = frozenset(
     {
+        "mini_app_opened",
         "onboarding_started",
         "step_completed",
         "generate_started",
         "skills_confirmed",
         "template_selected",
         "preview_viewed",
+        "teaser_viewed",
         "pay_clicked",
         "payment_completed",
         "share_clicked",
         "share_banner_downloaded",
         "text_exported",
         "bonus_applied",
+        "adapt_clicked",
         "adapt_purchased",
         "pdf_resent",
     }

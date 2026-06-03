@@ -113,7 +113,9 @@ async def create_resume(
         founder = is_founder(current_user.get("telegram_id"))
         bonus = db.get_referral_bonus(current_user["telegram_id"])
         is_paid_by_bonus = bonus > 0 and db.use_referral_bonus(current_user["telegram_id"])
-        is_paid = founder or is_paid_by_bonus
+        # Founders go through the full funnel (locked preview -> payment) like real
+        # users; their payment is fulfilled for free in test mode at /create-invoice.
+        is_paid = is_paid_by_bonus
         template_id = (user_data.template_id or "classic").strip().lower()
         if template_id not in VALID_TEMPLATES:
             template_id = "classic"

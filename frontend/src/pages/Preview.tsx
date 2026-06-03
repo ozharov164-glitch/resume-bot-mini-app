@@ -47,8 +47,8 @@ export function PreviewPage() {
   const [hydrateError, setHydrateError] = useState(false);
   const [resendingPdf, setResendingPdf] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
-  const previewLocked = !isPaid && !founderActive;
-  const previewPaid = isPaid || founderActive;
+  const previewLocked = !isPaid;
+  const previewPaid = isPaid;
   const useFitLayout = previewLocked || previewPaid;
   const handleBack = useCallback(() => {
     getTg()?.HapticFeedback?.impactOccurred("light");

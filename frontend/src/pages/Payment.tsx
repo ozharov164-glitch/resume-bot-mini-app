@@ -175,6 +175,12 @@ export function PaymentPage() {
             resumeId,
             bonusApplied,
           )) as YookassaCreateResponse;
+          if (response.status === "founder_unlimited") {
+            setPaid(true);
+            getTg()?.HapticFeedback?.notificationOccurred("success");
+            setPage("success");
+            return;
+          }
           checkoutUrl = response.confirmation_url?.trim() ?? "";
           if (checkoutUrl) break;
           lastError = "ЮKassa не вернула ссылку на оплату.";
