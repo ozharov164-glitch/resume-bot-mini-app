@@ -50,7 +50,6 @@ export function SkillPickPage() {
 
   const [phase, setPhase] = useState<Phase>("loading");
   const [phraseIndex, setPhraseIndex] = useState(0);
-  const [progress, setProgress] = useState(8);
   const [skillOptions, setSkillOptions] = useState<string[]>([]);
   const [skillGroups, setSkillGroups] = useState<Record<string, string[]>>({});
   const [selectedSkills, setSelectedSkills] = useState<string[]>(() =>
@@ -67,20 +66,6 @@ export function SkillPickPage() {
   }, [phase]);
 
   useEffect(() => {
-    if (phase !== "loading") return;
-    const start = performance.now();
-    const duration = 4500;
-    const tick = (now: number) => {
-      const ratio = Math.min((now - start) / duration, 1);
-      const eased = 1 - Math.pow(1 - ratio, 2);
-      setProgress(Math.min(8 + eased * 72, 88));
-      if (ratio < 1) requestAnimationFrame(tick);
-    };
-    const frame = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(frame);
-  }, [phase]);
-
-  useEffect(() => {
     let cancelled = false;
     const fallback = [...skillsOptionsForPosition(SKILLS_FALLBACK_BY_POSITION, position)];
 
@@ -89,7 +74,6 @@ export function SkillPickPage() {
         setSkillOptions(fallback);
         setSkillGroups({});
         setPhase("ready");
-        setProgress(100);
         return;
       }
 
@@ -101,13 +85,11 @@ export function SkillPickPage() {
         setSkillOptions(skills);
         setSkillGroups(result.groups ?? {});
         setPhase("ready");
-        setProgress(100);
       } catch {
         if (cancelled) return;
         setSkillOptions(fallback);
         setSkillGroups({});
         setPhase("error");
-        setProgress(100);
       }
     };
 
@@ -207,22 +189,6 @@ export function SkillPickPage() {
                   {PHRASES[phraseIndex]}
                 </motion.p>
               </AnimatePresence>
-            </div>
-            <div className="w-full max-w-xs">
-              <div
-                className="loading-progress-track h-2 w-full overflow-hidden rounded-full"
-                role="progressbar"
-                aria-valuenow={Math.round(progress)}
-                aria-valuemin={0}
-                aria-valuemax={100}
-              >
-                <div
-                  className="loading-progress-fill relative h-full rounded-full transition-[width] duration-700 ease-out"
-                  style={{ width: `${progress}%` }}
-                >
-                  <div className="loading-progress-shimmer absolute inset-0" aria-hidden />
-                </div>
-              </div>
             </div>
           </div>
         ) : (
