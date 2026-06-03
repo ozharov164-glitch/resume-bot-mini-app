@@ -14,6 +14,18 @@ sys.path.insert(0, str(ROOT / "backend"))
 
 EXAMPLE_PATH = ROOT / "frontend" / "src" / "data" / "resumeExamples.json"
 OUT_DIR = ROOT / "tmp"
+ENV_PATH = ROOT / "backend" / ".env"
+
+
+def _load_backend_env() -> None:
+    if not ENV_PATH.is_file():
+        return
+    for raw in ENV_PATH.read_text(encoding="utf-8").splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, val = line.split("=", 1)
+        os.environ.setdefault(key.strip(), val.strip().strip('"').strip("'"))
 
 
 def _load_driver_example() -> dict:
@@ -51,6 +63,7 @@ def generate_sample_docx() -> tuple[bytes, str, dict]:
 
 
 async def _send_telegram(docx_bytes: bytes, filename: str) -> None:
+    _load_backend_env()
     from config import settings
     from services.telegram_service import send_document_to_user
 
@@ -78,6 +91,7 @@ async def _send_telegram(docx_bytes: bytes, filename: str) -> None:
 
 def main() -> None:
     docx_bytes, filename, _ = generate_sample_docx()
+    _load_backend_env()
     if os.environ.get("BOT_TOKEN"):
         asyncio.run(_send_telegram(docx_bytes, filename))
     else:
