@@ -706,6 +706,41 @@ async def adm_promo_acts_callback(update: Update, context: ContextTypes.DEFAULT_
         await query.edit_message_text(f"❌ {exc}", reply_markup=keyboard)
 
 
+def _format_admin_funnel_text(d: dict) -> str:
+    """Render founder funnel: unique users, real payments, test traffic excluded."""
+
+    def _step(label: str, key: str, prev_key: str | None) -> str:
+        n = int(d.get(key, 0) or 0)
+        if prev_key is None:
+            return f"• {label}: <b>{n}</b>"
+        prev = int(d.get(prev_key, 0) or 0)
+        if prev > 0 and n <= prev:
+            drop = round(100 * (prev - n) / prev)
+            return f"• {label}: <b>{n}</b> <i>(−{drop}%)</i>"
+        return f"• {label}: <b>{n}</b>"
+
+    lines = [
+        "📈 <b>Воронка (7 дней)</b>",
+        "<i>Уникальные пользователи · без ваших тестов</i>",
+        "",
+        _step("Начали анкету", "onboarding_started", None),
+        _step("Нажали «Сформировать»", "generate_started", "onboarding_started"),
+        _step("Выбрали шаблон", "template_selected", "generate_started"),
+        _step("Открыли предпросмотр", "preview_viewed", "template_selected"),
+        _step("Нажали «Оплатить»", "pay_clicked", "preview_viewed"),
+        "",
+        f"💳 <b>Оплатили (реально):</b> {int(d.get('payments_real', 0) or 0)}",
+        "",
+        f"Конверсия (оплата / анкета): <b>{d.get('conversion_rate', '0%')}</b>",
+        f"Оплата после предпросмотра: <b>{d.get('preview_to_pay_rate', '0%')}</b>",
+        f"Оплата после «Оплатить»: <b>{d.get('pay_click_to_paid_rate', '0%')}</b>",
+        "",
+        f"Поделились: {int(d.get('share_clicked', 0) or 0)} · "
+        f"Share-rate: <b>{d.get('share_rate', '0%')}</b>",
+    ]
+    return "\n".join(lines)
+
+
 @admin_only
 async def adm_funnel_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -718,19 +753,7 @@ async def adm_funnel_callback(update: Update, context: ContextTypes.DEFAULT_TYPE
         if resp.status_code != 200:
             await _edit_callback_message(query, f"❌ Ошибка funnel: {resp.status_code}")
             return
-        d = resp.json()
-        text = (
-            "📈 <b>Воронка (7 дней)</b>\n\n"
-            f"Начали анкету: {d.get('onboarding_started', 0)}\n"
-            f"Нажали «Сформировать»: {d.get('generate_started', 0)}\n"
-            f"Выбрали шаблон: {d.get('template_selected', 0)}\n"
-            f"Открыли предпросмотр: {d.get('preview_viewed', 0)}\n"
-            f"Нажали «Оплатить»: {d.get('pay_clicked', 0)}\n"
-            f"Оплатили: {d.get('payment_completed', 0)}\n\n"
-            f"Конверсия: <b>{d.get('conversion_rate', '0%')}</b>\n"
-            f"Поделились (Preview): {d.get('share_clicked', 0)}\n"
-            f"Share-rate: <b>{d.get('share_rate', '0%')}</b>"
-        )
+        text = _format_admin_funnel_text(resp.json())
         keyboard = _admin_back_refresh("adm_funnel")
         await _edit_callback_message(query, text, reply_markup=keyboard)
     except Exception as exc:

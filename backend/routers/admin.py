@@ -1,6 +1,4 @@
 import hmac
-from datetime import datetime, timedelta
-
 from fastapi import APIRouter, Depends, Header, HTTPException
 
 from config import settings
@@ -10,6 +8,7 @@ from services.founder import is_founder
 from services.admin_stats import (
     count_paid_resumes_clean,
     count_resumes_today_clean,
+    get_admin_funnel_stats,
     get_promo_analytics_clean,
 )
 from services.affiliate_service import (
@@ -90,40 +89,12 @@ async def admin_funnel(
 ):
     if not is_founder(current_user.get("telegram_id")):
         raise HTTPException(status_code=403, detail="Доступ только для founder.")
-
-    since = (datetime.utcnow() - timedelta(days=7)).isoformat()
-    steps = {
-        "onboarding_started": db.count_analytics_events_since("onboarding_started", since),
-        "generate_started": db.count_analytics_events_since("generate_started", since),
-        "preview_viewed": db.count_analytics_events_since("preview_viewed", since),
-        "pay_clicked": db.count_analytics_events_since("pay_clicked", since),
-        "payment_completed": db.count_analytics_events_since("payment_completed", since),
-    }
-    started = steps["onboarding_started"] or 0
-    completed = steps["payment_completed"] or 0
-    conversion = f"{round(100 * completed / started, 1)}%" if started else "0%"
-    return {**steps, "conversion_rate": conversion}
+    return get_admin_funnel_stats(db, days=7, include_template=False)
 
 
 @router.get("/funnel-key", dependencies=[Depends(verify_admin_key)])
 async def admin_funnel_by_key(db=Depends(get_db)):
-    since = (datetime.utcnow() - timedelta(days=7)).isoformat()
-    steps = {
-        "onboarding_started": db.count_analytics_events_since("onboarding_started", since),
-        "generate_started": db.count_analytics_events_since("generate_started", since),
-        "template_selected": db.count_analytics_events_since("template_selected", since),
-        "preview_viewed": db.count_analytics_events_since("preview_viewed", since),
-        "pay_clicked": db.count_analytics_events_since("pay_clicked", since),
-        "payment_completed": db.count_analytics_events_since("payment_completed", since),
-        "share_clicked": db.count_analytics_events_since("share_clicked", since),
-    }
-    started = steps["onboarding_started"]
-    completed = steps["payment_completed"]
-    conversion = f"{round(100 * completed / started, 1)}%" if started else "0%"
-    previews = steps["preview_viewed"] or 0
-    shares = steps["share_clicked"]
-    share_rate = f"{round(100 * shares / previews, 1)}%" if previews else "0%"
-    return {**steps, "conversion_rate": conversion, "share_rate": share_rate}
+    return get_admin_funnel_stats(db, days=7, include_template=True)
 
 
 @router.get("/stats", dependencies=[Depends(verify_admin_key)])

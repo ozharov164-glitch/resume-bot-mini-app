@@ -634,6 +634,62 @@ class SQLiteBackend:
             ).fetchone()
         return int(row["c"]) if row else 0
 
+    def count_analytics_unique_users_since(
+        self,
+        event: str,
+        since_iso: str,
+        exclude_telegram_ids: list[int] | None = None,
+    ) -> int:
+        with self._connect() as conn:
+            if exclude_telegram_ids:
+                placeholders = ",".join("?" * len(exclude_telegram_ids))
+                row = conn.execute(
+                    f"""
+                    SELECT COUNT(DISTINCT telegram_id) AS c FROM analytics_events
+                    WHERE event = ? AND created_at >= ?
+                      AND telegram_id NOT IN ({placeholders})
+                    """,
+                    (event, since_iso, *exclude_telegram_ids),
+                ).fetchone()
+            else:
+                row = conn.execute(
+                    """
+                    SELECT COUNT(DISTINCT telegram_id) AS c FROM analytics_events
+                    WHERE event = ? AND created_at >= ?
+                    """,
+                    (event, since_iso),
+                ).fetchone()
+        return int(row["c"]) if row else 0
+
+    def count_paid_resumes_since(
+        self,
+        since_iso: str,
+        exclude_telegram_ids: list[int] | None = None,
+    ) -> int:
+        with self._connect() as conn:
+            if exclude_telegram_ids:
+                placeholders = ",".join("?" * len(exclude_telegram_ids))
+                row = conn.execute(
+                    f"""
+                    SELECT COUNT(*) AS c FROM resumes r
+                    INNER JOIN users u ON u.id = r.user_id
+                    WHERE r.is_paid = 1
+                      AND r.paid_at IS NOT NULL
+                      AND r.paid_at >= ?
+                      AND u.telegram_id NOT IN ({placeholders})
+                    """,
+                    (since_iso, *exclude_telegram_ids),
+                ).fetchone()
+            else:
+                row = conn.execute(
+                    """
+                    SELECT COUNT(*) AS c FROM resumes
+                    WHERE is_paid = 1 AND paid_at IS NOT NULL AND paid_at >= ?
+                    """,
+                    (since_iso,),
+                ).fetchone()
+        return int(row["c"]) if row else 0
+
     def get_referral_stats(self, telegram_id: int) -> dict[str, int]:
         with self._connect() as conn:
             invited_row = conn.execute(
@@ -889,6 +945,63 @@ class SupabaseBackend:
             return int(result.count or 0)
         except Exception:
             return 0
+
+    def count_analytics_unique_users_since(
+        self,
+        event: str,
+        since_iso: str,
+        exclude_telegram_ids: list[int] | None = None,
+    ) -> int:
+        try:
+            query = (
+                self.client.table("analytics_events")
+                .select("telegram_id")
+                .eq("event", event)
+                .gte("created_at", since_iso)
+            )
+            if exclude_telegram_ids:
+                query = query.not_.in_("telegram_id", exclude_telegram_ids)
+            result = query.execute()
+            seen: set[int] = set()
+            for row in result.data or []:
+                tid = row.get("telegram_id")
+                if tid is not None:
+                    seen.add(int(tid))
+            return len(seen)
+        except Exception:
+            return 0
+
+    def count_paid_resumes_since(
+        self,
+        since_iso: str,
+        exclude_telegram_ids: list[int] | None = None,
+    ) -> int:
+        try:
+            query = (
+                self.client.table("resumes")
+                .select("id, user_id, paid_at, users!inner(telegram_id)")
+                .eq("is_paid", True)
+                .gte("paid_at", since_iso)
+            )
+            if exclude_telegram_ids:
+                query = query.not_.in_("users.telegram_id", exclude_telegram_ids)
+            result = query.execute()
+            return len(result.data or [])
+        except Exception:
+            try:
+                rows = (
+                    self.client.table("resumes")
+                    .select("id, user_id, paid_at")
+                    .eq("is_paid", True)
+                    .gte("paid_at", since_iso)
+                    .execute()
+                ).data or []
+                if not exclude_telegram_ids:
+                    return len(rows)
+                exclude_user_ids = set(self._user_ids_for_telegram_ids(exclude_telegram_ids))
+                return sum(1 for r in rows if r.get("user_id") not in exclude_user_ids)
+            except Exception:
+                return 0
 
     def get_referral_stats(self, telegram_id: int) -> dict[str, int]:
         try:
