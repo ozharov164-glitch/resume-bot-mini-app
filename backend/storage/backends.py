@@ -501,6 +501,35 @@ class SQLiteBackend:
             ).fetchall()
         return [dict(r) for r in rows]
 
+    def sum_affiliate_commission_owed_rub(self, owner_tg_id: int) -> int:
+        """Total ₽ owed to trafficker (commission % × paid resume price in ₽)."""
+        from config import settings as app_settings
+
+        fallback_rub = int(app_settings.RUB_PRICE_SINGLE_PDF)
+        with self._connect() as conn:
+            rows = conn.execute(
+                """
+                SELECT
+                    COALESCE(r.final_price_rub, ?) AS paid_rub,
+                    COALESCE(pc.commission_percent, 20) AS commission_pct,
+                    COALESCE(pc.discount_percent, 0) AS discount_pct
+                FROM promo_activations pa
+                INNER JOIN promo_codes pc ON UPPER(pc.code) = UPPER(pa.promo_code)
+                LEFT JOIN resumes r ON r.id = pa.resume_id
+                WHERE pa.owner_tg_id = ? AND pa.paid_at IS NOT NULL
+                """,
+                (fallback_rub, owner_tg_id),
+            ).fetchall()
+        total = 0
+        for row in rows:
+            paid_rub = row["paid_rub"]
+            if paid_rub is None:
+                discount = int(row["discount_pct"] or 0)
+                paid_rub = max(1, round(fallback_rub * (1 - discount / 100)))
+            pct = int(row["commission_pct"] or 20)
+            total += max(0, round(int(paid_rub) * pct / 100))
+        return total
+
     def list_recent_promo_activations(self, limit: int = 20) -> list[dict]:
         with self._connect() as conn:
             rows = conn.execute(

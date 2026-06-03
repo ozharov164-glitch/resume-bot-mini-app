@@ -58,6 +58,7 @@ class AffiliateServiceTests(unittest.TestCase):
         assert stats is not None
         self.assertEqual(stats["activations"], 1)
         self.assertEqual(stats["paid_count"], 1)
+        self.assertIn("commission_owed_rub", stats)
 
         listed = list_affiliates_with_stats(self.db)
         self.assertEqual(len(listed), 1)

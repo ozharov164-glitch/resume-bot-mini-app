@@ -3,8 +3,9 @@
 import os
 import tempfile
 import unittest
+from datetime import datetime
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 os.environ.setdefault("BOT_TOKEN", "0:test")
 os.environ.setdefault("BOT_USERNAME", "testbot")
@@ -16,13 +17,15 @@ os.environ.setdefault("APP_URL", "https://example.test")
 os.environ.setdefault("FRONTEND_URL", "https://example.test/app")
 
 from storage.backends import SQLiteBackend  # noqa: E402
-from services.affiliate_service import grant_affiliate  # noqa: E402
+from services.affiliate_service import (  # noqa: E402
+    affiliate_commission_rub,
+    grant_affiliate,
+    sum_affiliate_commission_owed_rub,
+)
 from services.referral_rewards import (  # noqa: E402
     REFERRAL_FRIEND_BONUS_STARS,
-    affiliate_commission_stars,
     process_first_payment_attribution,
 )
-from services.admin_notify import PaymentNotifyInfo  # noqa: E402
 
 
 class ReferralRewardsTests(unittest.IsolatedAsyncioTestCase):
@@ -42,15 +45,37 @@ class ReferralRewardsTests(unittest.IsolatedAsyncioTestCase):
         assert user is not None
         self.assertIsNone(user.get("referred_by"))
 
-    def test_commission_math(self):
-        self.assertEqual(affiliate_commission_stars(149, 20), 30)
+    def test_commission_rub_math(self):
+        self.assertEqual(affiliate_commission_rub(149, 20), 30)
+        self.assertEqual(affiliate_commission_rub(134, 20), 27)
 
-    @patch("services.referral_rewards.send_admin_message", new_callable=AsyncMock)
+    def test_commission_owed_sums_paid_activations(self):
+        self.db.activate_promo_for_user("TRAFF10", 1001)
+        user = self.db.find_user_by_telegram_id(1001)
+        assert user is not None
+        resume_id = "resume-1"
+        self.db.create_resume(
+            {
+                "id": resume_id,
+                "user_id": user["id"],
+                "data": {"full_name": "Test"},
+                "is_paid": True,
+                "paid_at": datetime.utcnow().isoformat(),
+                "created_at": datetime.utcnow().isoformat(),
+            }
+        )
+        self.db.update_resume(
+            resume_id,
+            {"final_price_rub": 134, "promo_code": "TRAFF10"},
+        )
+        self.db.mark_promo_activation_paid(1001, resume_id)
+        self.assertEqual(sum_affiliate_commission_owed_rub(self.db, 5001), 27)
+
     @patch("telegram.Bot.send_message", new_callable=AsyncMock)
-    async def test_affiliate_payment_no_bonus_stars(self, send_msg, admin_msg):
+    async def test_affiliate_payment_no_bonus_stars(self, send_msg):
         self.db.activate_promo_for_user("TRAFF10", 1001)
         buyer = self.db.find_user_by_telegram_id(1001)
-        resume = {"id": "r1", "promo_code": None}
+        resume = {"id": "r1", "promo_code": None, "final_price_rub": 149}
 
         await process_first_payment_attribution(
             self.db,
@@ -58,21 +83,15 @@ class ReferralRewardsTests(unittest.IsolatedAsyncioTestCase):
             buyer_telegram_id=1001,
             resume_id="r1",
             resume=resume,
-            payment=PaymentNotifyInfo(
-                provider="telegram_stars",
-                amount="149",
-                currency="XTR",
-                resume_id="r1",
-                telegram_id=1001,
-            ),
+            payment=None,
         )
 
         self.assertEqual(self.db.get_bonus_stars(5001), 0)
         send_msg.assert_awaited()
         text = send_msg.await_args.kwargs.get("text") or send_msg.await_args.args[1]
-        self.assertIn("комиссия", text.lower())
+        self.assertIn("купили резюме", text.lower())
+        self.assertNotIn("Stars", text)
         self.assertNotIn("Ваш друг", text)
-        admin_msg.assert_awaited()
 
     @patch("services.referral_rewards._notify_friend_referral_bonus", new_callable=AsyncMock)
     async def test_friend_referral_gets_30_stars(self, notify_friend):

@@ -4,7 +4,18 @@ from __future__ import annotations
 
 from typing import Any
 
+from config import settings
 from services.admin_stats import stats_exclude_telegram_ids
+def affiliate_commission_rub(paid_rub: int, commission_percent: int) -> int:
+    """Trafficker payout in ₽ (20% of the buyer's resume price in rubles)."""
+    pct = max(0, min(100, int(commission_percent or 20)))
+    return max(0, round(int(paid_rub) * pct / 100))
+
+
+def sum_affiliate_commission_owed_rub(db: Any, owner_tg_id: int) -> int:
+    if hasattr(db, "sum_affiliate_commission_owed_rub"):
+        return int(db.sum_affiliate_commission_owed_rub(owner_tg_id))
+    return 0
 
 
 def get_affiliate_stats_for_owner(
@@ -27,12 +38,15 @@ def get_affiliate_stats_for_owner(
         "discount_percent": 0,
         "activations": 0,
         "paid_count": 0,
+        "commission_percent": 20,
+        "commission_owed_rub": 0,
         "max_uses": 0,
         "uses_count": 0,
         "is_active": False,
     }
+    owed_rub = sum_affiliate_commission_owed_rub(db, owner_tg_id)
     if not promos:
-        return base
+        return {**base, "commission_owed_rub": owed_rub}
 
     primary_code = str(promos[0]["code"])
     analytics = db.get_promo_analytics(exclude_telegram_ids=exclude_telegram_ids)
@@ -42,8 +56,10 @@ def get_affiliate_stats_for_owner(
                 **base,
                 "code": primary_code,
                 "discount_percent": int(promo.get("discount_percent") or 0),
+                "commission_percent": int(promo.get("commission_percent") or 20),
                 "activations": int(promo.get("activations") or 0),
                 "paid_count": int(promo.get("paid_count") or 0),
+                "commission_owed_rub": owed_rub,
                 "max_uses": promo.get("max_uses"),
                 "uses_count": int(promo.get("uses_count") or 0),
                 "is_active": bool(promo.get("is_active")),
@@ -54,6 +70,8 @@ def get_affiliate_stats_for_owner(
         **base,
         "code": primary_code,
         "discount_percent": int(primary.get("discount_percent") or 0),
+        "commission_percent": int(primary.get("commission_percent") or 20),
+        "commission_owed_rub": owed_rub,
         "max_uses": primary.get("max_uses"),
         "uses_count": int(primary.get("uses_count") or 0),
         "is_active": bool(primary.get("is_active")),

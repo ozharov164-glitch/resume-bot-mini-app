@@ -357,9 +357,7 @@ def _format_affiliate_panel_text(stats: dict) -> str:
         f"Промокод: <code>{code_esc}</code> (−{discount}%) · {status}\n"
         f"Ссылка: {html.escape(promo_link)}\n\n"
         f"👤 Активировали промокод: <b>{stats.get('activations', 0)}</b>\n"
-        f"💳 Купили резюме: <b>{stats.get('paid_count', 0)}</b>\n\n"
-        "Комиссия 20% с каждой оплаты — выплата от администратора, "
-        "не бонусные Stars."
+        f"💳 Купили резюме: <b>{stats.get('paid_count', 0)}</b>"
     )
 
 
@@ -433,16 +431,19 @@ async def adm_affiliates_callback(update: Update, context: ContextTypes.DEFAULT_
                 ]
             )
         else:
-            lines = ["👥 <b>Трафферы</b> (активации / оплаты)\n"]
+            lines = ["👥 <b>Трафферы</b> (активации / оплаты / к выплате)\n"]
             rows: list[list[InlineKeyboardButton]] = []
             for aff in affiliates[:15]:
                 tg_id = aff.get("telegram_id")
                 code = html.escape(str(aff.get("code") or "—"))
                 activations = aff.get("activations", 0)
                 paid = aff.get("paid_count", 0)
+                owed = int(aff.get("commission_owed_rub") or 0)
+                pct = int(aff.get("commission_percent") or 20)
                 lines.append(
                     f"• {_format_affiliate_name(aff)} (<code>{tg_id}</code>)\n"
-                    f"  <code>{code}</code> · акт. {activations}, оплат {paid}"
+                    f"  <code>{code}</code> · акт. {activations}, оплат {paid}\n"
+                    f"  💰 К выплате: <b>{owed} ₽</b> ({pct}% от суммы оплат)"
                 )
                 rows.append(
                     [
