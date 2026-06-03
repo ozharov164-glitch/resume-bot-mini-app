@@ -48,8 +48,10 @@ def test_classic_docx_has_two_column_table() -> None:
     doc = Document(io.BytesIO(raw))
     assert len(doc.tables) == 1
     assert len(doc.tables[0].columns) == 2
-    sidebar_text = doc.tables[0].rows[0].cells[0].text
-    main_text = doc.tables[0].rows[0].cells[1].text
+    from services.docx_service import _cell_all_text
+
+    sidebar_text = _cell_all_text(doc.tables[0].rows[0].cells[0])
+    main_text = _cell_all_text(doc.tables[0].rows[0].cells[1])
     assert "КОНТАКТЫ" in sidebar_text
     assert "Python" in sidebar_text
     assert "ОПЫТ РАБОТЫ" in main_text

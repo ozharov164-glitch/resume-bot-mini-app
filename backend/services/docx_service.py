@@ -20,17 +20,19 @@ from services.resume_text_utils import split_bullets
 FONT_NAME = "Nunito Sans"
 VALID_TEMPLATES = frozenset({"classic", "modern", "compact"})
 
-# Classic PDF palette (resume_classic.html + get_pdf_styles)
+# Classic PDF palette — pixel-matched to get_pdf_styles() / resume_classic.html
 C_SIDEBAR_BG = "0D1F14"
 C_SIDEBAR_TITLE = "2DE08A"
-C_SIDEBAR_TEXT = "D1E8DA"
-C_SIDEBAR_MUTED = "6EA882"
-C_SIDEBAR_CHIP_BG = "172820"
-C_SALARY_BG = "142A1E"
+C_SIDEBAR_TEXT = "D1D5DB"       # rgba(255,255,255,0.82)
+C_SIDEBAR_MUTED = "999999"      # rgba(255,255,255,0.40)
+C_CHIP_BG = "12241C"            # rgba(45,224,138,0.09) on dark
+C_CHIP_BORDER = "2A4A38"        # rgba(45,224,138,0.18)
+C_SALARY_BG = "142118"          # rgba(45,224,138,0.10) on dark
+C_SALARY_BORDER = "2A4536"      # rgba(45,224,138,0.22)
 C_TEXT_DARK = "0D1F14"
 C_TEXT_BODY = "374151"
 C_TEXT_MUTED = "6B7280"
-C_BRAND_GREEN = "16A34A"
+C_BRAND_GREEN = "16A34A"        # main-position in PDF
 C_SUMMARY_BG = "F7FDF9"
 C_ACCENT = "2DE08A"
 
@@ -188,35 +190,96 @@ def docx_filename(resume_data: dict[str, Any]) -> str:
     return f"Rezyume_{safe}_hh.docx"
 
 
-def _add_spacer(cell, pt: float = 6) -> None:
+def _set_cell_borders(
+    cell,
+    *,
+    top: str | None = None,
+    bottom: str | None = None,
+    left: str | None = None,
+    right: str | None = None,
+    color: str = C_ACCENT,
+    size: int = 4,
+) -> None:
+    tc_pr = cell._tc.get_or_add_tcPr()
+    borders = OxmlElement("w:tcBorders")
+    for side_name, val in (("top", top), ("bottom", bottom), ("left", left), ("right", right)):
+        if val:
+            edge = OxmlElement(f"w:{side_name}")
+            edge.set(qn("w:val"), val)
+            edge.set(qn("w:sz"), str(size))
+            edge.set(qn("w:color"), color.upper())
+            edge.set(qn("w:space"), "0")
+            borders.append(edge)
+    tc_pr.append(borders)
+
+
+def _set_table_fixed_width(table, *, pct: int = 5000) -> None:
+    tbl = table._tbl
+    tbl_pr = tbl.tblPr if tbl.tblPr is not None else OxmlElement("w:tblPr")
+    if tbl.tblPr is None:
+        tbl.insert(0, tbl_pr)
+    layout = OxmlElement("w:tblLayout")
+    layout.set(qn("w:type"), "fixed")
+    tbl_pr.append(layout)
+    tbl_w = OxmlElement("w:tblW")
+    tbl_w.set(qn("w:w"), str(pct))
+    tbl_w.set(qn("w:type"), "pct")
+    tbl_pr.append(tbl_w)
+
+
+def _set_row_min_height(row, twips: int = 15840) -> None:
+    tr_pr = row._tr.get_or_add_trPr()
+    tr_height = OxmlElement("w:trHeight")
+    tr_height.set(qn("w:val"), str(twips))
+    tr_height.set(qn("w:hRule"), "atLeast")
+    tr_pr.append(tr_height)
+
+
+def _clear_paragraph_spacing(paragraph) -> None:
+    fmt = paragraph.paragraph_format
+    fmt.space_before = Pt(0)
+    fmt.space_after = Pt(0)
+    fmt.line_spacing = 1.15
+
+
+def _para_divider(cell, *, color: str = C_TEXT_DARK, size: int = 16, space_after: float = 14) -> None:
     p = cell.add_paragraph()
-    p.paragraph_format.space_before = Pt(0)
-    p.paragraph_format.space_after = Pt(pt)
-    p = cell.add_paragraph()
-    p.paragraph_format.space_before = Pt(0)
-    p.paragraph_format.space_after = Pt(pt)
+    _clear_paragraph_spacing(p)
+    p.paragraph_format.space_after = Pt(space_after)
+    _paragraph_border(p, bottom=color, size=size, color=color)
 
 
 def _add_sidebar_title(cell, text: str, *, title_color: str = C_SIDEBAR_TITLE) -> None:
     p = cell.add_paragraph()
-    p.paragraph_format.space_before = Pt(0)
-    p.paragraph_format.space_after = Pt(4)
+    _clear_paragraph_spacing(p)
+    p.paragraph_format.space_before = Pt(10)
+    p.paragraph_format.space_after = Pt(5)
     run = p.add_run(text.upper())
     _style_run(run, size_pt=6.5, bold=True, color=title_color)
-    _paragraph_border(p, bottom=title_color, size=4, color=title_color)
+    _paragraph_border(p, bottom="2A4A38", size=4, color="2A4A38")
 
 
 def _add_main_title(cell, text: str, *, accent: str = C_ACCENT, dark: str = C_TEXT_DARK) -> None:
-    p = cell.add_paragraph()
-    p.paragraph_format.space_before = Pt(8)
-    p.paragraph_format.space_after = Pt(6)
+    """Section title with short green underline (inline-block effect via nested table)."""
+    outer = cell.add_table(rows=1, cols=1)
+    _remove_table_borders(outer)
+    _set_table_fixed_width(outer, pct=1800)
+    sc = outer.rows[0].cells[0]
+    _set_cell_margins(sc, top=0, start=0, bottom=60, end=0)
+    _set_cell_borders(sc, bottom="single", color=accent, size=10)
+    p = sc.paragraphs[0]
+    _clear_paragraph_spacing(p)
+    p.paragraph_format.space_before = Pt(10)
+    p.paragraph_format.space_after = Pt(0)
     run = p.add_run(text.upper())
     _style_run(run, size_pt=7.5, bold=True, color=dark)
-    _paragraph_border(p, bottom=accent, size=8, color=accent)
+    gap = cell.add_paragraph()
+    gap.paragraph_format.space_after = Pt(6)
 
 
 def _add_sidebar_label_value(cell, label: str, value: str, *, muted: str = C_SIDEBAR_MUTED, text: str = C_SIDEBAR_TEXT) -> None:
     p = cell.add_paragraph()
+    _clear_paragraph_spacing(p)
     p.paragraph_format.space_after = Pt(4)
     label_run = p.add_run(label.upper() + "\n")
     _style_run(label_run, size_pt=6.5, bold=True, color=muted)
@@ -224,18 +287,108 @@ def _add_sidebar_label_value(cell, label: str, value: str, *, muted: str = C_SID
     _style_run(value_run, size_pt=8, color=text)
 
 
-def _add_bullet_line(cell, text: str, *, color: str = C_TEXT_BODY, marker: str = C_ACCENT, size_pt: float = 8.5) -> None:
+def _add_sidebar_dot_line(cell, text: str) -> None:
     p = cell.add_paragraph()
-    p.paragraph_format.space_after = Pt(2)
+    _clear_paragraph_spacing(p)
+    p.paragraph_format.space_after = Pt(3)
+    p.paragraph_format.left_indent = Cm(0.25)
+    p.paragraph_format.first_line_indent = Cm(-0.25)
+    dot = p.add_run("· ")
+    _style_run(dot, size_pt=9, bold=True, color=C_SIDEBAR_TITLE)
+    body = p.add_run(text)
+    _style_run(body, size_pt=8, color=C_SIDEBAR_TEXT)
+
+
+def _add_cert_line(cell, text: str) -> None:
+    p = cell.add_paragraph()
+    _clear_paragraph_spacing(p)
+    p.paragraph_format.space_after = Pt(3)
     p.paragraph_format.left_indent = Cm(0.35)
     p.paragraph_format.first_line_indent = Cm(-0.35)
+    mark = p.add_run("✓ ")
+    _style_run(mark, size_pt=7, bold=True, color=C_SIDEBAR_TITLE)
+    body = p.add_run(text)
+    _style_run(body, size_pt=7.5, color="B8CFC0")
+
+
+def _add_salary_box(cell, salary: str) -> None:
+    tbl = cell.add_table(rows=1, cols=1)
+    _remove_table_borders(tbl)
+    _set_table_fixed_width(tbl, pct=4800)
+    box = tbl.rows[0].cells[0]
+    _set_cell_bg(box, C_SALARY_BG)
+    _set_cell_borders(box, top="single", bottom="single", left="single", right="single", color=C_SALARY_BORDER, size=4)
+    _set_cell_margins(box, top=80, start=100, bottom=80, end=100)
+    p = box.paragraphs[0]
+    _clear_paragraph_spacing(p)
+    val = p.add_run(salary + "\n")
+    _style_run(val, size_pt=11.5, bold=True, color=C_SIDEBAR_TITLE)
+    lbl = p.add_run("Желаемая зарплата")
+    _style_run(lbl, size_pt=6.5, color=C_SIDEBAR_MUTED)
+    spacer = cell.add_paragraph()
+    spacer.paragraph_format.space_after = Pt(4)
+
+
+def _add_skills_chips(cell, skills: list[str]) -> None:
+    if not skills:
+        return
+    cols = 2
+    rows_needed = (len(skills) + cols - 1) // cols
+    tbl = cell.add_table(rows=rows_needed, cols=cols)
+    _remove_table_borders(tbl)
+    _set_table_fixed_width(tbl, pct=4800)
+    idx = 0
+    for r in range(rows_needed):
+        for c in range(cols):
+            chip_cell = tbl.rows[r].cells[c]
+            _set_cell_margins(chip_cell, top=20, start=20, bottom=20, end=20)
+            if idx >= len(skills):
+                continue
+            skill = skills[idx]
+            idx += 1
+            _set_cell_bg(chip_cell, C_CHIP_BG)
+            _set_cell_borders(chip_cell, top="single", bottom="single", left="single", right="single", color=C_CHIP_BORDER, size=2)
+            p = chip_cell.paragraphs[0]
+            _clear_paragraph_spacing(p)
+            run = p.add_run(skill)
+            _style_run(run, size_pt=7, color=C_SIDEBAR_TEXT)
+    gap = cell.add_paragraph()
+    gap.paragraph_format.space_after = Pt(2)
+
+
+def _add_bullet_line(cell, text: str, *, color: str = C_TEXT_BODY, marker: str = C_ACCENT, size_pt: float = 8.5) -> None:
+    p = cell.add_paragraph()
+    _clear_paragraph_spacing(p)
+    p.paragraph_format.space_after = Pt(2)
+    p.paragraph_format.left_indent = Cm(0.4)
+    p.paragraph_format.first_line_indent = Cm(-0.4)
     dot = p.add_run("· ")
-    _style_run(dot, size_pt=size_pt + 2, bold=True, color=marker)
+    _style_run(dot, size_pt=11, bold=True, color=marker)
     body = p.add_run(text)
     _style_run(body, size_pt=size_pt, color=color)
 
 
+def _add_spacer(cell, pt: float = 6) -> None:
+    p = cell.add_paragraph()
+    p.paragraph_format.space_after = Pt(pt)
+
+
+def _cell_all_text(cell) -> str:
+    parts = [cell.text]
+    for tbl in cell.tables:
+        for row in tbl.rows:
+            for c in row.cells:
+                parts.append(_cell_all_text(c))
+    return "\n".join(parts)
+
+
 def _schedule_text(resume_data: dict[str, Any]) -> str:
+    schedule = resume_data.get("work_schedule")
+    if not schedule:
+        return ""
+    if isinstance(schedule, list):
+        return ", ".join(str(s).strip() for s in schedule if str(s).strip())
+    return str(schedule).strip()
     schedule = resume_data.get("work_schedule")
     if not schedule:
         return ""
@@ -251,7 +404,7 @@ def _non_native_languages(resume_data: dict[str, Any]) -> list[str]:
 
 def _fill_classic_sidebar(cell, data: dict[str, Any]) -> None:
     _set_cell_bg(cell, C_SIDEBAR_BG)
-    _set_cell_margins(cell, top=140, start=140, bottom=140, end=120)
+    _set_cell_margins(cell, top=170, start=170, bottom=170, end=130)
     cell.vertical_alignment = WD_CELL_VERTICAL_ALIGNMENT.TOP
 
     _add_sidebar_title(cell, "Контакты")
@@ -264,96 +417,77 @@ def _fill_classic_sidebar(cell, data: dict[str, Any]) -> None:
 
     salary = str(data.get("salary") or "").strip()
     if salary:
-        _add_spacer(cell, 8)
-        p = cell.add_paragraph()
-        p.paragraph_format.space_after = Pt(8)
-        _shade_paragraph(p, C_SALARY_BG)
-        _paragraph_border(p, left=C_ACCENT, size=4, color=C_ACCENT)
-        val = p.add_run(salary + "\n")
-        _style_run(val, size_pt=11.5, bold=True, color=C_SIDEBAR_TITLE)
-        lbl = p.add_run("Желаемая зарплата")
-        _style_run(lbl, size_pt=6.5, color=C_SIDEBAR_MUTED)
+        _add_salary_box(cell, salary)
 
     sched = _schedule_text(data)
     if sched:
-        _add_spacer(cell, 6)
         _add_sidebar_title(cell, "График")
-        p = cell.add_paragraph()
-        p.paragraph_format.space_after = Pt(4)
-        run = p.add_run("· " + sched)
-        _style_run(run, size_pt=8, color=C_SIDEBAR_TEXT)
+        _add_sidebar_dot_line(cell, sched)
 
     relocation = str(data.get("relocation") or "").strip()
     if relocation:
-        _add_spacer(cell, 6)
         _add_sidebar_title(cell, "Переезд")
-        p = cell.add_paragraph()
-        run = p.add_run("· " + relocation)
-        _style_run(run, size_pt=8, color=C_SIDEBAR_TEXT)
+        _add_sidebar_dot_line(cell, relocation)
 
     skills = [str(s).strip() for s in (data.get("skills") or []) if str(s).strip()]
     if skills:
-        _add_spacer(cell, 6)
         _add_sidebar_title(cell, "Навыки")
-        for skill in skills:
-            p = cell.add_paragraph()
-            p.paragraph_format.space_after = Pt(3)
-            _shade_paragraph(p, C_SIDEBAR_CHIP_BG)
-            run = p.add_run(skill)
-            _style_run(run, size_pt=7, color=C_SIDEBAR_TEXT)
+        _add_skills_chips(cell, skills)
 
     langs = _non_native_languages(data)
     if langs:
-        _add_spacer(cell, 6)
         _add_sidebar_title(cell, "Языки")
         for lang in data.get("languages") or []:
             lang_s = str(lang).strip()
-            if not lang_s:
-                continue
-            p = cell.add_paragraph()
-            run = p.add_run("· " + lang_s)
-            _style_run(run, size_pt=8, color=C_SIDEBAR_TEXT)
+            if lang_s:
+                _add_sidebar_dot_line(cell, lang_s)
 
     docs = [str(d).strip() for d in (data.get("documents_and_permits") or []) if str(d).strip()]
     if docs:
-        _add_spacer(cell, 6)
         _add_sidebar_title(cell, "Документы и допуски")
         for doc_line in docs:
-            p = cell.add_paragraph()
-            run = p.add_run("✓ " + doc_line)
-            _style_run(run, size_pt=7.5, color=C_SIDEBAR_TEXT)
+            _add_cert_line(cell, doc_line)
 
 
 def _fill_classic_main(cell, data: dict[str, Any]) -> None:
-    _set_cell_margins(cell, top=140, start=160, bottom=140, end=140)
+    _set_cell_margins(cell, top=170, start=180, bottom=170, end=170)
     cell.vertical_alignment = WD_CELL_VERTICAL_ALIGNMENT.TOP
 
     name = str(data.get("full_name") or "").strip()
     position = str(data.get("target_position") or "").strip()
-    if name or position:
-        hero = cell.add_paragraph()
-        hero.paragraph_format.space_after = Pt(10)
-        _paragraph_border(hero, bottom=C_TEXT_DARK, size=12, color=C_TEXT_DARK)
-        if name:
-            n_run = hero.add_run(name + "\n")
-            _style_run(n_run, size_pt=19, bold=True, color=C_TEXT_DARK)
-        if position:
-            p_run = hero.add_run(position + "\n")
-            _style_run(p_run, size_pt=10, bold=True, color=C_BRAND_GREEN)
-        contact = _hh_contact_line(data)
-        if contact:
-            c_line = hero.add_run(contact)
-            _style_run(c_line, size_pt=8, color=C_TEXT_MUTED)
+    if name:
+        p = cell.add_paragraph()
+        _clear_paragraph_spacing(p)
+        p.paragraph_format.space_after = Pt(2)
+        _style_run(p.add_run(name), size_pt=19, bold=True, color=C_TEXT_DARK)
+    if position:
+        p = cell.add_paragraph()
+        _clear_paragraph_spacing(p)
+        p.paragraph_format.space_after = Pt(3)
+        _style_run(p.add_run(position), size_pt=10, bold=True, color=C_BRAND_GREEN)
+    contact = _hh_contact_line(data)
+    if contact:
+        p = cell.add_paragraph()
+        _clear_paragraph_spacing(p)
+        p.paragraph_format.space_after = Pt(6)
+        _style_run(p.add_run(contact), size_pt=8, color=C_TEXT_MUTED)
+    _para_divider(cell, color=C_TEXT_DARK, size=16, space_after=14)
 
     summary = str(data.get("summary") or "").strip()
     if summary:
         _add_main_title(cell, "О себе")
-        p = cell.add_paragraph()
-        p.paragraph_format.space_after = Pt(10)
-        _shade_paragraph(p, C_SUMMARY_BG)
-        _paragraph_border(p, left=C_ACCENT, size=12, color=C_ACCENT)
-        run = p.add_run(summary)
-        _style_run(run, size_pt=9, color=C_TEXT_BODY)
+        tbl = cell.add_table(rows=1, cols=1)
+        _remove_table_borders(tbl)
+        _set_table_fixed_width(tbl, pct=4800)
+        box = tbl.rows[0].cells[0]
+        _set_cell_bg(box, C_SUMMARY_BG)
+        _set_cell_borders(box, left="single", color=C_ACCENT, size=12)
+        _set_cell_margins(box, top=90, start=130, bottom=90, end=110)
+        p = box.paragraphs[0]
+        _clear_paragraph_spacing(p)
+        _style_run(p.add_run(summary), size_pt=9, color=C_TEXT_BODY)
+        gap = cell.add_paragraph()
+        gap.paragraph_format.space_after = Pt(8)
 
     experience = data.get("experience") or []
     if experience:
@@ -366,20 +500,19 @@ def _fill_classic_main(cell, data: dict[str, Any]) -> None:
             position_j = str(job.get("position") or "").strip()
             if company or period:
                 p = cell.add_paragraph()
+                _clear_paragraph_spacing(p)
                 p.paragraph_format.space_after = Pt(1)
-                p.paragraph_format.tab_stops.add_tab_stop(Cm(11.5), WD_TAB_ALIGNMENT.RIGHT)
+                p.paragraph_format.tab_stops.add_tab_stop(Cm(12.2), WD_TAB_ALIGNMENT.RIGHT)
                 if company:
-                    c_run = p.add_run(company)
-                    _style_run(c_run, size_pt=9.5, bold=True, color=C_TEXT_DARK)
+                    _style_run(p.add_run(company), size_pt=9.5, bold=True, color=C_TEXT_DARK)
                 if period:
                     p.add_run("\t")
-                    pr_run = p.add_run(period)
-                    _style_run(pr_run, size_pt=7, italic=True, color=C_TEXT_MUTED)
+                    _style_run(p.add_run(period), size_pt=7, italic=True, color=C_TEXT_MUTED)
             if position_j:
                 p_pos = cell.add_paragraph()
+                _clear_paragraph_spacing(p_pos)
                 p_pos.paragraph_format.space_after = Pt(4)
-                run = p_pos.add_run(position_j)
-                _style_run(run, size_pt=8.5, bold=True, color=C_BRAND_GREEN)
+                _style_run(p_pos.add_run(position_j), size_pt=8.5, bold=True, color=C_BRAND_GREEN)
             desc = str(job.get("description") or "").strip()
             if desc:
                 for bullet in split_bullets(desc):
@@ -387,7 +520,9 @@ def _fill_classic_main(cell, data: dict[str, Any]) -> None:
                         _add_bullet_line(cell, bullet)
             if idx < len(experience) - 1:
                 sep = cell.add_paragraph()
-                sep.paragraph_format.space_after = Pt(6)
+                _clear_paragraph_spacing(sep)
+                sep.paragraph_format.space_before = Pt(4)
+                sep.paragraph_format.space_after = Pt(8)
                 _paragraph_border(sep, bottom="F0F0F0", size=4, color="F0F0F0")
 
     achievements = [str(a).strip() for a in (data.get("key_achievements") or []) if str(a).strip()]
@@ -409,36 +544,48 @@ def _fill_classic_main(cell, data: dict[str, Any]) -> None:
                 continue
             if institution:
                 p = cell.add_paragraph()
-                run = p.add_run(institution)
-                _style_run(run, size_pt=9, bold=True, color=C_TEXT_DARK)
+                _clear_paragraph_spacing(p)
+                _style_run(p.add_run(institution), size_pt=9, bold=True, color=C_TEXT_DARK)
             details = degree
             if year and year != "0":
                 details = f"{details} · {year}" if details else year
             if details:
                 p2 = cell.add_paragraph()
+                _clear_paragraph_spacing(p2)
                 p2.paragraph_format.space_after = Pt(6)
-                run2 = p2.add_run(details)
-                _style_run(run2, size_pt=8, color=C_TEXT_MUTED)
+                _style_run(p2.add_run(details), size_pt=8, color=C_TEXT_MUTED)
+
+
+def _apply_default_styles(doc: Document) -> None:
+    normal = doc.styles["Normal"]
+    normal.font.name = FONT_NAME
+    normal.font.size = Pt(9)
+    pf = normal.paragraph_format
+    pf.space_before = Pt(0)
+    pf.space_after = Pt(0)
+    pf.line_spacing = 1.15
 
 
 def _build_classic_docx(data: dict[str, Any]) -> bytes:
     doc = Document()
+    _apply_default_styles(doc)
     _apply_doc_properties(doc, data)
     section = doc.sections[0]
     section.page_width = Cm(21)
     section.page_height = Cm(29.7)
-    section.left_margin = Cm(1)
-    section.right_margin = Cm(1)
+    section.left_margin = Cm(0.8)
+    section.right_margin = Cm(0.8)
     section.top_margin = Cm(0.8)
     section.bottom_margin = Cm(0.8)
 
     table = doc.add_table(rows=1, cols=2)
     table.alignment = WD_TABLE_ALIGNMENT.LEFT
     _remove_table_borders(table)
-    table.autofit = False
+    _set_table_fixed_width(table)
+    _set_row_min_height(table.rows[0])
     sidebar, main = table.rows[0].cells
-    sidebar.width = Cm(5.8)
-    main.width = Cm(12.4)
+    sidebar.width = Cm(5.9)
+    main.width = Cm(13.1)
 
     _fill_classic_sidebar(sidebar, data)
     _fill_classic_main(main, data)
