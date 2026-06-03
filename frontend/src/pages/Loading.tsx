@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { AppHeader } from "../components/ui/AppHeader";
 import { LoadingIllustration } from "../components/ui/LoadingIllustration";
+import { LoadingProgressStrip } from "../components/ui/LoadingProgressStrip";
 import { Screen } from "../components/ui/Screen";
 import { runResumeGenerate } from "../lib/runResumeGenerate";
 
@@ -89,27 +90,7 @@ export function LoadingPage() {
             {SECONDARY}
           </p>
 
-          <div className="loading-progress-block mt-6 w-full" aria-live="polite">
-            <div className="loading-progress-block__meta">
-              <span className="loading-progress-block__label">Подготовка резюме</span>
-              <span className="loading-progress-block__pct">{progress}%</span>
-            </div>
-            <div
-              className="loading-progress-track loading-progress-track--prominent h-3 w-full overflow-hidden rounded-full"
-              role="progressbar"
-              aria-valuenow={progress}
-              aria-valuemin={0}
-              aria-valuemax={100}
-              aria-label="Подготовка резюме"
-            >
-              <div
-                className="loading-progress-fill relative h-full rounded-full transition-[width] duration-300 ease-out"
-                style={{ width: `${Math.max(progress, 4)}%` }}
-              >
-                <div className="loading-progress-shimmer absolute inset-0" aria-hidden />
-              </div>
-            </div>
-          </div>
+          <LoadingProgressStrip progress={progress} label="Подготовка резюме" />
         </div>
       </main>
     </Screen>

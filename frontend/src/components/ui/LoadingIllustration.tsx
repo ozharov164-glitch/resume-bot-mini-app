@@ -1,10 +1,7 @@
 /** Stitch: Animated Premium AI Resume Assembly (project 17728584795721097694). */
-export function LoadingIllustration({ compact = false }: { compact?: boolean }) {
+export function LoadingIllustration() {
   return (
-    <div
-      className={compact ? "loading-assembly-stage loading-assembly-stage--compact mb-4 shrink-0" : "loading-assembly-stage mb-10 shrink-0"}
-      aria-hidden
-    >
+    <div className="loading-assembly-stage mb-10 shrink-0" aria-hidden>
       <div className="loading-assembly loading-assembly__float relative h-[282px] w-[200px]">
         <div className="loading-assembly__back loading-assembly__drift absolute h-full w-full rounded-2xl border border-black/5 bg-white opacity-30 shadow-sm" />
 
@@ -33,9 +30,7 @@ export function LoadingIllustration({ compact = false }: { compact?: boolean }) 
                 <div className="loading-assembly__pill loading-assembly__pill--2 h-5 w-16 rounded-[10px] opacity-60" />
                 <div className="loading-assembly__pill loading-assembly__pill--3 h-5 w-10 rounded-[10px] opacity-40" />
               </div>
-              {!compact ? (
-                <div className="loading-assembly__cursor absolute -right-2 top-0 w-0.5 bg-[#10b981] shadow-[0_0_8px_#10b981]" />
-              ) : null}
+              <div className="loading-assembly__cursor absolute -right-2 top-0 w-0.5 bg-[#10b981] shadow-[0_0_8px_#10b981]" />
             </div>
           </div>
         </div>
