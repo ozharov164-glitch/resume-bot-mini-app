@@ -85,7 +85,7 @@ async def fulfill_paid_resume(
         filename = f"resume_{safe_name}.pdf"
         name = (resume_data.get("full_name") or "").strip()
         caption = (
-            f"Готово! PDF и DOCX уже в чате. Удачи в поиске работы{f', {name}' if name else ''}!"
+            f"Готово! PDF, DOCX уже в чате. Удачи в поиске работы{f', {name}' if name else ''}!"
         )
         await send_document_to_user(
             user_telegram_id=telegram_id,

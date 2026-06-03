@@ -8,13 +8,13 @@ from config import settings
 from services.invoice_payload import encode_invoice_payload
 from services.payment_return import yookassa_return_url
 
-_STARS_TITLE = "Резюме PDF + DOCX"
-_STARS_DESCRIPTION = "PDF и DOCX в выбранном шаблоне + текст для отклика на hh.ru."
+_STARS_TITLE = "Резюме: PDF и DOCX"
+_STARS_DESCRIPTION = "PDF, DOCX в выбранном шаблоне и текст для отклика на hh.ru."
 
 
 def _stars_prices(amount: int | None = None) -> list[LabeledPrice]:
     stars = amount if amount is not None else settings.STARS_PRICE_SINGLE_PDF
-    return [LabeledPrice(label="PDF + DOCX", amount=stars)]
+    return [LabeledPrice(label="PDF и DOCX", amount=stars)]
 
 
 def create_yookassa_payment(
@@ -38,7 +38,7 @@ def create_yookassa_payment(
                 "return_url": yookassa_return_url(resume_id),
             },
             "capture": True,
-            "description": "ResumeBot: PDF + DOCX",
+            "description": "ResumeBot: PDF и DOCX",
             "metadata": {
                 "resume_id": resume_id,
                 "user_id": user_id,

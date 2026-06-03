@@ -85,7 +85,7 @@ export function HistoryPage() {
   const clearHistory = async () => {
     if (clearing || items.length === 0) return;
     const ok = window.confirm(
-      "Удалить все резюме из истории?\n\nPDF и DOCX в чате с ботом останутся — пропадёт только список здесь.",
+      "Удалить все резюме из истории?\n\nPDF, DOCX в чате с ботом останутся — пропадёт только список здесь.",
     );
     if (!ok) return;
 

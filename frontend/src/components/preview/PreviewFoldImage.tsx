@@ -19,7 +19,7 @@ export function PreviewFoldImage({ src, locked }: PreviewFoldImageProps) {
           <>
             <div className="preview-fold-fade" aria-hidden />
             <div className="preview-fold-paywall-copy" aria-hidden>
-              <p>PDF + DOCX + текст hh.ru — 149₽</p>
+              <p>PDF, DOCX и текст hh.ru — 149₽</p>
               <span>Нижняя часть скрыта до оплаты</span>
             </div>
             <span className="preview-fold-watermark">ПРЕДПРОСМОТР</span>

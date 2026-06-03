@@ -136,7 +136,7 @@ export function PaymentPage() {
       }
       if (result === "timeout") {
         alert(
-          "Оплата прошла, но PDF и DOCX ещё готовятся. Проверьте чат с ботом — файлы должны появиться через минуту.",
+          "Оплата прошла, но PDF, DOCX ещё готовятся. Проверьте чат с ботом — файлы появятся через минуту.",
         );
         setPaid(true);
         setPage("success");
@@ -349,8 +349,8 @@ export function PaymentPage() {
         </div>
 
         <p className="payment-footer-note">
-          После оплаты вернитесь в Telegram и снова откройте Mini App. PDF, DOCX и полный текст для hh.ru
-          придут в чат с ботом автоматически.
+          После оплаты вернитесь в Telegram и снова откройте Mini App — в чат автоматически
+          придут PDF, DOCX и текст для hh.ru.
         </p>
       </main>
     </Screen>

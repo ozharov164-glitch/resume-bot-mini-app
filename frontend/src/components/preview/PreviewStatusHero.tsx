@@ -18,7 +18,7 @@ export function PreviewStatusHero() {
       </div>
       <h2 className="text-2xl font-bold leading-tight">Готово к скачиванию</h2>
       <p className="max-w-[280px] text-[15px] leading-relaxed" style={{ color: "var(--text-muted)" }}>
-        Проверьте текст и оформление — затем подтвердите шаблон и получите PDF и DOCX в Telegram.
+        Проверьте текст и оформление — подтвердите шаблон: после оплаты в Telegram придут PDF и DOCX.
       </p>
     </motion.section>
   );

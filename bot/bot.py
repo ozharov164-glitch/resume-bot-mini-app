@@ -968,7 +968,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
             await update.message.reply_text(
                 "✅ <b>Оплата прошла!</b>\n\n"
-                "Нажмите кнопку ниже — откроется приложение, PDF и DOCX придут в этот чат с ботом.",
+                "Нажмите кнопку ниже — откроется приложение, в чат придут PDF и DOCX.",
                 reply_markup=keyboard,
                 parse_mode="HTML",
             )
@@ -1189,7 +1189,7 @@ async def invite_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     InlineKeyboardButton(
                         "📤 Поделиться с другом",
                         switch_inline_query=(
-                            f"Резюме за 5 минут: PDF и DOCX, вопросы голосом, файлы в Telegram → {invite_link}"
+                            f"Резюме за 5 минут в Telegram — вопросы голосом, PDF и DOCX → {invite_link}"
                         ),
                     )
                 ],
@@ -1280,7 +1280,7 @@ async def invite_prompt_callback(update: Update, context: ContextTypes.DEFAULT_T
                 [
                     InlineKeyboardButton(
                         "📤 Поделиться",
-                        switch_inline_query=f"Резюме за 5 минут — PDF, DOCX и текст в Telegram! {invite_link}",
+                        switch_inline_query=f"Резюме за 5 минут в Telegram: PDF, DOCX, текст hh.ru → {invite_link}",
                     )
                 ],
                 [InlineKeyboardButton("◀️ Назад", callback_data="back_to_start")],
@@ -1558,7 +1558,7 @@ async def successful_payment(update: Update, context: ContextTypes.DEFAULT_TYPE)
                 raise RuntimeError("payment payload missing resume_id")
             await update.message.reply_text(
                 "✅ Оплата прошла!\n\n"
-                "Теперь выберите шаблон PDF. После выбора сразу отправлю PDF и DOCX в этот чат.",
+                "Теперь выберите шаблон PDF. После выбора отправлю в этот чат PDF и DOCX.",
                 reply_markup=_paid_template_keyboard(resume_id),
             )
         else:
@@ -1611,7 +1611,7 @@ async def paid_template_callback(update: Update, context: ContextTypes.DEFAULT_T
 
     await _edit_callback_message(
         query,
-        f"⏳ Готовлю PDF и DOCX в шаблоне <b>{PDF_TEMPLATE_LABELS[template_id]}</b>...",
+        f"⏳ Готовлю резюме (PDF, DOCX) в шаблоне <b>{PDF_TEMPLATE_LABELS[template_id]}</b>...",
     )
     try:
         await fulfill_paid_resume(
@@ -1633,7 +1633,7 @@ async def paid_template_callback(update: Update, context: ContextTypes.DEFAULT_T
 
     await _edit_callback_message(
         query,
-        f"✅ Отправил PDF и DOCX в шаблоне <b>{PDF_TEMPLATE_LABELS[template_id]}</b>.\n"
+        f"✅ Отправил в чат PDF и DOCX в шаблоне <b>{PDF_TEMPLATE_LABELS[template_id]}</b>.\n"
         "Если хотите, можете выбрать другой шаблон и получить ещё один вариант.",
         reply_markup=_paid_template_keyboard(resume_id),
     )

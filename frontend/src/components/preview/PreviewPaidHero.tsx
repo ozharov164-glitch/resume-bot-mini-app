@@ -12,7 +12,7 @@ export function PreviewPaidHero({ onResendPdf, resending }: PreviewPaidHeroProps
         <Icon name="check_circle" filled size={20} style={{ color: "var(--brand)" }} />
       </span>
       <div className="preview-paid-hero__copy">
-        <strong>PDF и DOCX отправлены в Telegram</strong>
+        <strong>PDF, DOCX отправлены в Telegram</strong>
         <span>Можно сразу отправлять работодателю</span>
       </div>
       <div className="preview-paid-hero__actions">
