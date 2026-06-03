@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import confetti from "canvas-confetti";
 
 import {
@@ -11,6 +11,7 @@ import { Button } from "../components/ui/Button";
 import { FixedBottomBar } from "../components/ui/FixedBottomBar";
 import { Icon } from "../components/ui/Icon";
 import { Screen } from "../components/ui/Screen";
+import { useTelegramBackButton } from "../hooks/useTelegramBackButton";
 import { trackEvent } from "../lib/analytics";
 import { useAppStore } from "../store";
 import { getTg } from "../telegram";
@@ -18,10 +19,16 @@ import { getTg } from "../telegram";
 const BOT_USERNAME = "resumeez_bot";
 
 export function SuccessPage() {
-  const { resumeId, authToken, openHhTextView } = useAppStore();
+  const { resumeId, authToken, openHhTextView, setPage } = useAppStore();
   const [toast, setToast] = useState<string | null>(null);
   const [vacancy, setVacancy] = useState("");
   const [adaptBusy, setAdaptBusy] = useState(false);
+
+  const handleBack = useCallback(() => {
+    getTg()?.HapticFeedback?.impactOccurred("light");
+    setPage("preview");
+  }, [setPage]);
+  useTelegramBackButton(handleBack);
 
   useEffect(() => {
     try {
@@ -102,7 +109,7 @@ export function SuccessPage() {
 
   return (
     <Screen withBottomBar className="success-page px-4">
-      <AppHeader />
+      <AppHeader onBack={handleBack} showBack />
       <main className="success-page__main">
         <header className="success-page__hero">
           <div className="success-page__hero-icon" aria-hidden>
