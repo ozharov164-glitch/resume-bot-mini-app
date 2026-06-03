@@ -373,7 +373,7 @@ class SQLiteBackend:
                 "UPDATE users SET active_promo_code = ?, promo_activated_at = ? WHERE telegram_id = ?",
                 (upper_code, now, user_tg_id),
             )
-            if owner:
+            if owner and not self.is_user_affiliate(int(owner)):
                 conn.execute(
                     "UPDATE users SET referred_by = ? WHERE telegram_id = ? AND referred_by IS NULL",
                     (int(owner), user_tg_id),
@@ -1191,7 +1191,9 @@ class SupabaseBackend:
         self.client.table("users").update(
             {"active_promo_code": upper_code, "promo_activated_at": now}
         ).eq("telegram_id", user_tg_id).execute()
-        if owner and user and not user.get("referred_by"):
+        if owner and user and not user.get("referred_by") and not self.is_user_affiliate(
+            int(owner)
+        ):
             self.client.table("users").update({"referred_by": int(owner)}).eq(
                 "telegram_id", user_tg_id
             ).execute()

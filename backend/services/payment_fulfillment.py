@@ -6,6 +6,7 @@ from typing import Any
 
 from config import settings
 from services.admin_notify import PaymentNotifyInfo, notify_payment
+from services.referral_rewards import process_first_payment_attribution
 from services.payment_validation import resume_belongs_to_telegram
 from services.docx_service import docx_filename, generate_docx_bytes
 from services.pdf_async import generate_pdf_async
@@ -21,17 +22,6 @@ def parse_resume_data(raw: Any) -> dict:
     if isinstance(raw, str):
         return json.loads(raw)
     raise ValueError("resume data must be dict or json string")
-
-
-def _parse_paid_amount(payment: PaymentNotifyInfo | None) -> int:
-    if not payment:
-        return settings.STARS_PRICE_SINGLE_PDF
-    raw = str(payment.amount).strip()
-    digits = "".join(ch for ch in raw if ch.isdigit())
-    try:
-        return int(digits) if digits else settings.STARS_PRICE_SINGLE_PDF
-    except ValueError:
-        return settings.STARS_PRICE_SINGLE_PDF
 
 
 async def fulfill_paid_resume(
@@ -134,27 +124,19 @@ async def fulfill_paid_resume(
     if first_payment:
         try:
             buyer = db.find_user_by_telegram_id(telegram_id)
-            if buyer and buyer.get("active_promo_code"):
-                code = buyer["active_promo_code"]
-                db.use_promo_code(code, resume_id)
-                db.mark_promo_activation_paid(telegram_id, resume_id)
-            referred_by = buyer.get("referred_by") if buyer else None
-            if referred_by:
-                referrer_id = int(referred_by)
-                paid_amount = _parse_paid_amount(payment)
-                bonus = max(1, round(paid_amount * 0.20))
-                db.add_bonus_stars(referrer_id, bonus)
-                from telegram import Bot
-
-                bot = Bot(token=settings.BOT_TOKEN)
-                await bot.send_message(
-                    chat_id=referrer_id,
-                    text=(
-                        f"Ваш друг создал резюме! +{bonus} Stars на вашем счёте. "
-                        "Используйте при следующей оплате командой /my"
-                    ),
-                )
+            await process_first_payment_attribution(
+                db,
+                buyer=buyer,
+                buyer_telegram_id=telegram_id,
+                resume_id=resume_id,
+                resume=resume,
+                payment=payment,
+            )
         except Exception as exc:
-            logger.warning("fulfill: referral bonus failed resume_id=%s: %s", resume_id, exc)
+            logger.warning(
+                "fulfill: first-payment attribution failed resume_id=%s: %s",
+                resume_id,
+                exc,
+            )
 
     return True

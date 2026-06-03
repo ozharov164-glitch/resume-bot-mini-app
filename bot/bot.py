@@ -357,7 +357,9 @@ def _format_affiliate_panel_text(stats: dict) -> str:
         f"Промокод: <code>{code_esc}</code> (−{discount}%) · {status}\n"
         f"Ссылка: {html.escape(promo_link)}\n\n"
         f"👤 Активировали промокод: <b>{stats.get('activations', 0)}</b>\n"
-        f"💳 Купили резюме: <b>{stats.get('paid_count', 0)}</b>"
+        f"💳 Купили резюме: <b>{stats.get('paid_count', 0)}</b>\n\n"
+        "Комиссия 20% с каждой оплаты — выплата от администратора, "
+        "не бонусные Stars."
     )
 
 
