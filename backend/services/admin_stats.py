@@ -9,7 +9,6 @@ from services.founder import founder_telegram_ids
 
 FUNNEL_STEP_EVENTS: tuple[str, ...] = (
     "mini_app_opened",
-    "fast_track_started",
     "onboarding_started",
     "generate_started",
     "template_selected",

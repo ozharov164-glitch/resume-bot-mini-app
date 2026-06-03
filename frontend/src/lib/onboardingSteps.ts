@@ -28,16 +28,6 @@ export interface OnboardingStep {
   validate?: (value: string) => string | null;
 }
 
-/** Короткий путь: 6 шагов + profession_extra после должности. */
-export const FAST_TRACK_STEP_IDS = new Set<string>([
-  "name",
-  "contacts",
-  "target_position",
-  "work_history",
-  "city",
-  "about",
-]);
-
 export const PROFESSION_PRESETS = [
   { label: "Водитель", icon: "local_shipping", value: "Водитель" },
   { label: "Охранник", icon: "security", value: "Охранник" },
@@ -378,15 +368,9 @@ export function isProfessionExtraStep(step: OnboardingStep): boolean {
   return String(step.id).startsWith("prof_");
 }
 
-export function getVisibleSteps(
-  answers: Partial<UserAnswers>,
-  options?: { fastTrack?: boolean },
-): OnboardingStep[] {
+export function getVisibleSteps(answers: Partial<UserAnswers>): OnboardingStep[] {
   const positionPlaceholder = answers?.target_position ? String(answers.target_position) : "";
-  let filtered = ONBOARDING_STEPS.filter((s) => !s.showIf || s.showIf(answers));
-  if (options?.fastTrack) {
-    filtered = filtered.filter((s) => FAST_TRACK_STEP_IDS.has(String(s.id)));
-  }
+  const filtered = ONBOARDING_STEPS.filter((s) => !s.showIf || s.showIf(answers));
   const base = filtered.map((s) => {
     if (s.id !== "achievements") return s;
     return {

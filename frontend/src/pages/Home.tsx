@@ -23,7 +23,6 @@ import { getTg } from "../telegram";
 
 interface HomeProps {
   onStart: () => void;
-  onStartFast: () => void;
   onHistory: () => void;
 }
 
@@ -117,7 +116,7 @@ function useCountUp(target: number, durationMs = 1400) {
   return value;
 }
 
-export function HomePage({ onStart, onStartFast, onHistory }: HomeProps) {
+export function HomePage({ onStart, onHistory }: HomeProps) {
   const { homeTab, setHomeTab } = useAppStore();
   const [statsCount, setStatsCount] = useState(0);
   const [lightboxOpen, setLightboxOpen] = useState(false);
@@ -325,17 +324,6 @@ export function HomePage({ onStart, onStartFast, onHistory }: HomeProps) {
           <Button variant="brand" onClick={start} className="flex items-center justify-center gap-2">
             Создать резюме
             <Icon name="arrow_forward" size={20} />
-          </Button>
-          <Button
-            variant="secondary"
-            onClick={() => {
-              getTg()?.HapticFeedback?.impactOccurred("light");
-              onStartFast();
-            }}
-            className="flex items-center justify-center gap-2"
-          >
-            <Icon name="bolt" size={20} />
-            Быстрое резюме (6 вопросов)
           </Button>
           <Button
             variant="secondary"

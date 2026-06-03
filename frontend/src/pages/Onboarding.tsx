@@ -67,13 +67,9 @@ export function OnboardingPage() {
     cancelEditResume,
     onboardingStep,
     setOnboardingStep,
-    onboardingTrack,
   } = useAppStore();
 
-  const visibleSteps = useMemo(
-    () => getVisibleSteps(answers, { fastTrack: onboardingTrack === "fast" }),
-    [answers, onboardingTrack],
-  );
+  const visibleSteps = useMemo(() => getVisibleSteps(answers), [answers]);
   const step = Math.min(onboardingStep, Math.max(visibleSteps.length - 1, 0));
   const [value, setValue] = useState(() =>
     readStringAnswer(answers, visibleSteps[step]?.id ?? "name"),
@@ -113,9 +109,8 @@ export function OnboardingPage() {
   useEffect(() => {
     if (!isEdit) {
       trackEvent("onboarding_started");
-      if (onboardingTrack === "fast") trackEvent("fast_track_started");
     }
-  }, [isEdit, onboardingTrack]);
+  }, [isEdit]);
 
   const showTextInput =
     current.type === "text" ||

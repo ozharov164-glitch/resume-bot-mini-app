@@ -38,7 +38,6 @@ export default function App() {
     isLoading,
     setLoading,
     startNewResume,
-    startNewResumeFastTrack,
     setPage,
     setHomeTab,
     authToken,
@@ -152,7 +151,6 @@ export default function App() {
         {page === "home" ? (
           <HomePage
             onStart={startNewResume}
-            onStartFast={startNewResumeFastTrack}
             onHistory={() => setPage("history")}
           />
         ) : null}

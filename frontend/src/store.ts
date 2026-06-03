@@ -16,7 +16,6 @@ type Page =
   | "history"
   | "hh_text";
 type OnboardingMode = "create" | "edit";
-type OnboardingTrack = "full" | "fast";
 type HomeTab = "main" | "examples";
 export type TemplateId = "classic" | "modern" | "compact";
 
@@ -41,7 +40,6 @@ interface AppState {
   isFounder: boolean;
   setFounder: (value: boolean) => void;
   onboardingMode: OnboardingMode;
-  onboardingTrack: OnboardingTrack;
   previewReturnPage: Page;
   hhTextReturnPage: Page;
   openHhTextView: (returnPage?: Page) => void;
@@ -52,7 +50,6 @@ interface AppState {
   selectedTemplate: TemplateId;
   setSelectedTemplate: (template: TemplateId) => void;
   startNewResume: () => void;
-  startNewResumeFastTrack: () => void;
   startEditResume: () => void;
   cancelEditResume: () => void;
   openResumeFromHistory: (
@@ -86,7 +83,6 @@ export const useAppStore = create<AppState>((set, get) => ({
   isFounder: false,
   setFounder: (value) => set({ isFounder: value }),
   onboardingMode: "create",
-  onboardingTrack: "full",
   previewReturnPage: "home",
   hhTextReturnPage: "preview",
   openHhTextView: (returnPage) =>
@@ -104,7 +100,6 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({
       page: "onboarding",
       onboardingMode: "create",
-      onboardingTrack: "full",
       previewReturnPage: "home",
       onboardingStep: 0,
       answers: { gender: "" },
@@ -112,19 +107,6 @@ export const useAppStore = create<AppState>((set, get) => ({
       resumeData: null,
       isPaid: false,
       selectedTemplate: "classic",
-    }),
-  startNewResumeFastTrack: () =>
-    set({
-      page: "onboarding",
-      onboardingMode: "create",
-      onboardingTrack: "fast",
-      previewReturnPage: "home",
-      onboardingStep: 0,
-      answers: { gender: "" },
-      resumeId: null,
-      resumeData: null,
-      isPaid: false,
-      selectedTemplate: "modern",
     }),
   startEditResume: () => set({ page: "onboarding", onboardingMode: "edit" }),
   cancelEditResume: () => {
