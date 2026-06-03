@@ -422,7 +422,7 @@ def _add_experience_entries(
     accent: str,
     position_color: str,
     company_color: str = C_TEXT_DARK,
-    tab_cm: float = 12.2,
+    tab_cm: float = 11.0,
     company_pt: float = 9.5,
     position_pt: float = 8.5,
     bullet_pt: float = 8.5,
@@ -535,7 +535,7 @@ def _non_native_languages(resume_data: dict[str, Any]) -> list[str]:
 
 def _fill_classic_sidebar(cell, data: dict[str, Any]) -> None:
     _set_cell_bg(cell, C_SIDEBAR_BG)
-    _set_cell_margins(cell, top=170, start=170, bottom=170, end=130)
+    _set_cell_margins(cell, top=180, start=180, bottom=180, end=160)
     cell.vertical_alignment = WD_CELL_VERTICAL_ALIGNMENT.TOP
 
     _add_sidebar_title(cell, "Контакты")
@@ -581,7 +581,7 @@ def _fill_classic_sidebar(cell, data: dict[str, Any]) -> None:
 
 
 def _fill_classic_main(cell, data: dict[str, Any]) -> None:
-    _set_cell_margins(cell, top=170, start=180, bottom=170, end=170)
+    _set_cell_margins(cell, top=180, start=160, bottom=180, end=180)
     cell.vertical_alignment = WD_CELL_VERTICAL_ALIGNMENT.TOP
 
     name = str(data.get("full_name") or "").strip()
@@ -613,7 +613,7 @@ def _fill_classic_main(cell, data: dict[str, Any]) -> None:
         box = tbl.rows[0].cells[0]
         _set_cell_bg(box, C_SUMMARY_BG)
         _set_cell_borders(box, left="single", color=C_ACCENT, size=12)
-        _set_cell_margins(box, top=90, start=130, bottom=90, end=110)
+        _set_cell_margins(box, top=100, start=120, bottom=100, end=120)
         p = box.paragraphs[0]
         _clear_paragraph_spacing(p)
         _style_run(p.add_run(summary), size_pt=9, color=C_TEXT_BODY)
@@ -804,7 +804,7 @@ def _build_modern_docx_clean(data: dict[str, Any]) -> bytes:
 
 def _fill_compact_sidebar(cell, data: dict[str, Any]) -> None:
     _set_cell_bg(cell, K_SIDEBAR_BG)
-    _set_cell_margins(cell, top=150, start=130, bottom=150, end=110)
+    _set_cell_margins(cell, top=160, start=140, bottom=160, end=140)
     cell.vertical_alignment = WD_CELL_VERTICAL_ALIGNMENT.TOP
 
     _add_light_sidebar_title(cell, "Контакты")
@@ -876,7 +876,7 @@ def _fill_compact_sidebar(cell, data: dict[str, Any]) -> None:
 
 
 def _fill_compact_main(cell, data: dict[str, Any]) -> None:
-    _set_cell_margins(cell, top=150, start=160, bottom=150, end=150)
+    _set_cell_margins(cell, top=160, start=140, bottom=160, end=140)
     cell.vertical_alignment = WD_CELL_VERTICAL_ALIGNMENT.TOP
 
     name = str(data.get("full_name") or "").strip()
@@ -910,7 +910,7 @@ def _fill_compact_main(cell, data: dict[str, Any]) -> None:
             accent=K_ACCENT,
             position_color=K_ACCENT,
             company_color="111827",
-            tab_cm=11,
+            tab_cm=10.2,
             company_pt=8.5,
             position_pt=7.5,
             bullet_pt=7.5,

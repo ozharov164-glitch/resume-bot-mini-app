@@ -312,7 +312,6 @@ export function PreviewPage() {
 
           {previewLocked ? (
             <Button variant="brand" onClick={goToCheckout} className="preview-pdf-btn">
-              <span className="preview-btn-shimmer pointer-events-none absolute inset-0" aria-hidden />
               <Icon name="picture_as_pdf" size={20} />
               Получить PDF, DOCX и текст hh.ru
             </Button>

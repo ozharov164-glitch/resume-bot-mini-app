@@ -86,15 +86,15 @@ def get_pdf_styles() -> str:
         min-width: 30%;
         background: #0d1f14;
         color: #ffffff;
-        padding: 24px 16px;
+        padding: 24px 18px;
         display: flex;
         flex-direction: column;
-        gap: 18px;
+        gap: 16px;
     }
 
     .main-content {
         flex: 1;
-        padding: 24px 22px 24px 20px;
+        padding: 24px 20px;
         background: #ffffff;
         min-height: 220mm;
     }
@@ -215,7 +215,7 @@ def get_pdf_styles() -> str:
         border-bottom: 2px solid #2de08a;
         display: inline-block;
     }
-    .section-block { margin-bottom: 14pt; }
+    .section-block { margin-bottom: 13pt; }
 
     /* Summary */
     .summary-text {
@@ -230,8 +230,8 @@ def get_pdf_styles() -> str:
 
     /* Experience */
     .experience-entry {
-        margin-bottom: 11px;
-        padding-bottom: 9px;
+        margin-bottom: 10px;
+        padding-bottom: 8px;
         border-bottom: 1px solid #f0f0f0;
         page-break-inside: avoid;
     }
@@ -258,11 +258,27 @@ def get_pdf_styles() -> str:
         display: flex;
         justify-content: space-between;
         align-items: baseline;
-        gap: 6px;
-        margin-bottom: 1px;
+        flex-wrap: wrap;
+        gap: 4px 8px;
+        margin-bottom: 2px;
     }
-    .exp-company { font-size: 9.5pt; font-weight: 700; color: #0d1f14; flex: 1; }
-    .exp-period { font-size: 7pt; color: #6b7280; white-space: nowrap; font-style: italic; }
+    .exp-company {
+        font-size: 9.5pt;
+        font-weight: 700;
+        color: #0d1f14;
+        flex: 1 1 55%;
+        min-width: 0;
+        overflow-wrap: anywhere;
+    }
+    .exp-period {
+        font-size: 7pt;
+        color: #6b7280;
+        white-space: nowrap;
+        font-style: italic;
+        flex: 0 0 auto;
+        max-width: 42%;
+        text-align: right;
+    }
     .exp-position { font-size: 8.5pt; color: #16a34a; font-weight: 600; margin-bottom: 4px; }
 
     .exp-bullets { list-style: none; padding: 0; }
@@ -381,10 +397,25 @@ def get_modern_pdf_styles() -> str:
         display: flex;
         justify-content: space-between;
         align-items: baseline;
-        gap: 6pt;
+        flex-wrap: wrap;
+        gap: 4pt 8pt;
     }}
-    .exp-company {{ font-size: 9pt; font-weight: 700; color: #111827; flex: 1; }}
-    .exp-period {{ font-size: 7pt; color: #6b7280; white-space: nowrap; }}
+    .exp-company {{
+        font-size: 9pt;
+        font-weight: 700;
+        color: #111827;
+        flex: 1 1 55%;
+        min-width: 0;
+        overflow-wrap: anywhere;
+    }}
+    .exp-period {{
+        font-size: 7pt;
+        color: #6b7280;
+        white-space: nowrap;
+        flex: 0 0 auto;
+        max-width: 42%;
+        text-align: right;
+    }}
     .exp-position {{ font-size: 8pt; color: {accent}; font-weight: 600; margin: 2pt 0 3pt; }}
     .exp-bullets {{ list-style: none; padding: 0; }}
     .exp-bullets li {{
@@ -438,14 +469,14 @@ def get_compact_pdf_styles() -> str:
         min-width: 32%;
         background: #f8f8f8;
         color: #1f2937;
-        padding: 20px 14px;
+        padding: 20px 16px;
         display: flex;
         flex-direction: column;
         gap: 14px;
     }}
     .main-content {{
         flex: 1;
-        padding: 20px 18px;
+        padding: 20px 16px;
         background: #ffffff;
     }}
     .sidebar .section-title {{
@@ -564,10 +595,25 @@ def get_compact_pdf_styles() -> str:
         display: flex;
         justify-content: space-between;
         align-items: baseline;
-        gap: 4px;
+        flex-wrap: wrap;
+        gap: 4px 6px;
     }}
-    .exp-company {{ font-size: 8.5pt; font-weight: 700; color: #111827; flex: 1; }}
-    .exp-period {{ font-size: 6.5pt; color: #6b7280; white-space: nowrap; }}
+    .exp-company {{
+        font-size: 8.5pt;
+        font-weight: 700;
+        color: #111827;
+        flex: 1 1 55%;
+        min-width: 0;
+        overflow-wrap: anywhere;
+    }}
+    .exp-period {{
+        font-size: 6.5pt;
+        color: #6b7280;
+        white-space: nowrap;
+        flex: 0 0 auto;
+        max-width: 42%;
+        text-align: right;
+    }}
     .exp-position {{ font-size: 7.5pt; color: {accent}; font-weight: 600; margin-bottom: 3px; }}
     .exp-bullets {{ list-style: none; padding: 0; }}
     .exp-bullets li {{

@@ -188,10 +188,30 @@ export function SkillPickPage() {
       >
         {!showSkills ? (
           <div className="skill-pick-loading">
-            <LoadingIllustration />
-            <h2 className="mb-2 text-center text-2xl font-bold leading-snug">
+            <h2 className="mb-3 text-center text-2xl font-bold leading-snug">
               Подбираем навыки для «{position || "вашей должности"}»
             </h2>
+            <div className="loading-progress-block w-full max-w-sm" aria-live="polite">
+              <div className="loading-progress-block__meta">
+                <span className="loading-progress-block__label">Загрузка</span>
+                <span className="loading-progress-block__pct">{Math.round(progress)}%</span>
+              </div>
+              <div
+                className="loading-progress-track loading-progress-track--prominent h-3 w-full overflow-hidden rounded-full"
+                role="progressbar"
+                aria-valuenow={Math.round(progress)}
+                aria-valuemin={0}
+                aria-valuemax={100}
+              >
+                <div
+                  className="loading-progress-fill relative h-full rounded-full transition-[width] duration-700 ease-out"
+                  style={{ width: `${Math.max(progress, 6)}%` }}
+                >
+                  <div className="loading-progress-shimmer absolute inset-0" aria-hidden />
+                </div>
+              </div>
+            </div>
+            <LoadingIllustration compact />
             <div className="skill-pick-loading__phrase">
               <AnimatePresence mode="wait">
                 <motion.p
@@ -202,27 +222,10 @@ export function SkillPickPage() {
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -6 }}
                   transition={{ duration: 0.25 }}
-                  aria-live="polite"
                 >
                   {PHRASES[phraseIndex]}
                 </motion.p>
               </AnimatePresence>
-            </div>
-            <div className="w-full max-w-xs">
-              <div
-                className="loading-progress-track h-2 w-full overflow-hidden rounded-full"
-                role="progressbar"
-                aria-valuenow={Math.round(progress)}
-                aria-valuemin={0}
-                aria-valuemax={100}
-              >
-                <div
-                  className="loading-progress-fill relative h-full rounded-full transition-[width] duration-700 ease-out"
-                  style={{ width: `${progress}%` }}
-                >
-                  <div className="loading-progress-shimmer absolute inset-0" aria-hidden />
-                </div>
-              </div>
             </div>
           </div>
         ) : (

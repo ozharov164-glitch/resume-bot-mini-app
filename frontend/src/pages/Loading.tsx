@@ -89,24 +89,26 @@ export function LoadingPage() {
             {SECONDARY}
           </p>
 
-          <div className="loading-screen__progress mt-6 w-full overflow-hidden rounded-full bg-[#f4f4f5]">
+          <div className="loading-progress-block mt-6 w-full" aria-live="polite">
+            <div className="loading-progress-block__meta">
+              <span className="loading-progress-block__label">Подготовка резюме</span>
+              <span className="loading-progress-block__pct">{progress}%</span>
+            </div>
             <div
-              className="loading-assembly__progress relative h-[3px] rounded-full bg-[#10b981]"
-              style={{ width: `${progress}%` }}
+              className="loading-progress-track loading-progress-track--prominent h-3 w-full overflow-hidden rounded-full"
               role="progressbar"
               aria-valuenow={progress}
               aria-valuemin={0}
-              aria-valuemax={PROGRESS_TARGET}
+              aria-valuemax={100}
               aria-label="Подготовка резюме"
             >
-              <div className="loading-assembly__progress-pulse absolute right-0 top-0 h-full w-4 bg-white/60 blur-[2px]" />
+              <div
+                className="loading-progress-fill relative h-full rounded-full transition-[width] duration-300 ease-out"
+                style={{ width: `${Math.max(progress, 4)}%` }}
+              >
+                <div className="loading-progress-shimmer absolute inset-0" aria-hidden />
+              </div>
             </div>
-          </div>
-
-          <div className="mt-2 w-full text-right">
-            <span className="inline-block min-w-[2.5rem] text-[11px] font-bold tabular-nums uppercase tracking-[0.05em] text-[#10b981]">
-              {progress}%
-            </span>
           </div>
         </div>
       </main>

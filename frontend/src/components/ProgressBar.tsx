@@ -9,8 +9,7 @@ export function ProgressBar({ current, total, hint }: Props) {
   return (
     <div className="flex w-full flex-col gap-1.5">
       <div
-        className="h-[3px] w-full overflow-hidden rounded-full"
-        style={{ background: "var(--surface-variant, #e5e7eb)" }}
+        className="loading-progress-track loading-progress-track--prominent h-3 w-full overflow-hidden rounded-full"
         role="progressbar"
         aria-valuenow={Math.round(pct)}
         aria-valuemin={0}
@@ -18,14 +17,17 @@ export function ProgressBar({ current, total, hint }: Props) {
         aria-label={`Шаг ${current} из ${total}`}
       >
         <div
-          className="h-full rounded-full transition-[width] duration-300 ease-out"
-          style={{ width: `${pct}%`, background: "#10b981" }}
+          className="loading-progress-fill h-full rounded-full transition-[width] duration-300 ease-out"
+          style={{ width: `${Math.max(pct, pct > 0 ? 6 : 0)}%` }}
         />
       </div>
-      <div className="flex flex-col items-end gap-0.5">
-        <span className="text-xs" style={{ color: "#9ca3af" }}>
-          Шаг {current} из {total}
-        </span>
+      <div className="flex flex-col gap-0.5">
+        <div className="flex items-baseline justify-between gap-2">
+          <span className="text-xs font-medium" style={{ color: "#9ca3af" }}>
+            Шаг {current} из {total}
+          </span>
+          <span className="loading-progress-block__pct text-base">{Math.round(pct)}%</span>
+        </div>
         {hint ? (
           <span className="text-xs italic" style={{ color: "#9ca3af" }}>
             {hint}
