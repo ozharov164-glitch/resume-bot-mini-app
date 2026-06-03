@@ -94,7 +94,9 @@ async def fulfill_paid_resume(
         safe_name = resume_data.get("full_name", "resume").replace(" ", "_")[:80]
         filename = f"resume_{safe_name}.pdf"
         name = (resume_data.get("full_name") or "").strip()
-        caption = f"Готово! Ваше резюме в PDF уже в чате. Удачи в поиске работы{f', {name}' if name else ''}!"
+        caption = (
+            f"Готово! PDF и DOCX уже в чате. Удачи в поиске работы{f', {name}' if name else ''}!"
+        )
         await send_document_to_user(
             user_telegram_id=telegram_id,
             document=pdf_bytes,

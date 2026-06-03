@@ -117,7 +117,7 @@ export function SuccessPage() {
           </div>
           <h2 className="success-page__title">Ура! Ваше резюме готово</h2>
           <p className="success-page__lead">
-            PDF уже в чате с ботом. Осталось скопировать текст на hh.ru — ниже одна кнопка.
+            PDF и DOCX уже в чате с ботом. Осталось скопировать текст на hh.ru — ниже одна кнопка.
           </p>
         </header>
 

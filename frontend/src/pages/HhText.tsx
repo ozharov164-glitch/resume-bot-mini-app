@@ -89,9 +89,9 @@ export function HhTextPage() {
         ) : accessDenied ? (
           <div className="hh-text-page__status">
             <p className="hh-text-page__error">Текст для hh.ru доступен после оплаты</p>
-            <p className="hh-text-page__hint">Оплатите резюме — PDF и полный текст откроются сразу.</p>
+            <p className="hh-text-page__hint">Оплатите резюме — PDF, DOCX и полный текст откроются сразу.</p>
             <Button variant="brand" onClick={goToPayment}>
-              Получить PDF + текст
+              Получить PDF + DOCX + текст
             </Button>
           </div>
         ) : error || !text ? (

@@ -23,6 +23,6 @@ def test_founder_dm_url():
 def test_support_hub_text_includes_founder_and_faq():
     text = support_hub_text(greeting="Анна")
     assert "Анна" in text
-    assert "PDF не пришёл" in text
+    assert "PDF или DOCX не пришли" in text
     assert "вернём Stars" in text
     assert "Дмитрию" in text

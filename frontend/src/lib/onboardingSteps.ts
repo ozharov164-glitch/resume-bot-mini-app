@@ -111,7 +111,7 @@ export const ONBOARDING_STEPS: OnboardingStep[] = [
     id: "contacts",
     question: "Контакты для резюме",
     type: "contacts_dual",
-    hint: "Можно добавить позже прямо в PDF",
+    hint: "Можно добавить позже в PDF и DOCX",
     skipText: "Пропустить оба",
     optional: true,
   },

@@ -4,7 +4,7 @@ export const HOME_HEADLINE = "Резюме, которое замечают на
 
 export const HOME_TAGLINE =
   "Рекрутер решает за несколько секунд — успеете ли вы произвести впечатление. " +
-  "Ответьте на простые вопросы: мы упакуем ваш опыт в готовый PDF и пришлём файл в Telegram. " +
+  "Ответьте на простые вопросы: мы упакуем опыт в PDF и DOCX и пришлём файлы в Telegram. " +
   "Пять минут, без Word и лишних сервисов.";
 
 export const HOME_BENEFITS = [
@@ -20,8 +20,8 @@ export const HOME_BENEFITS = [
   },
   {
     icon: "send" as const,
-    title: "PDF сразу в Telegram",
-    subtitle: "Скачали — отправили работодателю. Без регистраций на сторонних сайтах.",
+    title: "PDF и DOCX в Telegram",
+    subtitle: "PDF для отправки, DOCX для hh.ru и ATS — без регистраций на сторонних сайтах.",
   },
 ] as const;
 
@@ -33,8 +33,8 @@ export const HOME_TRUST_POINTS = [
   },
   {
     icon: "description" as const,
-    title: "PDF + текст для hh.ru",
-    subtitle: "Файл и блок для вставки на сайт — в одном месте, без Word.",
+    title: "PDF + DOCX + текст для hh.ru",
+    subtitle: "PDF, DOCX и блок для вставки на сайт — в одном месте, без Word.",
   },
   {
     icon: "mic" as const,
@@ -68,12 +68,13 @@ export const EXAMPLES_GALLERY_SUB =
 
 export const PREVIEW_CHECKLIST = [
   "PDF для отправки работодателю",
+  "DOCX для hh.ru и ATS",
   "Текст для вставки на hh.ru",
   "Оформление в выбранном шаблоне",
 ] as const;
 
 export const PREVIEW_FOOTNOTE =
-  "Так выглядит выбранный шаблон — чистый PDF придёт в Telegram после оплаты";
+  "Так выглядит выбранный шаблон — PDF и DOCX придут в Telegram после оплаты";
 
 export const HH_RU_BADGE = "Структура и подача — как ждут на hh.ru";
 

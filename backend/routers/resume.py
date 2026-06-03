@@ -147,7 +147,7 @@ async def create_resume(
             safe_name = resume_data.get("full_name", "resume").replace(" ", "_")[:80]
             filename = f"resume_{safe_name}.pdf"
             name = (resume_data.get("full_name") or "").strip()
-            caption = f"Готово! Ваше резюме в PDF уже в чате. Удачи в поиске работы{f', {name}' if name else ''}!"
+            caption = f"Готово! PDF и DOCX уже в чате. Удачи в поиске работы{f', {name}' if name else ''}!"
             await send_document_to_user(
                 user_telegram_id=current_user["telegram_id"],
                 document=pdf_bytes,
@@ -413,13 +413,13 @@ async def download_pdf(resume_id: str, current_user: dict = Depends(get_current_
             user_telegram_id=current_user["telegram_id"],
             document=pdf_bytes,
             filename=filename,
-            caption=f"Готово! Ваше резюме в PDF уже в чате. Удачи в поиске работы, {resume_data.get('full_name', '')}.",
+            caption=f"Готово! PDF и DOCX уже в чате. Удачи в поиске работы, {resume_data.get('full_name', '')}.",
         )
     except Exception as exc:
         logger.exception("telegram send failed resume_id=%s telegram_id=%s", resume_id, current_user.get("telegram_id"))
         raise HTTPException(
             status_code=502,
-            detail="PDF готов, но не удалось отправить в Telegram. Напишите боту /start и попробуйте снова.",
+            detail="PDF и DOCX готовы, но не удалось отправить в Telegram. Напишите боту /start и попробуйте снова.",
         ) from exc
     await _send_docx_best_effort(current_user["telegram_id"], resume_data, safe_name, tmpl)
     return {"status": "sent", "filename": filename}

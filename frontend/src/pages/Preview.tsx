@@ -69,10 +69,10 @@ export function PreviewPage() {
       const token = authToken || (await ensureAuthToken());
       const result = await requestPdf(token, resumeId);
       getTg()?.HapticFeedback?.notificationOccurred("success");
-      showToast(`PDF «${result.filename}» отправлен в чат с ботом`);
+      showToast(`PDF и DOCX отправлены в чат с ботом`);
       trackEvent("pdf_resent", { source: "preview" });
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Не удалось отправить PDF";
+      const message = err instanceof Error ? err.message : "Не удалось отправить PDF и DOCX";
       alert(message);
     } finally {
       setResendingPdf(false);
@@ -314,7 +314,7 @@ export function PreviewPage() {
             <Button variant="brand" onClick={goToCheckout} className="preview-pdf-btn">
               <span className="preview-btn-shimmer pointer-events-none absolute inset-0" aria-hidden />
               <Icon name="picture_as_pdf" size={20} />
-              Получить PDF + текст hh.ru
+              Получить PDF + DOCX + текст hh.ru
             </Button>
           ) : null}
         </div>

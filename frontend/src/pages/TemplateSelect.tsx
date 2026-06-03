@@ -52,7 +52,7 @@ export function TemplateSelectPage() {
         <div className="template-pick-hero template-pick-hero--compact">
           <h2 className="template-pick-title">Перед оплатой</h2>
           <p className="template-pick-sub">
-            Можно оставить выбранный дизайн или сменить на другой — PDF сразу придёт в чат с ботом.
+            Можно оставить выбранный дизайн или сменить на другой — PDF и DOCX сразу придут в чат с ботом.
           </p>
         </div>
         <div className="flex flex-col gap-4">
