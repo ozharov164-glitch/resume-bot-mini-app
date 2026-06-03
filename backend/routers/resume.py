@@ -19,7 +19,7 @@ from services.payment_fulfillment import parse_resume_data
 from services.share_image_service import generate_share_banner
 from services.pdf_async import PdfGenerationTimeoutError, generate_pdf_async
 from services.pdf_service import generate_preview_png
-from services.docx_service import generate_docx_bytes
+from services.docx_service import docx_filename, generate_docx_bytes
 from services.ops_metrics import record_resume_generate_ms
 from services.rate_limiter import RateLimitExceeded, check_rate_limit
 from services.telegram_service import send_document_to_user
@@ -30,14 +30,19 @@ router = APIRouter(prefix="/api/resume", tags=["resume"])
 VALID_TEMPLATES = frozenset({"classic", "modern", "compact"})
 
 
-async def _send_docx_best_effort(telegram_id: int, resume_data: dict, safe_name: str) -> None:
+async def _send_docx_best_effort(
+    telegram_id: int,
+    resume_data: dict,
+    safe_name: str,
+    template_id: str = "classic",
+) -> None:
     """Send the ATS DOCX after the PDF. Failure must never block the PDF delivery."""
     try:
-        docx_bytes = generate_docx_bytes(resume_data)
+        docx_bytes = generate_docx_bytes(resume_data, template_id)
         await send_document_to_user(
             user_telegram_id=telegram_id,
             document=docx_bytes,
-            filename=f"resume_{safe_name}.docx",
+            filename=docx_filename(resume_data),
             caption="Файл DOCX для загрузки на hh.ru или в ATS",
         )
     except Exception:
@@ -149,7 +154,9 @@ async def create_resume(
                 filename=filename,
                 caption=caption.strip(),
             )
-            await _send_docx_best_effort(current_user["telegram_id"], resume_data, safe_name)
+            await _send_docx_best_effort(
+                current_user["telegram_id"], resume_data, safe_name, template_id
+            )
             db.update_resume(
                 resume_id,
                 {"is_paid": True, "paid_at": datetime.utcnow().isoformat()},
@@ -414,7 +421,7 @@ async def download_pdf(resume_id: str, current_user: dict = Depends(get_current_
             status_code=502,
             detail="PDF готов, но не удалось отправить в Telegram. Напишите боту /start и попробуйте снова.",
         ) from exc
-    await _send_docx_best_effort(current_user["telegram_id"], resume_data, safe_name)
+    await _send_docx_best_effort(current_user["telegram_id"], resume_data, safe_name, tmpl)
     return {"status": "sent", "filename": filename}
 
 

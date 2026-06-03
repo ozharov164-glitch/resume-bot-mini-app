@@ -7,7 +7,7 @@ from typing import Any
 from config import settings
 from services.admin_notify import PaymentNotifyInfo, notify_payment
 from services.payment_validation import resume_belongs_to_telegram
-from services.docx_service import generate_docx_bytes
+from services.docx_service import docx_filename, generate_docx_bytes
 from services.pdf_async import generate_pdf_async
 from services.resume_schema import normalize_resume_data
 from services.telegram_service import send_document_to_user
@@ -102,8 +102,8 @@ async def fulfill_paid_resume(
             caption=caption.strip(),
         )
         try:
-            docx_bytes = generate_docx_bytes(resume_data)
-            docx_name = f"resume_{safe_name}.docx"
+            docx_bytes = generate_docx_bytes(resume_data, selected_template)
+            docx_name = docx_filename(resume_data)
             await send_document_to_user(
                 user_telegram_id=telegram_id,
                 document=docx_bytes,

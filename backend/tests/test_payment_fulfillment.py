@@ -117,6 +117,7 @@ async def test_fulfill_uses_template_override_without_ai_regeneration(monkeypatc
     called_template = pdf_mock.await_args.args[1]
     assert called_template == "modern"
     docx_mock.assert_called_once()
+    assert docx_mock.call_args.args[1] == "modern"
     assert send_mock.await_count == 2
     pdf_call, docx_call = send_mock.await_args_list
     assert pdf_call.kwargs["filename"].endswith(".pdf")
