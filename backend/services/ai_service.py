@@ -157,9 +157,19 @@ SYSTEM_PROMPT = """Ты — старший HR-редактор резюме дл
   profession_extra или опыте работы.
 - Если категории прав не указаны — не пиши «категория B» и не добавляй права в skills.
 - Не дублируй keyword stuffing: не больше 2–3 отраслевых терминов в summary.
+- target_position — каноничное название как в вакансиях hh.ru (например «Водитель категории C», «Продавец-консультант»).
+
+ПРАВИЛО 17 (модерация hh.ru без свежего опыта):
+- Если work_history пустой ИЛИ experience_level = «Нет опыта» ИЛИ в опыте нет записей за последние 3 года →
+  в summary ОБЯЗАТЕЛЬНО одно нейтральное предложение с причиной отсутствия свежего опыта
+  (учёба / декрет / уход за близким / самозанятость / переезд) — только если это следует из данных кандидата.
+
+КЛЮЧЕВЫЕ ДОСТИЖЕНИЯ (key_achievements):
+• 2–4 коротких пункта с цифрами/результатами — ТОЛЬКО из «Достижения» и фактов опыта пользователя.
+• Нет цифр у кандидата → key_achievements: [] (не выдумывать метрики).
 
 ═══ ОТВЕТ: ТОЛЬКО JSON, без markdown, без пояснений ═══
-{"full_name":"","target_position":"","city":"","phone":"","email":"","salary":"","summary":"","experience":[{"company":"","position":"","period":"","description":""}],"education":[{"institution":"","degree":"","year":""}],"skills":[],"languages":["Русский — родной"],"certificates":[]}"""
+{"full_name":"","target_position":"","city":"","phone":"","email":"","salary":"","summary":"","key_achievements":[],"experience":[{"company":"","position":"","period":"","description":""}],"education":[{"institution":"","degree":"","year":""}],"skills":[],"languages":["Русский — родной"],"certificates":[]}"""
 
 SKILLS_SUGGEST_PROMPT = """Ты эксперт по российскому рынку труда (hh.ru, массовые профессии).
 
@@ -637,6 +647,9 @@ def finalize_resume_data(resume_data: dict, user_data: dict) -> dict:
         if isinstance(edu_entry, dict) and edu_entry.get("institution"):
             edu_entry["institution"] = normalize_organization_name(edu_entry["institution"])
 
+    from services.resume_enrichment import enrich_resume_data
+
+    resume_data = enrich_resume_data(resume_data, user_data)
     return normalize_resume_data(resume_data)
 
 
@@ -646,7 +659,7 @@ async def generate_resume(user_data: dict) -> dict:
         {"role": "user", "content": _build_user_payload(user_data)},
     ]
     try:
-        raw = await _call_openrouter(messages, temperature=0.62, max_tokens=1600)
+        raw = await _call_openrouter(messages, temperature=0.62, max_tokens=2200)
     except (json.JSONDecodeError, ValueError) as exc:
         logger.warning("primary model output invalid (%s), retrying fallback", exc)
         raw = await _call_openrouter(

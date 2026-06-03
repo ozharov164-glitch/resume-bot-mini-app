@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from services.pdf_service import _split_bullets
+from services.resume_text_utils import split_bullets as _split_bullets
 
 
 def format_hh_text(resume_data: dict) -> str:
@@ -46,6 +46,15 @@ def format_hh_text(resume_data: dict) -> str:
     lines.append("")
     lines.append("=== О СЕБЕ ===")
     lines.append(str(resume_data.get("summary") or "").strip() or "—")
+
+    achievements = resume_data.get("key_achievements") or []
+    if isinstance(achievements, list) and achievements:
+        lines.append("")
+        lines.append("=== КЛЮЧЕВЫЕ ДОСТИЖЕНИЯ ===")
+        for item in achievements:
+            text = str(item).strip()
+            if text:
+                lines.append(f"• {text}")
 
     experience = resume_data.get("experience") or []
     if experience:
@@ -92,6 +101,15 @@ def format_hh_text(resume_data: dict) -> str:
         lines.append("")
         lines.append("=== ЯЗЫКИ ===")
         lines.append(", ".join(str(lang).strip() for lang in languages if str(lang).strip()))
+
+    docs = resume_data.get("documents_and_permits") or []
+    if isinstance(docs, list) and docs:
+        lines.append("")
+        lines.append("=== СЕРТИФИКАТЫ И ДОКУМЕНТЫ ===")
+        for doc in docs:
+            text = str(doc).strip()
+            if text:
+                lines.append(f"• {text}")
 
     return "\n".join(lines).strip() + "\n"
 

@@ -9,7 +9,7 @@
   <header class="modern-header">
     <div class="modern-name">{{ resume.full_name }}</div>
     <div class="modern-meta">
-      {% if resume.target_position %}{{ resume.target_position | capitalize }}{% endif %}{% if resume.city %} · {{ resume.city }}{% endif %}{% if resume.phone %} · {{ resume.phone }}{% endif %}{% if resume.email %} · {{ resume.email }}{% endif %}
+      {% if resume.target_position %}{{ resume.target_position }}{% endif %}{% if resume.city %} · {{ resume.city }}{% endif %}{% if resume.phone %} · {{ resume.phone }}{% endif %}{% if resume.email %} · {{ resume.email }}{% endif %}
     </div>
     {% if resume.salary %}
     <div class="modern-meta" style="margin-top: 4pt;">
@@ -43,7 +43,22 @@
   {% if resume.skills %}
   <div class="section-block">
     <div class="section-title">Навыки</div>
-    <div class="skills-inline">{{ resume.skills | join(', ') }}</div>
+    <div class="skills-list">
+      {% for skill in resume.skills %}
+      <span class="skill-chip">{{ skill }}</span>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  {% if resume.key_achievements %}
+  <div class="section-block">
+    <div class="section-title">Ключевые достижения</div>
+    <ul class="achievement-list">
+      {% for item in resume.key_achievements %}
+      {% if item %}<li>{{ item }}</li>{% endif %}
+      {% endfor %}
+    </ul>
   </div>
   {% endif %}
 
@@ -95,11 +110,11 @@
   </div>
   {% endif %}
 
-  {% if resume.certificates %}
+  {% if resume.documents_and_permits %}
   <div class="section-block">
-    <div class="section-title">Документы</div>
-    {% for cert in resume.certificates %}
-    <div class="cert-item">{{ cert }}</div>
+    <div class="section-title">Документы и допуски</div>
+    {% for doc in resume.documents_and_permits %}
+    <div class="cert-item">{{ doc }}</div>
     {% endfor %}
   </div>
   {% endif %}

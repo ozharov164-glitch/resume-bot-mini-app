@@ -6,6 +6,7 @@ import { ErrorBoundary } from "./components/ErrorBoundary";
 import { useFounderStatus } from "./hooks/useFounderStatus";
 import { isFounderTelegramId } from "./lib/founder";
 import { readCachedAuthToken } from "./lib/authSession";
+import { trackEvent } from "./lib/analytics";
 import { runAppBootstrap } from "./lib/bootstrap";
 import { clearDeepLinkHash, parseDeepLink } from "./lib/deepLink";
 import { completePaymentReturn, discoverPaymentReturnResumeId } from "./lib/paymentReturn";
@@ -37,6 +38,7 @@ export default function App() {
     isLoading,
     setLoading,
     startNewResume,
+    startNewResumeFastTrack,
     setPage,
     setHomeTab,
     authToken,
@@ -71,6 +73,7 @@ export default function App() {
       }
 
       setAuthToken(result.accessToken);
+      trackEvent("mini_app_opened");
       if (result.isFounder) {
         setFounder(true);
       }
@@ -147,7 +150,11 @@ export default function App() {
       <ErrorBoundary>
       <Suspense fallback={<PageFallback />}>
         {page === "home" ? (
-          <HomePage onStart={startNewResume} onHistory={() => setPage("history")} />
+          <HomePage
+            onStart={startNewResume}
+            onStartFast={startNewResumeFastTrack}
+            onHistory={() => setPage("history")}
+          />
         ) : null}
         {page === "history" ? <HistoryPage /> : null}
         {page === "skill_pick" ? <SkillPickPage /> : null}

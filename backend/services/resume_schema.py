@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from services.name_format import capitalize_person_name
+from services.resume_enrichment import enrich_resume_data
 
 
 def _as_str(value: object) -> str:
@@ -78,4 +79,14 @@ def normalize_resume_data(resume_data: dict[str, Any]) -> dict[str, Any]:
         data["work_schedule"] = _as_str_list(data.get("work_schedule"))
     if data.get("relocation") is not None:
         data["relocation"] = _as_str(data.get("relocation"))
-    return data
+    if isinstance(data.get("key_achievements"), list):
+        data["key_achievements"] = _as_str_list(data.get("key_achievements"))
+    else:
+        data["key_achievements"] = []
+    if isinstance(data.get("documents_and_permits"), list):
+        data["documents_and_permits"] = _as_str_list(data.get("documents_and_permits"))
+    else:
+        data["documents_and_permits"] = []
+    if data.get("profession_extra") is not None and isinstance(data.get("profession_extra"), dict):
+        data["profession_extra"] = dict(data["profession_extra"])
+    return enrich_resume_data(data)

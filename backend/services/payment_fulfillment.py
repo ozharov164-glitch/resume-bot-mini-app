@@ -1,11 +1,13 @@
 import json
 import logging
+import uuid
 from datetime import datetime
 from typing import Any
 
 from config import settings
 from services.admin_notify import PaymentNotifyInfo, notify_payment
 from services.payment_validation import resume_belongs_to_telegram
+from services.docx_service import generate_docx_bytes
 from services.pdf_async import generate_pdf_async
 from services.resume_schema import normalize_resume_data
 from services.telegram_service import send_document_to_user
@@ -99,6 +101,30 @@ async def fulfill_paid_resume(
             filename=filename,
             caption=caption.strip(),
         )
+        try:
+            docx_bytes = generate_docx_bytes(resume_data)
+            docx_name = f"resume_{safe_name}.docx"
+            await send_document_to_user(
+                user_telegram_id=telegram_id,
+                document=docx_bytes,
+                filename=docx_name,
+                caption="Файл DOCX для загрузки на hh.ru или в ATS",
+            )
+            try:
+                db.insert_analytics_event(
+                    {
+                        "id": str(uuid.uuid4()),
+                        "event": "docx_downloaded",
+                        "telegram_id": telegram_id,
+                        "step": None,
+                        "metadata": json.dumps({"resume_id": resume_id}, ensure_ascii=False),
+                        "created_at": datetime.utcnow().isoformat(),
+                    }
+                )
+            except Exception:
+                logger.warning("fulfill: docx_downloaded analytics failed resume_id=%s", resume_id)
+        except Exception:
+            logger.exception("fulfill: docx generation failed resume_id=%s", resume_id)
         logger.info("fulfill: PDF sent for resume %s to telegram_id=%s", resume_id, telegram_id)
     else:
         logger.info("fulfill: payment confirmed without PDF send resume_id=%s", resume_id)

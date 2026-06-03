@@ -76,11 +76,11 @@
     </div>
     {% endif %}
 
-    {% if resume.certificates %}
+    {% if resume.documents_and_permits %}
     <div>
-      <div class="section-title">Документы</div>
-      {% for cert in resume.certificates %}
-      <div class="cert-item">{{ cert }}</div>
+      <div class="section-title">Документы и допуски</div>
+      {% for doc in resume.documents_and_permits %}
+      <div class="cert-item">{{ doc }}</div>
       {% endfor %}
     </div>
     {% endif %}
@@ -91,7 +91,7 @@
 
     <div class="hero-section">
       <div class="main-name">{{ resume.full_name }}</div>
-      <div class="main-position">{{ resume.target_position | capitalize }}</div>
+      <div class="main-position">{{ resume.target_position }}</div>
     </div>
 
     {% if resume.summary %}
@@ -122,6 +122,17 @@
         {% endif %}
       </div>
       {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if resume.key_achievements %}
+    <div class="section-block">
+      <div class="section-title">Ключевые достижения</div>
+      <ul class="achievement-list">
+        {% for item in resume.key_achievements %}
+        {% if item %}<li>{{ item }}</li>{% endif %}
+        {% endfor %}
+      </ul>
     </div>
     {% endif %}
 

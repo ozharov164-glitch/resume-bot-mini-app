@@ -92,6 +92,7 @@ async def create_resume(
                 c.strip() for c in certs_user.replace("\n", ",").split(",") if c.strip()
             ]
         _apply_user_meta_to_resume(resume_data, user_data)
+        resume_data = _normalize_resume_fields(resume_data)
         hh_text = format_hh_text(resume_data)
         resume_id = str(uuid.uuid4())
         founder = is_founder(current_user.get("telegram_id"))
@@ -250,7 +251,7 @@ async def preview_resume_image(
             resume_data,
             tmpl,
             watermark=False,
-            resolution=130 if paid else 96,
+            resolution=150 if paid else 120,
         )
     except Exception as exc:
         logger.exception("preview image failed resume_id=%s", resume_id)

@@ -25,6 +25,7 @@ import {
   RUB_PRICE,
   STARS_PRICE,
 } from "../lib/pricing";
+import { PRICE_ANCHOR_LINE } from "../lib/marketingCopy";
 import { useAppStore } from "../store";
 import { getTg, openExternalUrl } from "../telegram";
 
@@ -224,6 +225,7 @@ export function PaymentPage() {
           <p className="payment-card-label">Заказ</p>
           <h3 className="payment-order-name">{fullName}</h3>
           {position ? <p className="payment-order-role">{position}</p> : null}
+          <p className="payment-price-anchor">{PRICE_ANCHOR_LINE}</p>
 
           <div className="payment-price-grid">
             <div className="payment-price-row">

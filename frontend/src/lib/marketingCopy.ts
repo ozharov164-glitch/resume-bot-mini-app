@@ -48,8 +48,13 @@ export const HOME_TRUST_POINTS = [
   },
   {
     icon: "savings" as const,
-    title: "149 ₽",
-    subtitle: "Дешевле многих конструкторов. Не устроит — вернём Stars.",
+    title: "149 ₽ вместо 300–1000 ₽",
+    subtitle: "Дешевле конструкторов и ChatGPT без PDF. Не устроит — вернём Stars.",
+  },
+  {
+    icon: "verified_user" as const,
+    title: "Проходит автоотбор (ATS)",
+    subtitle: "Шаблон Modern — одна колонка: робот и рекрутер читают резюме без сбоев.",
   },
   {
     icon: "work" as const,
@@ -76,4 +81,6 @@ export const HH_RU_BADGE = "Структура и подача — как жду
 export const META_TITLE = "ResumeBot — резюме для hh.ru за 5 минут";
 export const META_DESCRIPTION =
   "Создайте резюме для hh.ru за 5 минут в Telegram: ИИ только из ваших фактов, " +
-  "три шаблона PDF, бесплатный предпросмотр, готовый текст для hh.ru.";
+  "три шаблона PDF, бесплатный предпросмотр, готовый текст для hh.ru, DOCX для ATS.";
+
+export const PRICE_ANCHOR_LINE = "149 ₽ вместо 300–1000 ₽ у конструкторов резюме";

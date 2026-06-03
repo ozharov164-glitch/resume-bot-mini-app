@@ -54,4 +54,6 @@ export interface ResumeData {
   work_schedule?: string[];
   relocation?: string;
   profession_extra?: Record<string, string | string[]>;
+  key_achievements?: string[];
+  documents_and_permits?: string[];
 }

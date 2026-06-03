@@ -34,6 +34,8 @@ export function normalizeResumeData(raw: ResumeData): ResumeData {
       ? asStrList(raw.languages)
       : ["Русский — родной"],
     certificates: asStrList(raw.certificates),
+    key_achievements: asStrList(raw.key_achievements),
+    documents_and_permits: asStrList(raw.documents_and_permits),
     experience: Array.isArray(raw.experience)
       ? raw.experience.map((e) => ({
           company: asStr(e?.company),

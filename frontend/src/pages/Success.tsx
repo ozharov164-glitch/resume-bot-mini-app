@@ -65,6 +65,7 @@ export function SuccessPage() {
       alert("Оплата доступна только в Telegram.");
       return;
     }
+    trackEvent("adapt_clicked");
     setAdaptBusy(true);
     try {
       const token = authToken || (await ensureAuthToken());

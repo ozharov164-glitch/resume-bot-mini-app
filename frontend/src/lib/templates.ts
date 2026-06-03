@@ -15,7 +15,7 @@ export const PDF_TEMPLATES: ReadonlyArray<{
   {
     id: "modern",
     name: "Modern",
-    description: "Минимализм, одна колонка, синие акценты",
+    description: "Одна колонка — проходит автоотбор (ATS), синие акценты",
     chipColor: "#2563eb",
   },
   {

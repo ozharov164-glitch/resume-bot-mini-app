@@ -22,7 +22,7 @@ import { getTg } from "../telegram";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
-function summaryTeaserText(summary: string, maxLen = 120): string {
+function summaryTeaserText(summary: string, maxLen = 180): string {
   const trimmed = summary.trim();
   if (!trimmed) return "";
   if (trimmed.length <= maxLen) return trimmed;
@@ -82,6 +82,12 @@ export function PreviewPage() {
   useEffect(() => {
     trackEvent("preview_viewed");
   }, []);
+
+  useEffect(() => {
+    if (previewLocked && (resumeData?.summary?.trim() || resumeData?.experience?.length)) {
+      trackEvent("teaser_viewed");
+    }
+  }, [previewLocked, resumeData]);
 
   useEffect(() => {
     if (resumeData || !resumeId) return;
@@ -193,6 +199,15 @@ export function PreviewPage() {
   };
 
   const mainClass = useFitLayout ? "preview-page-main preview-page-main--fit" : "preview-page-main";
+  const experienceTeaser = (() => {
+    if (!previewLocked || !resumeData.experience?.length) return "";
+    const desc = resumeData.experience[0]?.description?.trim();
+    if (!desc) return "";
+    const first = desc.split(/[•·\n]+/).map((s) => s.trim()).find(Boolean);
+    if (!first) return "";
+    return first.length > 100 ? `${first.slice(0, 100).trimEnd()}…` : first;
+  })();
+
   const summaryTeaser =
     previewLocked && resumeData.summary?.trim()
       ? summaryTeaserText(resumeData.summary)
@@ -225,10 +240,22 @@ export function PreviewPage() {
             <PreviewLoadingSkeleton />
           )}
 
-          {summaryTeaser ? (
+          {summaryTeaser || experienceTeaser ? (
             <div className="preview-summary-teaser">
-              <p className="preview-summary-teaser__label">Раздел «О себе» из вашего резюме:</p>
-              <p className="preview-summary-teaser__text">{summaryTeaser}</p>
+              {summaryTeaser ? (
+                <>
+                  <p className="preview-summary-teaser__label">Раздел «О себе» из вашего резюме:</p>
+                  <p className="preview-summary-teaser__text">{summaryTeaser}</p>
+                </>
+              ) : null}
+              {experienceTeaser ? (
+                <>
+                  <p className="preview-summary-teaser__label">Из опыта работы:</p>
+                  <p className="preview-summary-teaser__text preview-summary-teaser__text--muted">
+                    {experienceTeaser}
+                  </p>
+                </>
+              ) : null}
             </div>
           ) : null}
         </div>
@@ -262,6 +289,13 @@ export function PreviewPage() {
                 </li>
               ))}
             </ul>
+          ) : null}
+
+          {previewLocked ? (
+            <p className="preview-adapt-hint">
+              После оплаты можно адаптировать резюме под вакансию за 99 ₽ — усилит ключевые слова под
+              hh.ru.
+            </p>
           ) : null}
 
           <Button

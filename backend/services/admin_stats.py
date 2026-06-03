@@ -8,12 +8,17 @@ from typing import Any
 from services.founder import founder_telegram_ids
 
 FUNNEL_STEP_EVENTS: tuple[str, ...] = (
+    "mini_app_opened",
+    "fast_track_started",
     "onboarding_started",
     "generate_started",
     "template_selected",
     "preview_viewed",
+    "teaser_viewed",
     "pay_clicked",
     "share_clicked",
+    "adapt_clicked",
+    "docx_downloaded",
 )
 
 

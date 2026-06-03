@@ -8,6 +8,8 @@ from jinja2 import Environment, FileSystemLoader
 from weasyprint import CSS, HTML
 from weasyprint.text.fonts import FontConfiguration
 
+from services.resume_text_utils import split_bullets as _split_bullets
+
 try:
     import pymupdf as fitz
 except ImportError:  # pragma: no cover
@@ -76,39 +78,25 @@ def _font_face_css() -> str:
 """
 
 
-def _split_bullets(text: str) -> list[str]:
-    if not text:
-        return []
-    raw = str(text).strip()
-    if "•" in raw or "·" in raw or "\n" in raw:
-        parts = re.split(r"[•·\n]+", raw)
-        bullets = [p.strip() for p in parts if p.strip()]
-    else:
-        sentences = [s.strip() for s in re.split(r"\.\s+", raw) if s.strip()]
-        bullets = []
-        for sentence in sentences:
-            if not sentence.endswith("."):
-                sentence = f"{sentence}."
-            bullets.append(sentence[0].upper() + sentence[1:] if sentence else sentence)
-    bullets = bullets[:5]
-    return bullets
-
-
 def get_pdf_styles() -> str:
     font_face = _font_face_css()
     font_stack = "'NunitoSans', 'DejaVu Sans', 'Liberation Sans', Arial, sans-serif"
 
     return font_face + f"""
-    @page {{ size: A4; margin: 0; }}
+    @page {{ size: A4; margin: 8mm 10mm; }}
 
     * {{ box-sizing: border-box; margin: 0; padding: 0; }}
 
     body {{
         font-family: {font_stack};
-        font-size: 9.5pt;
+        font-size: 10pt;
         line-height: 1.45;
         color: #2c2c2c;
         background: #ffffff;
+        hyphens: auto;
+        -webkit-hyphens: auto;
+        overflow-wrap: anywhere;
+        word-break: normal;
     }}
     """ + """
     /* Layout */
@@ -150,7 +138,8 @@ def get_pdf_styles() -> str:
         color: rgba(255,255,255,0.82);
         margin-bottom: 5px;
         line-height: 1.3;
-        word-break: break-all;
+        overflow-wrap: anywhere;
+        word-break: normal;
     }
     .contact-label {
         font-size: 6.5pt;
@@ -222,11 +211,11 @@ def get_pdf_styles() -> str:
         margin-bottom: 14px;
     }
     .main-name {
-        font-size: 17pt;
+        font-size: 19pt;
         font-weight: 700;
         color: #0d1f14;
         line-height: 1.15;
-        letter-spacing: -0.3px;
+        letter-spacing: 0;
     }
     .main-position {
         font-size: 10pt;
@@ -265,8 +254,26 @@ def get_pdf_styles() -> str:
         margin-bottom: 11px;
         padding-bottom: 9px;
         border-bottom: 1px solid #f0f0f0;
+        page-break-inside: avoid;
     }
     .experience-entry:last-child { border-bottom: none; margin-bottom: 0; }
+
+    .achievement-list { list-style: none; padding: 0; margin: 0; }
+    .achievement-list li {
+        font-size: 8.5pt;
+        color: #374151;
+        line-height: 1.45;
+        padding-left: 10px;
+        position: relative;
+        margin-bottom: 3px;
+    }
+    .achievement-list li::before {
+        content: '·';
+        position: absolute;
+        left: 1px;
+        color: #2de08a;
+        font-weight: 700;
+    }
 
     .exp-header {
         display: flex;
@@ -299,7 +306,7 @@ def get_pdf_styles() -> str:
     }
 
     /* Education */
-    .edu-entry { margin-bottom: 7px; }
+    .edu-entry { margin-bottom: 7px; page-break-inside: avoid; }
     .edu-institution { font-size: 9pt; font-weight: 700; color: #0d1f14; }
     .edu-details { font-size: 8pt; color: #6b7280; margin-top: 1px; }
     """
@@ -315,10 +322,14 @@ def get_modern_pdf_styles() -> str:
     * {{ box-sizing: border-box; margin: 0; padding: 0; }}
     body {{
         font-family: {font_stack};
-        font-size: 9pt;
+        font-size: 10.5pt;
         line-height: 1.4;
         color: #1f2937;
         background: #ffffff;
+        hyphens: auto;
+        -webkit-hyphens: auto;
+        overflow-wrap: anywhere;
+        word-break: normal;
     }}
     .modern-header {{
         margin-bottom: 14pt;
@@ -330,7 +341,7 @@ def get_modern_pdf_styles() -> str:
         font-weight: 700;
         color: #111827;
         line-height: 1.1;
-        letter-spacing: -0.5px;
+        letter-spacing: 0;
     }}
     .modern-meta {{
         margin-top: 6pt;
@@ -354,15 +365,37 @@ def get_modern_pdf_styles() -> str:
         color: #374151;
         line-height: 1.5;
     }}
-    .skills-inline {{
+    .skills-list {{ display: flex; flex-wrap: wrap; gap: 3pt; }}
+    .skill-chip {{
+        background: #eff6ff;
+        border: 0.5pt solid #bfdbfe;
+        border-radius: 3pt;
+        padding: 2pt 5pt;
+        font-size: 8pt;
+        color: #1e40af;
+        line-height: 1.35;
+    }}
+    .achievement-list {{ list-style: none; padding: 0; margin: 0; }}
+    .achievement-list li {{
         font-size: 8.5pt;
         color: #374151;
         line-height: 1.45;
+        padding-left: 9pt;
+        position: relative;
+        margin-bottom: 2pt;
+    }}
+    .achievement-list li::before {{
+        content: '•';
+        position: absolute;
+        left: 0;
+        color: {accent};
+        font-weight: 700;
     }}
     .experience-entry {{
         margin-bottom: 8pt;
         padding-bottom: 6pt;
         border-bottom: 0.5pt solid #e5e7eb;
+        page-break-inside: avoid;
     }}
     .experience-entry:last-child {{ border-bottom: none; }}
     .exp-header {{
@@ -390,7 +423,7 @@ def get_modern_pdf_styles() -> str:
         color: {accent};
         font-weight: 700;
     }}
-    .edu-entry {{ margin-bottom: 5pt; }}
+    .edu-entry {{ margin-bottom: 5pt; page-break-inside: avoid; }}
     .edu-institution {{ font-size: 8.5pt; font-weight: 700; color: #111827; }}
     .edu-details {{ font-size: 7.5pt; color: #6b7280; }}
     .lang-item, .cert-item {{
@@ -407,14 +440,18 @@ def get_compact_pdf_styles() -> str:
     accent = "#7C3AED"
 
     return font_face + f"""
-    @page {{ size: A4; margin: 0; }}
+    @page {{ size: A4; margin: 8mm 10mm; }}
     * {{ box-sizing: border-box; margin: 0; padding: 0; }}
     body {{
         font-family: {font_stack};
-        font-size: 9pt;
+        font-size: 9.5pt;
         line-height: 1.4;
         color: #1f2937;
         background: #ffffff;
+        hyphens: auto;
+        -webkit-hyphens: auto;
+        overflow-wrap: anywhere;
+        word-break: normal;
     }}
     .page-layout {{ display: flex; width: 100%; min-height: 297mm; }}
     .sidebar {{
@@ -447,7 +484,8 @@ def get_compact_pdf_styles() -> str:
         color: #374151;
         margin-bottom: 4px;
         line-height: 1.3;
-        word-break: break-all;
+        overflow-wrap: anywhere;
+        word-break: normal;
     }}
     .contact-label {{
         font-size: 6pt;
@@ -492,10 +530,11 @@ def get_compact_pdf_styles() -> str:
         margin-bottom: 12px;
     }}
     .main-name {{
-        font-size: 15pt;
+        font-size: 16pt;
         font-weight: 700;
         color: #111827;
         line-height: 1.15;
+        letter-spacing: 0;
     }}
     .main-position {{
         font-size: 9pt;
@@ -519,10 +558,27 @@ def get_compact_pdf_styles() -> str:
         color: #374151;
         line-height: 1.45;
     }}
+    .achievement-list {{ list-style: none; padding: 0; margin: 0; }}
+    .achievement-list li {{
+        font-size: 7.5pt;
+        color: #374151;
+        line-height: 1.4;
+        padding-left: 9px;
+        position: relative;
+        margin-bottom: 2px;
+    }}
+    .achievement-list li::before {{
+        content: '·';
+        position: absolute;
+        left: 0;
+        color: {accent};
+        font-weight: 700;
+    }}
     .experience-entry {{
         margin-bottom: 8px;
         padding-bottom: 6px;
         border-bottom: 0.5pt solid #f0f0f0;
+        page-break-inside: avoid;
     }}
     .experience-entry:last-child {{ border-bottom: none; }}
     .exp-header {{
@@ -550,7 +606,7 @@ def get_compact_pdf_styles() -> str:
         color: {accent};
         font-weight: 700;
     }}
-    .edu-entry {{ margin-bottom: 5px; }}
+    .edu-entry {{ margin-bottom: 5px; page-break-inside: avoid; }}
     .edu-institution {{ font-size: 8pt; font-weight: 700; color: #111827; }}
     .edu-details {{ font-size: 7pt; color: #6b7280; }}
     """
