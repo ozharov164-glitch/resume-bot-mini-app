@@ -1,7 +1,7 @@
 import os
 import sys
 import types
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -54,6 +54,9 @@ class DummyDB:
             return {"id": "uid-1", "telegram_id": 123}
         return None
 
+    def insert_analytics_event(self, record: dict):
+        return None
+
 
 @pytest.mark.asyncio
 async def test_fulfill_without_document_does_not_generate_pdf(monkeypatch):
@@ -94,8 +97,10 @@ async def test_fulfill_uses_template_override_without_ai_regeneration(monkeypatc
     db = DummyDB(is_paid=True, template_id="classic")
     pdf_mock = AsyncMock(return_value=b"pdf")
     send_mock = AsyncMock()
+    docx_mock = MagicMock(return_value=b"docx")
 
     monkeypatch.setattr("services.payment_fulfillment.generate_pdf_async", pdf_mock)
+    monkeypatch.setattr("services.payment_fulfillment.generate_docx_bytes", docx_mock)
     monkeypatch.setattr("services.payment_fulfillment.send_document_to_user", send_mock)
     monkeypatch.setattr("services.payment_fulfillment.notify_payment", AsyncMock())
 
@@ -111,4 +116,8 @@ async def test_fulfill_uses_template_override_without_ai_regeneration(monkeypatc
     pdf_mock.assert_awaited_once()
     called_template = pdf_mock.await_args.args[1]
     assert called_template == "modern"
-    send_mock.assert_awaited_once()
+    docx_mock.assert_called_once()
+    assert send_mock.await_count == 2
+    pdf_call, docx_call = send_mock.await_args_list
+    assert pdf_call.kwargs["filename"].endswith(".pdf")
+    assert docx_call.kwargs["filename"].endswith(".docx")
