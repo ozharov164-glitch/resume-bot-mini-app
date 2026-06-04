@@ -48,16 +48,22 @@ async def fulfill_paid_resume(
         logger.warning("fulfill: resume %s not found", resume_id)
         return False
 
-    first_payment = not resume.get("is_paid")
-    if resume.get("is_paid"):
-        logger.info("fulfill: resume %s already paid, resending PDF", resume_id)
-    else:
-        db.update_resume(
-            resume_id,
-            {"is_paid": True, "paid_at": datetime.utcnow().isoformat()},
-        )
+    paid_at = datetime.utcnow().isoformat()
+    first_payment = db.mark_resume_paid_if_unpaid(resume_id, paid_at)
+    if first_payment:
         if payment:
             await notify_payment(db, payment, first_payment=True)
+        if bonus_stars_applied > 0:
+            db.use_bonus_stars(telegram_id, bonus_stars_applied)
+    elif resume.get("is_paid"):
+        logger.info("fulfill: resume %s already paid, resending PDF", resume_id)
+    else:
+        resume = db.find_resume(resume_id) or resume
+        if resume.get("is_paid"):
+            logger.info("fulfill: resume %s paid by concurrent fulfillment", resume_id)
+        else:
+            logger.warning("fulfill: could not mark resume %s paid", resume_id)
+            return False
 
     try:
         resume_data = normalize_resume_data(parse_resume_data(resume["data"]))
@@ -72,8 +78,6 @@ async def fulfill_paid_resume(
     if template_name and selected_template != (resume.get("template_id") or "classic"):
         db.update_resume(resume_id, {"template_id": selected_template})
         resume["template_id"] = selected_template
-    if bonus_stars_applied > 0:
-        db.use_bonus_stars(telegram_id, bonus_stars_applied)
 
     if send_document:
         try:

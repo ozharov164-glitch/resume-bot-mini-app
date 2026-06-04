@@ -41,6 +41,21 @@ def _signed_init_data(bot_token: str, *, age_seconds: int) -> str:
     return f"auth_date={auth_date}&user={user_json}&hash={digest}"
 
 
+def test_init_data_rejects_missing_auth_date(monkeypatch):
+    token = os.environ["BOT_TOKEN"]
+    import hashlib
+    import hmac
+    import json
+
+    user_json = json.dumps({"id": 1}, separators=(",", ":"))
+    pairs = {"user": user_json}
+    data_check_string = "\n".join(f"{k}={pairs[k]}" for k in sorted(pairs))
+    secret_key = hmac.new(b"WebAppData", token.encode(), hashlib.sha256).digest()
+    digest = hmac.new(secret_key, data_check_string.encode(), hashlib.sha256).hexdigest()
+    unsigned = f"user={user_json}&hash={digest}"
+    assert verify_telegram_init_data(unsigned, token) is None
+
+
 def test_init_data_rejects_stale_auth_date(monkeypatch):
     monkeypatch.setattr(
         "services.telegram_service.settings.INIT_DATA_MAX_AGE_SECONDS",
@@ -51,3 +66,9 @@ def test_init_data_rejects_stale_auth_date(monkeypatch):
     assert verify_telegram_init_data(stale, token) is None
     fresh = _signed_init_data(token, age_seconds=0)
     assert verify_telegram_init_data(fresh, token) == {"id": 1}
+
+
+def test_webhook_secret_rejected_when_unconfigured_even_in_debug(monkeypatch):
+    monkeypatch.setattr("services.telegram_service.settings.DEBUG", True)
+    monkeypatch.setattr("services.telegram_service.settings.TELEGRAM_WEBHOOK_SECRET", "")
+    assert verify_telegram_webhook_secret("anything") is False

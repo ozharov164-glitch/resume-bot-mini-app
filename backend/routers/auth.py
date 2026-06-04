@@ -1,12 +1,13 @@
 import logging
 from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, Depends, Header, HTTPException
+from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from jose import JWTError, jwt
 
 from config import settings
 from database import get_db
 from models.schemas import TelegramAuthRequest, TokenResponse
+from services.rate_limiter import RateLimitExceeded, check_rate_limit
 from services.user_registration import register_telegram_user
 from services.founder import is_founder
 from services.telegram_service import verify_telegram_init_data
@@ -34,7 +35,7 @@ async def auth_me(authorization: str = Header(default="")):
         raise HTTPException(status_code=401, detail="Некорректный токен.")
 
     tid = int(telegram_id)
-    founder = bool(payload.get("founder")) or is_founder(tid)
+    founder = is_founder(tid)
     bonus_stars = 0
     try:
         db = get_db()
@@ -49,8 +50,28 @@ async def auth_me(authorization: str = Header(default="")):
     }
 
 
+def _client_ip(request: Request) -> str:
+    forwarded = (request.headers.get("x-forwarded-for") or "").split(",")[0].strip()
+    if forwarded:
+        return forwarded
+    if request.client:
+        return request.client.host
+    return "unknown"
+
+
 @router.post("/telegram", response_model=TokenResponse)
-async def auth_with_telegram(payload: TelegramAuthRequest, db=Depends(get_db)):
+async def auth_with_telegram(
+    payload: TelegramAuthRequest,
+    request: Request,
+    db=Depends(get_db),
+):
+    try:
+        await check_rate_limit("auth_telegram", _client_ip(request))
+    except RateLimitExceeded as exc:
+        raise HTTPException(
+            status_code=429,
+            detail=f"Слишком много попыток входа. Повторите через {exc.retry_after_hours} ч.",
+        ) from exc
     user_data = verify_telegram_init_data(payload.init_data, settings.BOT_TOKEN)
     if not user_data:
         raise HTTPException(status_code=401, detail="Неверная подпись Telegram.")

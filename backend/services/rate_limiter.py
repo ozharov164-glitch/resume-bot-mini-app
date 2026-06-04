@@ -22,6 +22,7 @@ LIMITS: dict[str, tuple[int, str]] = {
     "voice_polish": (30, "24h"),
     "enrich_suggest": (120, "24h"),
     "analytics_event": (200, "24h"),
+    "auth_telegram": (20, "24h"),
 }
 
 _COUNTERS: dict[str, dict[str, int]] = defaultdict(dict)

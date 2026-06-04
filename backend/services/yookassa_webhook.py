@@ -101,6 +101,14 @@ async def handle_yookassa_webhook(db: Any, payload: dict) -> dict:
         record_yookassa_error("amount_mismatch")
         return {"ok": True, "status": "ignored", "reason": "amount_mismatch"}
 
+    if not db.try_claim_payment(str(payment_id), resume_id, "yookassa"):
+        logger.info(
+            "yookassa webhook: payment %s already processed resume_id=%s",
+            payment_id,
+            resume_id,
+        )
+        return {"ok": True, "status": "already_processed", "resume_id": resume_id}
+
     pay_info = PaymentNotifyInfo(
         provider="yookassa",
         amount=amount_str,
