@@ -21,6 +21,18 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/payment", tags=["payment"])
 
 
+def _pending_adapt_vacancy(resume: dict) -> str:
+    answers = resume.get("user_answers") or {}
+    if isinstance(answers, str):
+        try:
+            answers = json.loads(answers)
+        except json.JSONDecodeError:
+            answers = {}
+    if not isinstance(answers, dict):
+        return ""
+    return str(answers.get("_pending_adapt_vacancy") or "").strip()
+
+
 def _prepare_resume_promo(db, resume_id: str, telegram_id: int) -> tuple[int, str]:
     promo_code, discount, _promo = resolve_payment_promo(db, telegram_id)
     stars, rub = discounted_prices(discount)
@@ -103,6 +115,16 @@ async def create_adapt_invoice(
     resume = db.find_resume(resume_id, current_user["id"])
     if not resume:
         raise HTTPException(status_code=404, detail="Резюме не найдено.")
+    if not resume.get("is_paid"):
+        raise HTTPException(
+            status_code=400,
+            detail="Сначала оплатите основное резюме, затем закажите адаптацию.",
+        )
+    if not _pending_adapt_vacancy(resume):
+        raise HTTPException(
+            status_code=400,
+            detail="Сначала укажите текст вакансии для адаптации.",
+        )
 
     stars = settings.STARS_PRICE_ADAPT
     try:

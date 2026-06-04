@@ -41,8 +41,11 @@ def parse_invoice_payload(raw: str) -> dict:
             data = json.loads(text)
         except json.JSONDecodeError:
             return {}
+        resume_id = str(data.get("resume_id") or "").strip()
+        if resume_id and not _UUID_RE.match(resume_id):
+            return {}
         return {
-            "resume_id": str(data.get("resume_id") or ""),
+            "resume_id": resume_id,
             "type": str(data.get("type") or "single_pdf"),
             "bonus_stars_applied": int(data.get("bonus_stars_applied") or 0),
         }
@@ -54,7 +57,9 @@ def parse_invoice_payload(raw: str) -> dict:
         key, value = segment.split("=", 1)
         parts[key.strip()] = value.strip()
 
-    resume_id = parts.get("r", "")
+    resume_id = parts.get("r", "").strip()
+    if resume_id and not _UUID_RE.match(resume_id):
+        return {}
     type_code = parts.get("t", "s").lower()
     try:
         bonus = int(parts.get("b", "0") or 0)

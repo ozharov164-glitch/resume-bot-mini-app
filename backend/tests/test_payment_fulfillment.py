@@ -57,6 +57,13 @@ class DummyDB:
     def insert_analytics_event(self, record: dict):
         return None
 
+    def mark_resume_paid_if_unpaid(self, resume_id: str, paid_at: str) -> bool:
+        if resume_id != self.resume["id"] or self.resume.get("is_paid"):
+            return False
+        self.resume["is_paid"] = True
+        self.resume["paid_at"] = paid_at
+        return True
+
 
 @pytest.mark.asyncio
 async def test_fulfill_without_document_does_not_generate_pdf(monkeypatch):
@@ -85,11 +92,30 @@ async def test_fulfill_without_document_does_not_generate_pdf(monkeypatch):
     )
 
     assert ok is True
-    assert any(fields.get("is_paid") for _, fields in db.update_calls)
+    assert db.resume.get("is_paid") is True
     pdf_mock.assert_not_awaited()
     send_mock.assert_not_awaited()
     notify_mock.assert_awaited_once()
     assert db.used_bonus == [(123, 3)]
+
+
+@pytest.mark.asyncio
+async def test_fulfill_does_not_deduct_bonus_when_already_paid(monkeypatch):
+    db = DummyDB(is_paid=True)
+    monkeypatch.setattr("services.payment_fulfillment.generate_pdf_async", AsyncMock(return_value=b"pdf"))
+    monkeypatch.setattr("services.payment_fulfillment.send_document_to_user", AsyncMock())
+    monkeypatch.setattr("services.payment_fulfillment.generate_docx_bytes", MagicMock(return_value=b"docx"))
+    monkeypatch.setattr("services.payment_fulfillment.notify_payment", AsyncMock())
+
+    ok = await fulfill_paid_resume(
+        db,
+        "rid-1",
+        telegram_id=123,
+        bonus_stars_applied=5,
+    )
+
+    assert ok is True
+    assert db.used_bonus == []
 
 
 @pytest.mark.asyncio

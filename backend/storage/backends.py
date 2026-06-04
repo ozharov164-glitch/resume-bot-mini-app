@@ -77,6 +77,12 @@ class SQLiteBackend:
                 );
                 CREATE INDEX IF NOT EXISTS idx_analytics_events_event ON analytics_events(event);
                 CREATE INDEX IF NOT EXISTS idx_analytics_events_created ON analytics_events(created_at);
+                CREATE TABLE IF NOT EXISTS processed_payments (
+                    payment_key TEXT PRIMARY KEY,
+                    resume_id TEXT NOT NULL,
+                    provider TEXT NOT NULL,
+                    created_at TEXT NOT NULL
+                );
                 """
             )
             for col_sql in [
@@ -234,6 +240,32 @@ class SQLiteBackend:
         values = list(allowed.values()) + [resume_id]
         with self._connect() as conn:
             conn.execute(f"UPDATE resumes SET {cols} WHERE id = ?", values)
+            conn.commit()
+
+    def mark_resume_paid_if_unpaid(self, resume_id: str, paid_at: str) -> bool:
+        with self._connect() as conn:
+            cur = conn.execute(
+                "UPDATE resumes SET is_paid = 1, paid_at = ? WHERE id = ? AND is_paid = 0",
+                (paid_at, resume_id),
+            )
+            conn.commit()
+            return cur.rowcount > 0
+
+    def try_claim_payment(self, payment_key: str, resume_id: str, provider: str) -> bool:
+        key = (payment_key or "").strip()
+        if not key:
+            return True
+        now = datetime.utcnow().isoformat()
+        with self._connect() as conn:
+            cur = conn.execute(
+                """
+                INSERT OR IGNORE INTO processed_payments (payment_key, resume_id, provider, created_at)
+                VALUES (?, ?, ?, ?)
+                """,
+                (key, resume_id, provider, now),
+            )
+            conn.commit()
+            return cur.rowcount > 0
 
     def count_resumes(self) -> int:
         with self._connect() as conn:
@@ -870,6 +902,45 @@ class SupabaseBackend:
 
     def update_resume(self, resume_id: str, fields: dict[str, Any]) -> None:
         self.client.table("resumes").update(fields).eq("id", resume_id).execute()
+
+    def mark_resume_paid_if_unpaid(self, resume_id: str, paid_at: str) -> bool:
+        try:
+            result = (
+                self.client.table("resumes")
+                .update({"is_paid": True, "paid_at": paid_at})
+                .eq("id", resume_id)
+                .eq("is_paid", False)
+                .execute()
+            )
+            return bool(result.data)
+        except Exception as exc:
+            logger.warning("mark_resume_paid_if_unpaid failed resume_id=%s: %s", resume_id, exc)
+            resume = self.find_resume(resume_id)
+            return bool(resume and not resume.get("is_paid"))
+
+    def try_claim_payment(self, payment_key: str, resume_id: str, provider: str) -> bool:
+        key = (payment_key or "").strip()
+        if not key:
+            return True
+        record = {
+            "payment_key": key,
+            "resume_id": resume_id,
+            "provider": provider,
+            "created_at": datetime.utcnow().isoformat(),
+        }
+        try:
+            self.client.table("processed_payments").insert(record).execute()
+            return True
+        except Exception as exc:
+            err = str(exc).lower()
+            if "duplicate" in err or "unique" in err or "23505" in err:
+                return False
+            logger.warning(
+                "try_claim_payment insert failed key=%s (proceeding): %s",
+                key,
+                exc,
+            )
+            return True
 
     def count_resumes(self) -> int:
         result = self.client.table("resumes").select("id", count="exact").execute()
