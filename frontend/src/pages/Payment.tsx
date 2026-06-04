@@ -112,6 +112,7 @@ export function PaymentPage() {
       const result = await validatePromo(code, authToken);
       setPromoDiscount(result.discount_percent);
       setPromoCode(result.code);
+      setPromoError(null);
       getTg()?.HapticFeedback?.notificationOccurred("success");
     } catch (err) {
       setPromoDiscount(0);

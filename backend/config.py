@@ -52,6 +52,9 @@ class Settings(BaseSettings):
     # Reject Mini App initData older than this (seconds); mitigates replay.
     INIT_DATA_MAX_AGE_SECONDS: int = 86_400
 
+    # Days before the same user may activate a different promo code (same code never again).
+    PROMO_REACTIVATION_COOLDOWN_DAYS: int = 30
+
     # Supergroup for admin alerts (bare id 100… or full -100…).
     ADMIN_GROUP_CHAT_ID: str = "1003959501619"
 

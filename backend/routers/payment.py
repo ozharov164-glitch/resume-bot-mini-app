@@ -13,6 +13,7 @@ from services.bonus_payment import apply_bonus_rub, apply_bonus_stars
 from services.payment_dispatch import fulfill_from_invoice_payload
 from services.payment_fulfillment import fulfill_paid_resume
 from services.payment_service import create_stars_invoice_link, create_yookassa_payment
+from services.promo_errors import is_promo_activation_blocked_error
 from services.promo_service import RUB_PRICE_SINGLE_PDF, activate_promo, discounted_prices, resolve_payment_promo
 from services.telegram_service import verify_telegram_webhook_secret
 from services.yookassa_webhook import handle_yookassa_webhook
@@ -285,8 +286,11 @@ async def validate_promo(
         raise HTTPException(status_code=400, detail="Укажите промокод.")
     try:
         result = activate_promo(db, code, current_user["telegram_id"])
-    except ValueError:
-        raise HTTPException(status_code=404, detail="Промокод не найден или недействителен.")
+    except ValueError as exc:
+        detail = str(exc)
+        if is_promo_activation_blocked_error(detail):
+            raise HTTPException(status_code=409, detail=detail) from exc
+        raise HTTPException(status_code=404, detail="Промокод не найден или недействителен.") from exc
     return {
         "valid": True,
         "discount_percent": result["discount_percent"],

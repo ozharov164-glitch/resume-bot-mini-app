@@ -389,14 +389,41 @@ class SQLiteBackend:
             ).fetchall()
         return [dict(r) for r in rows]
 
+    def user_has_promo_code_activation(self, user_tg_id: int, upper_code: str) -> bool:
+        code = (upper_code or "").strip().upper()
+        if not code:
+            return False
+        with self._connect() as conn:
+            row = conn.execute(
+                """
+                SELECT 1 FROM promo_activations
+                WHERE user_tg_id = ? AND UPPER(promo_code) = ?
+                LIMIT 1
+                """,
+                (user_tg_id, code),
+            ).fetchone()
+        return row is not None
+
+    def get_last_promo_activation_at(self, user_tg_id: int) -> str | None:
+        with self._connect() as conn:
+            row = conn.execute(
+                """
+                SELECT activated_at FROM promo_activations
+                WHERE user_tg_id = ?
+                ORDER BY activated_at DESC
+                LIMIT 1
+                """,
+                (user_tg_id,),
+            ).fetchone()
+        if not row:
+            return None
+        return str(row["activated_at"]) if row["activated_at"] else None
+
     def activate_promo_for_user(self, code: str, user_tg_id: int) -> dict:
         promo = self.validate_promo_code(code, user_tg_id)
         if not promo:
             raise ValueError("Промокод не найден или недействителен.")
         upper_code = str(promo["code"]).strip().upper()
-        user = self.find_user_by_telegram_id(user_tg_id)
-        if user and user.get("active_promo_code") == upper_code:
-            return {"already_active": True, **promo}
 
         now = datetime.utcnow().isoformat()
         owner = promo.get("owner_tg_id")
@@ -1277,17 +1304,51 @@ class SupabaseBackend:
         )
         return result.data or []
 
+    def user_has_promo_code_activation(self, user_tg_id: int, upper_code: str) -> bool:
+        code = (upper_code or "").strip().upper()
+        if not code:
+            return False
+        try:
+            result = (
+                self.client.table("promo_activations")
+                .select("id")
+                .eq("user_tg_id", user_tg_id)
+                .eq("promo_code", code)
+                .limit(1)
+                .execute()
+            )
+            return bool(result.data)
+        except Exception as exc:
+            logger.warning("user_has_promo_code_activation failed: %s", exc)
+            return False
+
+    def get_last_promo_activation_at(self, user_tg_id: int) -> str | None:
+        try:
+            result = (
+                self.client.table("promo_activations")
+                .select("activated_at")
+                .eq("user_tg_id", user_tg_id)
+                .order("activated_at", desc=True)
+                .limit(1)
+                .execute()
+            )
+        except Exception as exc:
+            logger.warning("get_last_promo_activation_at failed: %s", exc)
+            return None
+        if not result.data:
+            return None
+        raw = result.data[0].get("activated_at")
+        return str(raw) if raw else None
+
     def activate_promo_for_user(self, code: str, user_tg_id: int) -> dict:
         promo = self.validate_promo_code(code, user_tg_id)
         if not promo:
             raise ValueError("Промокод не найден или недействителен.")
         upper_code = str(promo["code"]).strip().upper()
-        user = self.find_user_by_telegram_id(user_tg_id)
-        if user and user.get("active_promo_code") == upper_code:
-            return {"already_active": True, **promo}
 
         now = datetime.utcnow().isoformat()
         owner = promo.get("owner_tg_id")
+        user = self.find_user_by_telegram_id(user_tg_id)
         self.client.table("users").update(
             {"active_promo_code": upper_code, "promo_activated_at": now}
         ).eq("telegram_id", user_tg_id).execute()

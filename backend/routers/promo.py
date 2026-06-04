@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from database import get_db
 from dependencies import get_current_user
+from services.promo_errors import is_promo_activation_blocked_error
 from services.promo_service import activate_promo
 
 router = APIRouter(prefix="/api/promo", tags=["promo"])
@@ -31,7 +32,9 @@ async def activate_promo_code(
     try:
         result = activate_promo(db, code, current_user["telegram_id"])
     except ValueError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
+        detail = str(exc)
+        status = 409 if is_promo_activation_blocked_error(detail) else 404
+        raise HTTPException(status_code=status, detail=detail) from exc
     return {
         "ok": True,
         "already_active": bool(result.get("already_active")),

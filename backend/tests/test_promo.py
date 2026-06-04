@@ -2,8 +2,9 @@
 
 import tempfile
 import unittest
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
-
+from services.promo_service import activate_promo
 from storage.backends import SQLiteBackend
 
 
@@ -18,8 +19,7 @@ class PromoActivationTests(unittest.TestCase):
         self.tmp.cleanup()
 
     def test_activate_promo_sets_user_and_attribution(self):
-        result = self.db.activate_promo_for_user("blog10", 1001)
-        self.assertFalse(result["already_active"])
+        result = activate_promo(self.db, "blog10", 1001)
         self.assertEqual(result["code"], "BLOG10")
 
         user = self.db.find_user_by_telegram_id(1001)
@@ -31,13 +31,65 @@ class PromoActivationTests(unittest.TestCase):
         assert active is not None
         self.assertEqual(active["discount_percent"], 10)
 
-    def test_activate_same_promo_twice_is_idempotent(self):
-        self.db.activate_promo_for_user("BLOG10", 1001)
-        result = self.db.activate_promo_for_user("BLOG10", 1001)
-        self.assertTrue(result["already_active"])
+    def test_same_promo_cannot_be_reactivated(self):
+        activate_promo(self.db, "BLOG10", 1001)
+        with self.assertRaises(ValueError) as ctx:
+            activate_promo(self.db, "BLOG10", 1001)
+        self.assertIn("уже использовали", str(ctx.exception).lower())
+
+    def test_cannot_activate_different_promo_within_month(self):
+        self.db.create_promo_code("SALE20", owner_tg_id=9002, discount=15, max_uses=50)
+        activate_promo(self.db, "BLOG10", 1001)
+        with self.assertRaises(ValueError) as ctx:
+            activate_promo(self.db, "SALE20", 1001)
+        self.assertIn("можно активировать через", str(ctx.exception).lower())
+        user = self.db.find_user_by_telegram_id(1001)
+        assert user is not None
+        self.assertEqual(user["active_promo_code"], "BLOG10")
+
+    def test_can_activate_different_promo_after_cooldown(self):
+        self.db.create_promo_code("SALE20", owner_tg_id=9002, discount=15, max_uses=50)
+        old = (datetime.now(timezone.utc) - timedelta(days=31)).isoformat()
+        with self.db._connect() as conn:
+            conn.execute(
+                """
+                INSERT INTO promo_activations
+                (id, promo_code, owner_tg_id, user_tg_id, activated_at)
+                VALUES (?, ?, ?, ?, ?)
+                """,
+                ("act-old", "BLOG10", 9001, 1001, old),
+            )
+            conn.execute(
+                "UPDATE users SET active_promo_code = ?, promo_activated_at = ? WHERE telegram_id = ?",
+                ("BLOG10", old, 1001),
+            )
+            conn.commit()
+
+        result = activate_promo(self.db, "SALE20", 1001)
+        self.assertEqual(result["code"], "SALE20")
+        user = self.db.find_user_by_telegram_id(1001)
+        assert user is not None
+        self.assertEqual(user["active_promo_code"], "SALE20")
+
+    def test_same_promo_still_blocked_after_cooldown(self):
+        old = (datetime.now(timezone.utc) - timedelta(days=31)).isoformat()
+        with self.db._connect() as conn:
+            conn.execute(
+                """
+                INSERT INTO promo_activations
+                (id, promo_code, owner_tg_id, user_tg_id, activated_at)
+                VALUES (?, ?, ?, ?, ?)
+                """,
+                ("act-old", "BLOG10", 9001, 1001, old),
+            )
+            conn.commit()
+
+        with self.assertRaises(ValueError) as ctx:
+            activate_promo(self.db, "BLOG10", 1001)
+        self.assertIn("уже использовали", str(ctx.exception).lower())
 
     def test_mark_promo_activation_paid(self):
-        self.db.activate_promo_for_user("BLOG10", 1001)
+        activate_promo(self.db, "BLOG10", 1001)
         self.db.mark_promo_activation_paid(1001, "resume-1")
         acts = self.db.list_recent_promo_activations(limit=5)
         self.assertEqual(len(acts), 1)
@@ -45,7 +97,7 @@ class PromoActivationTests(unittest.TestCase):
         self.assertEqual(acts[0]["resume_id"], "resume-1")
 
     def test_promo_analytics_counts(self):
-        self.db.activate_promo_for_user("BLOG10", 1001)
+        activate_promo(self.db, "BLOG10", 1001)
         analytics = self.db.get_promo_analytics()
         self.assertEqual(len(analytics), 1)
         self.assertEqual(analytics[0]["activations"], 1)

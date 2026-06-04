@@ -835,25 +835,35 @@ async def _activate_promo_for_user(tg_user, code: str, *, message=None) -> None:
             username=tg_user.username or "",
         )
         result = await asyncio.to_thread(activate_promo, get_db(), code.strip(), tg_user.id)
-        if not result.get("already_active"):
-            await notify_promo_activation(
-                get_db(),
-                promo_code=str(result.get("code", code)),
-                discount_percent=int(result.get("discount_percent") or 0),
-                telegram_id=tg_user.id,
-                first_name=tg_user.first_name or "",
-                username=tg_user.username or "",
-                owner_tg_id=result.get("owner_tg_id"),
-            )
+        await notify_promo_activation(
+            get_db(),
+            promo_code=str(result.get("code", code)),
+            discount_percent=int(result.get("discount_percent") or 0),
+            telegram_id=tg_user.id,
+            first_name=tg_user.first_name or "",
+            username=tg_user.username or "",
+            owner_tg_id=result.get("owner_tg_id"),
+        )
         text = promo_activated_text(
             str(result.get("code", code)),
             int(result.get("discount_percent") or 0),
-            already_active=bool(result.get("already_active")),
         )
         if message:
             await message.reply_text(text, reply_markup=_promo_result_keyboard(), parse_mode="HTML")
-    except ValueError:
+    except ValueError as exc:
         if message:
+            detail = str(exc)
+            if (
+                "уже использовали этот промокод" in detail.lower()
+                or "уже активирован промокод" in detail.lower()
+                or "можно активировать через" in detail.lower()
+            ):
+                await message.reply_text(
+                    f"ℹ️ {detail}",
+                    reply_markup=_promo_result_keyboard(),
+                    parse_mode="HTML",
+                )
+                return
             await message.reply_text(
                 promo_invalid_text(),
                 reply_markup=InlineKeyboardMarkup(
