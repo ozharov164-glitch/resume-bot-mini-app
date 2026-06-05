@@ -8,6 +8,7 @@ from services.founder import is_founder
 from services.admin_stats import (
     count_paid_resumes_clean,
     count_resumes_today_clean,
+    count_users_clean,
     get_admin_funnel_stats,
     get_promo_analytics_clean,
 )
@@ -113,7 +114,7 @@ async def admin_stats(db=Depends(get_db)):
         "count": count,
         "paid_count": paid_count,
         "today_count": today_count,
-        "users": db.count_users(),
+        "users": count_users_clean(db),
         "referred": referred,
     }
 

@@ -272,9 +272,42 @@ class SQLiteBackend:
             row = conn.execute("SELECT COUNT(*) AS c FROM resumes").fetchone()
         return int(row["c"]) if row else 0
 
-    def count_users(self) -> int:
+    def count_users(self, exclude_telegram_ids: list[int] | None = None) -> int:
         with self._connect() as conn:
-            row = conn.execute("SELECT COUNT(*) AS c FROM users").fetchone()
+            if exclude_telegram_ids:
+                placeholders = ",".join("?" * len(exclude_telegram_ids))
+                row = conn.execute(
+                    f"""
+                    SELECT COUNT(*) AS c FROM users
+                    WHERE telegram_id NOT IN ({placeholders})
+                    """,
+                    exclude_telegram_ids,
+                ).fetchone()
+            else:
+                row = conn.execute("SELECT COUNT(*) AS c FROM users").fetchone()
+        return int(row["c"]) if row else 0
+
+    def count_users_since(
+        self,
+        since_iso: str,
+        exclude_telegram_ids: list[int] | None = None,
+    ) -> int:
+        with self._connect() as conn:
+            if exclude_telegram_ids:
+                placeholders = ",".join("?" * len(exclude_telegram_ids))
+                row = conn.execute(
+                    f"""
+                    SELECT COUNT(*) AS c FROM users
+                    WHERE created_at >= ?
+                      AND telegram_id NOT IN ({placeholders})
+                    """,
+                    (since_iso, *exclude_telegram_ids),
+                ).fetchone()
+            else:
+                row = conn.execute(
+                    "SELECT COUNT(*) AS c FROM users WHERE created_at >= ?",
+                    (since_iso,),
+                ).fetchone()
         return int(row["c"]) if row else 0
 
     def list_user_telegram_ids(self) -> list[int]:
@@ -975,8 +1008,28 @@ class SupabaseBackend:
             return int(result.count)
         return len(result.data or [])
 
-    def count_users(self) -> int:
-        result = self.client.table("users").select("id", count="exact").execute()
+    def count_users(self, exclude_telegram_ids: list[int] | None = None) -> int:
+        query = self.client.table("users").select("id", count="exact")
+        if exclude_telegram_ids:
+            query = query.not_.in_("telegram_id", exclude_telegram_ids)
+        result = query.execute()
+        if result.count is not None:
+            return int(result.count)
+        return len(result.data or [])
+
+    def count_users_since(
+        self,
+        since_iso: str,
+        exclude_telegram_ids: list[int] | None = None,
+    ) -> int:
+        query = (
+            self.client.table("users")
+            .select("id", count="exact")
+            .gte("created_at", since_iso)
+        )
+        if exclude_telegram_ids:
+            query = query.not_.in_("telegram_id", exclude_telegram_ids)
+        result = query.execute()
         if result.count is not None:
             return int(result.count)
         return len(result.data or [])

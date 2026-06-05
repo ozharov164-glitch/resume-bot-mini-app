@@ -10,7 +10,7 @@ from typing import Any
 from telegram import Bot
 
 from config import settings
-from services.admin_stats import count_paid_resumes_clean
+from services.admin_stats import count_paid_resumes_clean, count_users_clean
 
 logger = logging.getLogger(__name__)
 
@@ -66,7 +66,7 @@ def _user_line(telegram_id: int, first_name: str = "", username: str = "") -> st
 
 async def notify_new_user(db: Any, *, telegram_id: int, first_name: str = "", username: str = "") -> bool:
     try:
-        total = db.count_users()
+        total = count_users_clean(db)
     except Exception:
         logger.exception("count_users failed")
         total = "?"

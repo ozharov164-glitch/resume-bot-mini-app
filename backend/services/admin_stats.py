@@ -50,7 +50,9 @@ def get_admin_funnel_stats(
     for event in events:
         steps[event] = db.count_analytics_unique_users_since(event, since, exclude)
 
+    bot_users = db.count_users_since(since, exclude)
     payments_real = db.count_paid_resumes_since(since, exclude)
+    mini_app = steps.get("mini_app_opened", 0)
     started = steps.get("onboarding_started", 0)
     previews = steps.get("preview_viewed", 0)
     pay_clicks = steps.get("pay_clicked", 0)
@@ -59,10 +61,13 @@ def get_admin_funnel_stats(
     return {
         "period_days": days,
         "since": since,
+        "bot_users": bot_users,
         **steps,
         "payments_real": payments_real,
         "payment_completed": payments_real,
         "conversion_rate": _pct(payments_real, started),
+        "bot_to_mini_app_rate": _pct(mini_app, bot_users),
+        "mini_app_to_onboarding_rate": _pct(started, mini_app),
         "preview_to_pay_rate": _pct(payments_real, previews),
         "pay_click_to_paid_rate": _pct(payments_real, pay_clicks),
         "share_rate": _pct(shares, previews),
@@ -70,6 +75,11 @@ def get_admin_funnel_stats(
         "exclude_telegram_ids": exclude,
         "metric": "unique_users",
     }
+
+
+def count_users_clean(db: Any) -> int:
+    """Users who pressed /start in bot, founder test accounts excluded."""
+    return db.count_users(exclude_telegram_ids=stats_exclude_telegram_ids())
 
 
 def count_paid_resumes_clean(db: Any) -> int:

@@ -90,6 +90,41 @@ class AdminFunnelStatsTests(unittest.TestCase):
         stats = get_admin_funnel_stats(self.db, days=7, include_template=False)
         self.assertEqual(stats["onboarding_started"], 0)
 
+    def test_bot_users_excludes_founder_and_respects_window(self) -> None:
+        founder = stats_exclude_telegram_ids()[0]
+        recent = 900404
+        old_user = 900405
+
+        self.db.create_user(telegram_id=founder, first_name="Founder")
+        self.db.create_user(telegram_id=recent, first_name="Recent")
+        old_created = (datetime.utcnow() - timedelta(days=10)).isoformat()
+        with self.db._connect() as conn:
+            conn.execute(
+                """
+                INSERT INTO users (id, telegram_id, first_name, last_name, username, created_at)
+                VALUES (?, ?, ?, ?, ?, ?)
+                """,
+                ("uid-old", old_user, "Old", "", "", old_created),
+            )
+            conn.commit()
+
+        self._event("mini_app_opened", recent)
+        self._event("onboarding_started", recent)
+
+        stats = get_admin_funnel_stats(self.db, days=7, include_template=False)
+        self.assertEqual(stats["bot_users"], 1)
+        self.assertEqual(stats["mini_app_opened"], 1)
+        self.assertEqual(stats["onboarding_started"], 1)
+
+    def test_count_users_clean_excludes_founder(self) -> None:
+        from services.admin_stats import count_users_clean
+
+        founder = stats_exclude_telegram_ids()[0]
+        self.db.create_user(telegram_id=founder, first_name="Founder")
+        self.db.create_user(telegram_id=900501, first_name="Real")
+
+        self.assertEqual(count_users_clean(self.db), 1)
+
 
 if __name__ == "__main__":
     unittest.main()

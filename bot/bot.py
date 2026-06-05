@@ -277,12 +277,13 @@ async def adm_stats_callback(update: Update, context: ContextTypes.DEFAULT_TYPE)
             return
         data = resp.json()
         text = (
-            f"📊 <b>Статистика</b>\n\n"
-            f"Всего резюме (витрина): {data.get('count', 0)}\n"
-            f"Оплачено (без тестов): {data.get('paid_count', 0)}\n"
-            f"Сегодня (без тестов): {data.get('today_count', 0)}\n"
-            f"Пользователей: {data.get('users', 0)}\n"
-            f"Пришли по реф-ссылкам: {data.get('referred', 0)}"
+            f"📊 <b>Статистика</b>\n"
+            f"<i>Без ваших тестовых аккаунтов</i>\n\n"
+            f"👥 Зашли в бота (/start): <b>{data.get('users', 0)}</b>\n"
+            f"💳 Оплачено резюме: <b>{data.get('paid_count', 0)}</b>\n"
+            f"📅 Создано сегодня: <b>{data.get('today_count', 0)}</b>\n"
+            f"🔗 Пришли по реф-ссылкам: <b>{data.get('referred', 0)}</b>\n"
+            f"🏪 Витрина (маркетинг): {data.get('count', 0)}"
         )
         keyboard = _admin_back_refresh("adm_stats")
         await _edit_callback_message(query, text, reply_markup=keyboard)
@@ -726,7 +727,9 @@ def _format_admin_funnel_text(d: dict) -> str:
         "📈 <b>Воронка (7 дней)</b>",
         "<i>Уникальные пользователи · без ваших тестов</i>",
         "",
-        _step("Начали анкету", "onboarding_started", None),
+        _step("Зашли в бота (/start)", "bot_users", None),
+        _step("Открыли Mini App", "mini_app_opened", "bot_users"),
+        _step("Начали анкету", "onboarding_started", "mini_app_opened"),
         _step("Нажали «Сформировать»", "generate_started", "onboarding_started"),
         _step("Выбрали шаблон", "template_selected", "generate_started"),
         _step("Открыли предпросмотр", "preview_viewed", "template_selected"),
@@ -734,6 +737,8 @@ def _format_admin_funnel_text(d: dict) -> str:
         "",
         f"💳 <b>Оплатили (реально):</b> {int(d.get('payments_real', 0) or 0)}",
         "",
+        f"Mini App / бот: <b>{d.get('bot_to_mini_app_rate', '0%')}</b>",
+        f"Анкета / Mini App: <b>{d.get('mini_app_to_onboarding_rate', '0%')}</b>",
         f"Конверсия (оплата / анкета): <b>{d.get('conversion_rate', '0%')}</b>",
         f"Оплата после предпросмотра: <b>{d.get('preview_to_pay_rate', '0%')}</b>",
         f"Оплата после «Оплатить»: <b>{d.get('pay_click_to_paid_rate', '0%')}</b>",
