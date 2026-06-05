@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import { trackEvent } from "../lib/analytics";
 
-import { AtsScoreCard } from "../components/preview/AtsScoreCard";
+import { AtsBadge } from "../components/preview/AtsBadge";
 import { PreviewImageFrame } from "../components/preview/PreviewImageFrame";
 import { PreviewPaidHero } from "../components/preview/PreviewPaidHero";
 import { PreviewLoadingSkeleton } from "../components/preview/PreviewLoadingSkeleton";
@@ -267,10 +267,6 @@ export function PreviewPage() {
           <HhTextEntryCard onClick={() => openHhTextView("preview")} />
         ) : null}
 
-        {resumeId && authToken ? (
-          <AtsScoreCard token={authToken} resumeId={resumeId} />
-        ) : null}
-
         {founderActive ? <FounderBadge /> : null}
       </main>
 
@@ -305,17 +301,23 @@ export function PreviewPage() {
             </p>
           ) : null}
 
-          <Button
-            variant="secondary"
-            onClick={() => {
-              getTg()?.HapticFeedback?.impactOccurred("light");
-              startEditResume();
-            }}
-            className="preview-secondary-btn"
-          >
-            <Icon name="edit" size={18} />
-            Изменить ответы
-          </Button>
+          <div className="preview-edit-ats-row">
+            <Button
+              variant="secondary"
+              onClick={() => {
+                getTg()?.HapticFeedback?.impactOccurred("light");
+                startEditResume();
+              }}
+              className="preview-secondary-btn preview-edit-btn"
+              fullWidth={false}
+            >
+              <Icon name="edit" size={16} />
+              Изменить ответы
+            </Button>
+            {resumeId && authToken ? (
+              <AtsBadge token={authToken} resumeId={resumeId} />
+            ) : null}
+          </div>
 
           {previewLocked ? (
             <Button variant="brand" onClick={goToCheckout} className="preview-pdf-btn">
