@@ -75,7 +75,19 @@ def get_pdf_styles() -> str:
     font_stack = "'NunitoSans', 'DejaVu Sans', 'Liberation Sans', Arial, sans-serif"
 
     return font_face + f"""
-    @page {{ size: A4; margin: 8mm 10mm; }}
+    @page {{
+        size: A4;
+        margin: 8mm 10mm;
+        @bottom-center {{
+            content: counter(page);
+            font-family: {font_stack};
+            font-size: 7pt;
+            color: rgba(112,117,121,0.5);
+        }}
+    }}
+    @page :first {{
+        @bottom-center {{ content: none; }}
+    }}
 
     * {{ box-sizing: border-box; margin: 0; padding: 0; }}
 
@@ -326,7 +338,19 @@ def get_modern_pdf_styles() -> str:
     accent = "#2563EB"
 
     return font_face + f"""
-    @page {{ size: A4; margin: 14mm 16mm 18mm 16mm; }}
+    @page {{
+        size: A4;
+        margin: 14mm 16mm 18mm 16mm;
+        @bottom-center {{
+            content: counter(page);
+            font-family: {font_stack};
+            font-size: 7pt;
+            color: rgba(75,85,99,0.5);
+        }}
+    }}
+    @page :first {{
+        @bottom-center {{ content: none; }}
+    }}
     * {{ box-sizing: border-box; margin: 0; padding: 0; }}
     body {{
         font-family: {font_stack};
@@ -463,7 +487,19 @@ def get_compact_pdf_styles() -> str:
     accent = "#7C3AED"
 
     return font_face + f"""
-    @page {{ size: A4; margin: 8mm 10mm; }}
+    @page {{
+        size: A4;
+        margin: 8mm 10mm;
+        @bottom-center {{
+            content: counter(page);
+            font-family: {font_stack};
+            font-size: 6.5pt;
+            color: rgba(112,117,121,0.45);
+        }}
+    }}
+    @page :first {{
+        @bottom-center {{ content: none; }}
+    }}
     * {{ box-sizing: border-box; margin: 0; padding: 0; }}
     body {{
         font-family: {font_stack};
@@ -747,7 +783,9 @@ def _render_document(resume_data: dict, template_name: str = "classic", *, previ
 
 
 def generate_pdf(resume_data: dict, template_name: str = "classic") -> bytes:
-    return _render_document(resume_data, template_name, preview=False).write_pdf()
+    return _render_document(resume_data, template_name, preview=False).write_pdf(
+        presentational_hints=True,
+    )
 
 
 def _pdf_bytes_to_png(pdf_bytes: bytes, *, resolution: int = 110) -> bytes:

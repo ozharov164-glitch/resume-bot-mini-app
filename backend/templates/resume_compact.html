@@ -2,7 +2,11 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
-  <title>Резюме — {{ resume.full_name }}</title>
+  <title>Резюме — {{ resume.full_name }}{% if resume.target_position %} — {{ resume.target_position }}{% endif %}</title>
+  <meta name="author" content="{{ resume.full_name }}">
+  {% if resume.target_position %}<meta name="description" content="{{ resume.target_position }}{% if resume.city %}, {{ resume.city }}{% endif %}">{% endif %}
+  {% if resume.skills %}<meta name="keywords" content="{{ resume.skills[:10] | join(', ') }}">{% endif %}
+  <meta name="generator" content="ResumeBot">
 </head>
 <body>
 <div class="page-layout">
@@ -12,12 +16,12 @@
       <div class="section-title">Контакты</div>
       {% if resume.phone %}
       <div class="contact-item">
-        <span class="contact-label">Телефон</span>{{ resume.phone }}
+        <span class="contact-label">Телефон</span><a href="tel:{{ resume.phone }}" style="color:inherit;text-decoration:none;">{{ resume.phone }}</a>
       </div>
       {% endif %}
       {% if resume.email %}
       <div class="contact-item">
-        <span class="contact-label">Email</span>{{ resume.email }}
+        <span class="contact-label">Email</span><a href="mailto:{{ resume.email }}" style="color:inherit;text-decoration:none;">{{ resume.email }}</a>
       </div>
       {% endif %}
       {% if resume.city %}

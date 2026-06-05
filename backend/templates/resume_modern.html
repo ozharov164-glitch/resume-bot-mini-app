@@ -2,14 +2,18 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
-  <title>Резюме — {{ resume.full_name }}</title>
+  <title>Резюме — {{ resume.full_name }}{% if resume.target_position %} — {{ resume.target_position }}{% endif %}</title>
+  <meta name="author" content="{{ resume.full_name }}">
+  {% if resume.target_position %}<meta name="description" content="{{ resume.target_position }}{% if resume.city %}, {{ resume.city }}{% endif %}">{% endif %}
+  {% if resume.skills %}<meta name="keywords" content="{{ resume.skills[:10] | join(', ') }}">{% endif %}
+  <meta name="generator" content="ResumeBot">
 </head>
 <body>
 
   <header class="modern-header">
     <div class="modern-name">{{ resume.full_name }}</div>
     <div class="modern-meta">
-      {% if resume.target_position %}{{ resume.target_position }}{% endif %}{% if resume.city %} · {{ resume.city }}{% endif %}{% if resume.phone %} · {{ resume.phone }}{% endif %}{% if resume.email %} · {{ resume.email }}{% endif %}
+      {% if resume.target_position %}{{ resume.target_position }}{% endif %}{% if resume.city %} · {{ resume.city }}{% endif %}{% if resume.phone %} · <a href="tel:{{ resume.phone }}" style="color:inherit;text-decoration:none;">{{ resume.phone }}</a>{% endif %}{% if resume.email %} · <a href="mailto:{{ resume.email }}" style="color:inherit;text-decoration:none;">{{ resume.email }}</a>{% endif %}
     </div>
     {% if resume.salary %}
     <div class="modern-meta" style="margin-top: 4pt;">
@@ -40,28 +44,6 @@
   </div>
   {% endif %}
 
-  {% if resume.skills %}
-  <div class="section-block">
-    <div class="section-title">Навыки</div>
-    <div class="skills-list">
-      {% for skill in resume.skills %}
-      <span class="skill-chip">{{ skill }}</span>
-      {% endfor %}
-    </div>
-  </div>
-  {% endif %}
-
-  {% if resume.key_achievements %}
-  <div class="section-block">
-    <div class="section-title">Ключевые достижения</div>
-    <ul class="achievement-list">
-      {% for item in resume.key_achievements %}
-      {% if item %}<li>{{ item }}</li>{% endif %}
-      {% endfor %}
-    </ul>
-  </div>
-  {% endif %}
-
   {% if resume.experience %}
   <div class="section-block">
     <div class="section-title">Опыт работы</div>
@@ -84,6 +66,17 @@
   </div>
   {% endif %}
 
+  {% if resume.key_achievements %}
+  <div class="section-block">
+    <div class="section-title">Ключевые достижения</div>
+    <ul class="achievement-list">
+      {% for item in resume.key_achievements %}
+      {% if item %}<li>{{ item }}</li>{% endif %}
+      {% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+
   {% if resume.education %}
   <div class="section-block">
     <div class="section-title">Образование</div>
@@ -97,6 +90,17 @@
     </div>
     {% endif %}
     {% endfor %}
+  </div>
+  {% endif %}
+
+  {% if resume.skills %}
+  <div class="section-block">
+    <div class="section-title">Навыки</div>
+    <div class="skills-list">
+      {% for skill in resume.skills %}
+      <span class="skill-chip">{{ skill }}</span>
+      {% endfor %}
+    </div>
   </div>
   {% endif %}
 
