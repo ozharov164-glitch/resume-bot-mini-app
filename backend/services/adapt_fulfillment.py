@@ -50,6 +50,14 @@ async def fulfill_adapt_resume(
         logger.warning("adapt: no pending vacancy resume_id=%s", source_resume_id)
         return None
 
+    # Idempotency: if this source resume already has a linked adapted result, return it
+    existing_adapt_id = str(answers.get("_adapt_result_id") or "").strip()
+    if existing_adapt_id:
+        existing = db.find_resume(existing_adapt_id)
+        if existing:
+            logger.info("adapt: idempotent — already fulfilled source=%s result=%s", source_resume_id, existing_adapt_id)
+            return existing_adapt_id
+
     try:
         resume_data = parse_resume_data(resume["data"])
     except (ValueError, json.JSONDecodeError):
@@ -83,6 +91,7 @@ async def fulfill_adapt_resume(
     )
 
     answers.pop("_pending_adapt_vacancy", None)
+    answers["_adapt_result_id"] = new_id  # idempotency marker
     db.update_resume(source_resume_id, {"user_answers": answers})
 
     pdf_bytes = await generate_pdf_async(adapted, template_id)

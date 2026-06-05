@@ -51,8 +51,11 @@ def expected_stars_amount(
     bonus = max(0, int(bonus_stars_applied or 0))
     use_bonus = bonus > 0
     stars, applied = apply_bonus_stars(db, telegram_id, stars, use_bonus)
-    if use_bonus and applied != bonus:
-        return None
+    if use_bonus and applied < bonus:
+        # Bonus stars were partially or fully spent elsewhere — accept the payment
+        # at the actual charged amount rather than blocking fulfillment.
+        # Stars have already been deducted from the user by Telegram.
+        stars = max(1, int(stars))
     return max(1, int(stars))
 
 
@@ -89,9 +92,7 @@ def expected_rub_amount(
 
     bonus = max(0, int(bonus_stars_applied or 0))
     use_bonus = bonus > 0
-    rub, applied = apply_bonus_rub(db, telegram_id, rub, use_bonus)
-    if use_bonus and applied != bonus:
-        return None
+    rub, _applied = apply_bonus_rub(db, telegram_id, rub, use_bonus)
     return rub
 
 

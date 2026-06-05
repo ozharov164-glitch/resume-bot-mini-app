@@ -1,3 +1,4 @@
+import asyncio
 import hashlib
 import hmac
 import io
@@ -7,6 +8,7 @@ import time
 from urllib.parse import parse_qs
 
 from telegram import Bot
+from telegram.error import RetryAfter, TimedOut, NetworkError
 
 from config import settings
 
@@ -59,8 +61,43 @@ def verify_telegram_webhook_secret(header_value: str | None) -> bool:
     return hmac.compare_digest(header_value.strip(), expected)
 
 
-async def send_document_to_user(user_telegram_id: int, document: bytes, filename: str, caption: str) -> None:
+async def send_document_to_user(
+    user_telegram_id: int,
+    document: bytes,
+    filename: str,
+    caption: str,
+    *,
+    max_retries: int = 3,
+) -> None:
+    """Send document with exponential-backoff retry on transient Telegram errors."""
     from services.telegram_bot import get_bot
-    payload = io.BytesIO(document)
-    payload.name = filename
-    await get_bot().send_document(chat_id=user_telegram_id, document=payload, filename=filename, caption=caption)
+    last_exc: Exception | None = None
+    for attempt in range(max_retries):
+        try:
+            payload = io.BytesIO(document)
+            payload.name = filename
+            await get_bot().send_document(
+                chat_id=user_telegram_id,
+                document=payload,
+                filename=filename,
+                caption=caption,
+            )
+            return
+        except RetryAfter as exc:
+            wait = max(exc.retry_after, 1)
+            logger.warning("telegram send_document flood_wait=%ss attempt=%s", wait, attempt + 1)
+            await asyncio.sleep(wait)
+            last_exc = exc
+        except (TimedOut, NetworkError) as exc:
+            wait = 2 ** attempt
+            logger.warning("telegram send_document transient error=%s wait=%ss attempt=%s", exc, wait, attempt + 1)
+            await asyncio.sleep(wait)
+            last_exc = exc
+        except Exception as exc:
+            last_exc = exc
+            if attempt < max_retries - 1:
+                await asyncio.sleep(2 ** attempt)
+            else:
+                raise
+    if last_exc:
+        raise last_exc

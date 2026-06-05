@@ -15,6 +15,7 @@ from services.payment_fulfillment import fulfill_paid_resume
 from services.payment_service import create_stars_invoice_link, create_yookassa_payment
 from services.promo_errors import is_promo_activation_blocked_error
 from services.promo_service import RUB_PRICE_SINGLE_PDF, activate_promo, discounted_prices, resolve_payment_promo
+from services.rate_limiter import RateLimitExceeded, check_rate_limit
 from services.telegram_service import verify_telegram_webhook_secret
 from services.yookassa_webhook import handle_yookassa_webhook
 
@@ -57,6 +58,13 @@ async def create_invoice(
     current_user: dict = Depends(get_current_user),
     db=Depends(get_db),
 ):
+    try:
+        await check_rate_limit("payment_invoice", current_user.get("telegram_id"))
+    except RateLimitExceeded as exc:
+        raise HTTPException(
+            status_code=429,
+            detail=f"Лимит создания счётов исчерпан. Повторите через {exc.retry_after_hours} ч.",
+        ) from exc
     resume = db.find_resume(resume_id, current_user["id"])
     if not resume:
         raise HTTPException(status_code=404, detail="Резюме не найдено.")
@@ -76,6 +84,10 @@ async def create_invoice(
             "provider": "founder",
             "invoice_link": None,
         }
+
+    # Idempotency: if resume already paid, no new invoice needed
+    if resume.get("is_paid"):
+        raise HTTPException(status_code=409, detail="Резюме уже оплачено.")
 
     stars, _rub = _prepare_resume_promo(db, resume_id, current_user["telegram_id"])
     use_bonus = bool((body or {}).get("use_bonus"))
@@ -156,6 +168,13 @@ async def create_yookassa_invoice(
     current_user: dict = Depends(get_current_user),
     db=Depends(get_db),
 ):
+    try:
+        await check_rate_limit("payment_yookassa", current_user.get("telegram_id"))
+    except RateLimitExceeded as exc:
+        raise HTTPException(
+            status_code=429,
+            detail=f"Лимит создания платежей исчерпан. Повторите через {exc.retry_after_hours} ч.",
+        ) from exc
     resume = db.find_resume(resume_id, current_user["id"])
     if not resume:
         raise HTTPException(status_code=404, detail="Резюме не найдено.")
@@ -173,6 +192,10 @@ async def create_yookassa_invoice(
             "provider": "founder",
             "confirmation_url": None,
         }
+    # Idempotency: if resume already paid, no new payment needed
+    if resume.get("is_paid"):
+        raise HTTPException(status_code=409, detail="Резюме уже оплачено.")
+
     _stars, rub = _prepare_resume_promo(db, resume_id, current_user["telegram_id"])
     use_bonus = bool((body or {}).get("use_bonus"))
     rub, bonus_applied = apply_bonus_rub(
@@ -210,12 +233,17 @@ async def create_yookassa_invoice(
 
 @router.post("/yookassa-webhook")
 async def yookassa_webhook(request: Request, db=Depends(get_db)):
-    payload = await request.json()
-    result = await handle_yookassa_webhook(db, payload)
-    if result.get("ok") is False and result.get("error") == "not_configured":
-        raise HTTPException(status_code=503, detail="YooKassa is not configured.")
-    if result.get("ok") is False:
-        raise HTTPException(status_code=502, detail="Webhook processing failed.")
+    """YooKassa HTTP notification. Must ALWAYS return 200 or YooKassa will retry indefinitely."""
+    try:
+        payload = await request.json()
+    except Exception:
+        logger.warning("yookassa-webhook: invalid JSON body")
+        return {"ok": True, "status": "ignored", "reason": "invalid_json"}
+    try:
+        result = await handle_yookassa_webhook(db, payload)
+    except Exception:
+        logger.exception("yookassa-webhook: unhandled error")
+        return {"ok": True, "status": "error_logged"}
     return result
 
 
