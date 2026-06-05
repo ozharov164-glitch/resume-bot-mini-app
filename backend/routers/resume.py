@@ -2,7 +2,7 @@ import json as _json
 import logging
 import time
 import uuid
-from datetime import datetime, timezone, timezone
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import JSONResponse, Response
@@ -427,3 +427,25 @@ async def set_resume_template(
         raise HTTPException(status_code=400, detail="Недопустимый шаблон.")
     db.update_resume(resume_id, {"template_id": template_id})
     return {"ok": True, "template_id": template_id}
+
+
+class AtsScoreRequest(BaseModel):
+    vacancy_text: str = Field(default="", max_length=6000)
+
+
+@router.post("/{resume_id}/ats-score")
+async def resume_ats_score(
+    resume_id: str,
+    body: AtsScoreRequest,
+    current_user: dict = Depends(get_current_user),
+    db=Depends(get_db),
+):
+    """Compute ATS score (0–100) for a resume, optionally against a vacancy text."""
+    resume = db.find_resume(resume_id, current_user["id"])
+    if not resume:
+        raise HTTPException(status_code=404, detail="Резюме не найдено.")
+
+    from services.ats_service import compute_ats_score
+    resume_data = parse_resume_data(resume["data"])
+    result = compute_ats_score(resume_data, body.vacancy_text or None)
+    return result

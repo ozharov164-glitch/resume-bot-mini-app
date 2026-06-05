@@ -91,6 +91,32 @@ export async function authWithTelegram(initData: string) {
 
 export { HttpTimeoutError, fetchWithTimeout };
 
+export interface AtsScoreResult {
+  score: number;
+  level: "low" | "medium" | "good" | "great";
+  label: string;
+  description: string;
+  completeness: number;
+  quality: number;
+  keyword_score: number;
+  matched_keywords: string[];
+  missing_keywords: string[];
+  has_vacancy: boolean;
+  tips: string[];
+}
+
+export async function fetchAtsScore(
+  token: string,
+  resumeId: string,
+  vacancyText = "",
+): Promise<AtsScoreResult> {
+  return http<AtsScoreResult>(`/api/resume/${resumeId}/ats-score`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ vacancy_text: vacancyText }),
+  });
+}
+
 export async function fetchMe(token: string, timeoutMs = AUTH_TIMEOUT_MS) {
   return http<{
     telegram_id: number;

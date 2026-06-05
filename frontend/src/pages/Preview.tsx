@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import { trackEvent } from "../lib/analytics";
 
+import { AtsScoreCard } from "../components/preview/AtsScoreCard";
 import { PreviewImageFrame } from "../components/preview/PreviewImageFrame";
 import { PreviewPaidHero } from "../components/preview/PreviewPaidHero";
 import { PreviewLoadingSkeleton } from "../components/preview/PreviewLoadingSkeleton";
@@ -264,6 +265,10 @@ export function PreviewPage() {
 
         {previewPaid ? (
           <HhTextEntryCard onClick={() => openHhTextView("preview")} />
+        ) : null}
+
+        {resumeId && authToken ? (
+          <AtsScoreCard token={authToken} resumeId={resumeId} />
         ) : null}
 
         {founderActive ? <FounderBadge /> : null}
