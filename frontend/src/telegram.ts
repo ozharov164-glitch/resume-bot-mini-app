@@ -13,6 +13,8 @@ export interface TelegramWebApp {
   };
   viewportStableHeight?: number;
   viewportHeight?: number;
+  safeAreaInset?: { top?: number; bottom?: number; left?: number; right?: number };
+  contentSafeAreaInset?: { top?: number; bottom?: number; left?: number; right?: number };
   themeParams: Record<string, string>;
   MainButton?: {
     text: string;
@@ -113,6 +115,17 @@ function syncViewportStableHeight() {
   document.documentElement.style.setProperty("--tg-viewport-stable-height", `${height}px`);
 }
 
+/** Pin once — env(safe-area-inset-top) can flicker when the keyboard opens on iOS. */
+function syncSafeAreaTop() {
+  const webApp = getTg();
+  const top =
+    webApp?.contentSafeAreaInset?.top ??
+    webApp?.safeAreaInset?.top;
+  if (typeof top === "number" && top >= 0) {
+    document.documentElement.style.setProperty("--tg-safe-top", `${top}px`);
+  }
+}
+
 const onViewportChanged = () => syncViewportStableHeight();
 
 export function initTelegramTheme() {
@@ -121,6 +134,7 @@ export function initTelegramTheme() {
   const webApp = getTg();
   if (!webApp) {
     syncViewportStableHeight();
+    syncSafeAreaTop();
     return;
   }
 
@@ -128,6 +142,7 @@ export function initTelegramTheme() {
   webApp.expand();
   webApp.disableVerticalSwipes?.();
   syncViewportStableHeight();
+  syncSafeAreaTop();
   syncTelegramChrome();
 
   webApp.offEvent?.("themeChanged", onThemeChanged);

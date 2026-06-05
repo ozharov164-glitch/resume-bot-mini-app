@@ -1,23 +1,31 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 import { getTg } from "../telegram";
 
 /** Native Telegram «Назад» — same handler as header back button. */
 export function useTelegramBackButton(onBack: (() => void) | null) {
+  const handlerRef = useRef(onBack);
+  handlerRef.current = onBack;
+  const enabled = Boolean(onBack);
+
   useEffect(() => {
     const back = getTg()?.BackButton;
     if (!back) return;
 
-    if (!onBack) {
+    if (!enabled) {
       back.hide();
       return;
     }
 
+    const handler = () => {
+      handlerRef.current?.();
+    };
+
     back.show();
-    back.onClick(onBack);
+    back.onClick(handler);
     return () => {
-      back.offClick(onBack);
+      back.offClick(handler);
       back.hide();
     };
-  }, [onBack]);
+  }, [enabled]);
 }

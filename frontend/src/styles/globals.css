@@ -1726,14 +1726,14 @@ textarea::-moz-placeholder {
   position: sticky;
   top: 0;
   z-index: 50;
-  display: flex;
+  display: grid;
   flex-shrink: 0;
-  min-height: var(--app-header-height);
+  grid-template-columns: 2.5rem minmax(0, 1fr) 2.5rem;
   align-items: center;
-  justify-content: space-between;
+  min-height: calc(var(--app-header-height) + var(--tg-safe-top));
+  padding: var(--tg-safe-top) 1rem 0;
   border-bottom: 1px solid var(--border-subtle);
   background: #ffffff;
-  padding: var(--tg-safe-top) 1rem 0;
 }
 
 .app-header-spacer {
@@ -1742,6 +1742,7 @@ textarea::-moz-placeholder {
 
 .app-header-side {
   width: 2.5rem;
+  height: 2.5rem;
   flex-shrink: 0;
 }
 
@@ -1792,7 +1793,7 @@ textarea::-moz-placeholder {
 }
 
 .app-header-title {
-  flex: 1;
+  grid-column: 2;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
