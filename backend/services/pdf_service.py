@@ -8,6 +8,7 @@ from jinja2 import Environment, FileSystemLoader
 from weasyprint import CSS, HTML
 from weasyprint.text.fonts import FontConfiguration
 
+from models.schemas import VALID_TEMPLATES
 from services.resume_text_utils import split_bullets as _split_bullets
 
 try:
@@ -19,6 +20,18 @@ logger = logging.getLogger(__name__)
 
 TEMPLATES_DIR = Path(__file__).parent.parent / "templates"
 from services.font_assets import FONTS_DIR, FONT_FILES, ensure_fonts
+
+# Cached Jinja2 environment — parse templates once per process
+_jinja_env: Environment | None = None
+
+
+def _get_jinja_env() -> Environment:
+    global _jinja_env
+    if _jinja_env is None:
+        env = Environment(loader=FileSystemLoader(str(TEMPLATES_DIR)), autoescape=True)
+        env.filters["split_bullets"] = _split_bullets
+        _jinja_env = env
+    return _jinja_env
 
 
 def _font_face_css() -> str:
@@ -710,11 +723,9 @@ def _normalize_salary(resume_data: dict) -> dict:
 
 def _render_document(resume_data: dict, template_name: str = "classic", *, preview: bool = False):
     data = _normalize_salary(resume_data)
-    valid_templates = {"classic", "modern", "compact"}
-    if template_name not in valid_templates:
+    if template_name not in VALID_TEMPLATES:
         template_name = "classic"
-    env = Environment(loader=FileSystemLoader(str(TEMPLATES_DIR)))
-    env.filters["split_bullets"] = _split_bullets
+    env = _get_jinja_env()
     template = env.get_template(f"resume_{template_name}.html")
     html_content = template.render(resume=data, preview=preview)
     if template_name == "modern":

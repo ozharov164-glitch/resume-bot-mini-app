@@ -185,8 +185,9 @@ async def transcribe_audio(audio_bytes: bytes, filename: str, content_type: str)
                 last_error = exc
                 continue
             raise
-        else:
-            raise last_error or RuntimeError("All Groq keys failed for transcribe")
+    else:
+        # for/else: loop completed without break — all keys failed
+        raise last_error or RuntimeError("All Groq keys failed for transcribe")
 
     text = str(data.get("text") or "").strip()
     if not text:
@@ -251,34 +252,37 @@ async def polish_experience_text(
     except Exception as exc:
         logger.warning("groq polish failed, trying openrouter: %s", exc)
 
-    or_body = {
-        "model": settings.OPENROUTER_MODEL,
-        "messages": [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_content},
-        ],
-        "temperature": 0.45,
-        "max_tokens": 500,
+    headers = {
+        "Authorization": f"Bearer {settings.OPENROUTER_API_KEY}",
+        "Content-Type": "application/json",
+        "HTTP-Referer": settings.OPENROUTER_APP_URL,
+        "X-Title": "ResumeBot",
     }
-
     client = await get_api_client(timeout=30.0)
-    response = await client.post(
-        "https://openrouter.ai/api/v1/chat/completions",
-        headers={
-            "Authorization": f"Bearer {settings.OPENROUTER_API_KEY}",
-            "Content-Type": "application/json",
-            "HTTP-Referer": settings.OPENROUTER_APP_URL,
-            "X-Title": "ResumeBot",
-        },
-        json=or_body,
-    )
-    response.raise_for_status()
-    data = response.json()
-
-    choices = data.get("choices") or []
-    if not choices:
-        return text
-
-    content = (choices[0].get("message") or {}).get("content") or ""
-    polished = content.strip() or text
-    return sanitize_duration_claims(text, polished, period)
+    for model in (settings.OPENROUTER_MODEL, settings.OPENROUTER_MODEL_FALLBACK):
+        try:
+            or_body = {
+                "model": model,
+                "messages": [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_content},
+                ],
+                "temperature": 0.45,
+                "max_tokens": 500,
+            }
+            response = await client.post(
+                "https://openrouter.ai/api/v1/chat/completions",
+                headers=headers,
+                json=or_body,
+            )
+            response.raise_for_status()
+            data = response.json()
+            choices = data.get("choices") or []
+            if not choices:
+                continue
+            content = (choices[0].get("message") or {}).get("content") or ""
+            polished = content.strip() or text
+            return sanitize_duration_claims(text, polished, period)
+        except Exception as exc:
+            logger.warning("openrouter polish model=%s failed: %s", model, exc)
+    return text

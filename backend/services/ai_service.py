@@ -29,8 +29,8 @@ JOB_CONTEXT: dict[str, str] = {
         "Вид доставки (пеший/авто/вело), районы, средний чек заказов, рейтинг если есть."
     ),
     "продавец": (
-        "Товарные группы, выполнение плана, работа с кассой, CRM если есть, "
-        "размер торговой точки."
+        "Товарные группы, выполнение плана продаж, работа с кассой и терминалом, "
+        "CRM если есть, размер торговой точки, работа с покупателями."
     ),
     "кассир": (
         "Кассовая дисциплина, объём операций/день, инвентаризация, "
@@ -38,10 +38,6 @@ JOB_CONTEXT: dict[str, str] = {
     ),
     "маляр": "Виды работ (фасад/интерьер/авто), материалы, площадь объектов, допуски.",
     "грузчик": "Физические нормативы, спецтехника (погрузчик), тип грузов, смены.",
-    "продав": (
-        "Товарные группы, выполнение плана продаж, работа с кассой и терминалом, "
-        "CRM если есть, размер торговой точки, работа с покупателями."
-    ),
     "официант": (
         "R-Keeper/iiko, тип заведения, средний чек стола, подача блюд, "
         "работа с возражениями, стандарты сервиса."
@@ -126,13 +122,6 @@ SYSTEM_PROMPT = """Ты — старший HR-редактор резюме дл
 ТЕЛЕФОН / EMAIL: точно из запроса, не изменяй
 ФИО (full_name): формат «Фамилия Имя Отчество», без сокращений (сервер перезапишет из ответов пользователя)
 
-ПРАВИЛО РОДА (соблюдать строго):
-- Если «Пол кандидата: Женский» — ВСЕ глаголы и прилагательные в женском роде:
-  организовывала, обеспечивала, выполняла, контролировала, внедряла, вела, участвовала
-  Прилагательные: ответственная, пунктуальная, стрессоустойчивая, коммуникабельная
-  Summary начинать: «Ответственная [должность]...» или «Опытная [должность]...»
-- Если «Пол кандидата: Мужской» или поле отсутствует → мужской род (текущее поведение)
-
 ПРАВИЛО 13 (опыт):
 - Если work_history пустой ИЛИ experience_level = «Нет опыта» →
   НЕЛЬЗЯ использовать слова «опытный», «с опытом», «опыт N лет» в summary.
@@ -212,17 +201,14 @@ FALLBACK_SKILLS: dict[str, list[str]] = {
         "Коммуникабельность", "Стрессоустойчивость",
     ],
     "официант": [
-        "Прием и выдача заказов", "Сервировка стола", "R-Keeper", "iiko",
+        "R-Keeper", "iiko", "Приём и выдача заказов", "Сервировка стола",
         "Работа с кассой", "Знание меню", "Коммуникабельность",
         "Работа с возражениями", "Работа в команде", "Внимательность",
+        "Стрессоустойчивость",
     ],
     "повар": [
         "Приготовление блюд", "Техкарты", "Санитарные нормы", "iiko",
         "Работа на линии", "Скорость работы", "Стрессоустойчивость",
-    ],
-    "официан": [
-        "R-Keeper", "iiko", "Приём заказов", "Сервировка", "Работа с гостями",
-        "Кассовый расчёт", "Знание меню", "Стрессоустойчивость",
     ],
     "сварщ": [
         "MIG/MAG сварка", "Сварка металлоконструкций", "Чтение чертежей",
@@ -570,6 +556,21 @@ def _merge_skills(ai_skills: Any, user_data: dict) -> list[str]:
     return merged
 
 
+def _find_matching_user_entry(ai_company: str, user_entries: list[dict]) -> dict | None:
+    """Match AI experience entry to user's work_history by company name similarity."""
+    ai_low = ai_company.lower().strip()
+    if not ai_low:
+        return None
+    # Exact or substring match
+    for entry in user_entries:
+        user_company = str(entry.get("company") or "").lower().strip()
+        if not user_company:
+            continue
+        if user_company in ai_low or ai_low in user_company:
+            return entry
+    return None
+
+
 def _apply_work_history_to_experience(resume_data: dict, user_data: dict) -> None:
     wh = user_data.get("work_history") or []
     exp = resume_data.get("experience")
@@ -577,9 +578,15 @@ def _apply_work_history_to_experience(resume_data: dict, user_data: dict) -> Non
         return
     user_entries = [e for e in wh if isinstance(e, dict)]
     for i, job in enumerate(exp):
-        if not isinstance(job, dict) or i >= len(user_entries):
+        if not isinstance(job, dict):
             continue
-        src = user_entries[i]
+        ai_company = str(job.get("company") or "").strip()
+        # Try name-based match first, fall back to index
+        src = _find_matching_user_entry(ai_company, user_entries)
+        if src is None and i < len(user_entries):
+            src = user_entries[i]
+        if src is None:
+            continue
         if str(src.get("company") or "").strip():
             job["company"] = str(src.get("company")).strip()
         if str(src.get("period") or "").strip():
@@ -659,7 +666,7 @@ async def generate_resume(user_data: dict) -> dict:
         {"role": "user", "content": _build_user_payload(user_data)},
     ]
     try:
-        raw = await _call_openrouter(messages, temperature=0.62, max_tokens=2200)
+        raw = await _call_openrouter(messages, temperature=0.62, max_tokens=settings.OPENROUTER_MAX_TOKENS)
     except (json.JSONDecodeError, ValueError) as exc:
         logger.warning("primary model output invalid (%s), retrying fallback", exc)
         raw = await _call_openrouter(
@@ -759,18 +766,39 @@ async def suggest_skills(position: str) -> dict[str, Any]:
     return fallback
 
 
+ADAPT_SYSTEM_PROMPT = """Ты — HR-редактор. Адаптируй готовое резюме под конкретную вакансию.
+
+ЗАДАЧА: изменить только summary и skills так, чтобы они точно попадали в требования вакансии.
+
+ПРАВИЛА:
+• experience — НЕ менять компании, должности и периоды; можно улучшить формулировки обязанностей
+• skills — добавь релевантные навыки из вакансии, убери нерелевантные
+• summary — перепиши под требования вакансии, сохрани факты из исходного резюме
+• НЕ выдумывай опыт, сертификаты или навыки, которых нет в исходном резюме
+• Сохрани JSON-схему один-в-один: те же поля, те же типы
+
+ОТВЕТ: ТОЛЬКО JSON без markdown, без пояснений."""
+
+
 async def adapt_resume_for_vacancy(resume_data: dict, vacancy_text: str) -> dict:
     compact_resume = json.dumps(resume_data, ensure_ascii=False, separators=(",", ":"))
     vacancy_text = _truncate(vacancy_text, MAX_FIELD_LEN["vacancy"])
     messages = [
-        {"role": "system", "content": SYSTEM_PROMPT},
+        {"role": "system", "content": ADAPT_SYSTEM_PROMPT},
         {
             "role": "user",
             "content": (
-                "Адаптируй резюме под вакансию: усиль summary и skills под требования, "
-                "опыт не выдумывай. Только JSON той же схемы.\n\n"
-                f"Резюме:\n{compact_resume}\n\nВакансия:\n{vacancy_text}"
+                f"Резюме:\n{compact_resume}\n\n"
+                f"Вакансия:\n{vacancy_text}"
             ),
         },
     ]
-    return await _call_openrouter(messages, temperature=0.5)
+    try:
+        return await _call_openrouter(messages, temperature=0.5, max_tokens=2000)
+    except (json.JSONDecodeError, ValueError):
+        return await _call_openrouter(
+            messages,
+            model=settings.OPENROUTER_MODEL_FALLBACK,
+            temperature=0.45,
+            max_tokens=2000,
+        )

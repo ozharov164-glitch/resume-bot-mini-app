@@ -208,4 +208,4 @@ def sanitize_summary_claims(summary: str, user_data: dict) -> str:
 
     joined = " ".join(cleaned).strip()
     logger.info("sanitize_summary_claims removed %s duration sentence(s)", removed)
-    return joined or "Внимательно отношусь к работе, быстро обучаюсь и готов(а) к развитию."
+    return joined or summary

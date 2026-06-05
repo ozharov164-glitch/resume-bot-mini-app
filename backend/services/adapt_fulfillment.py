@@ -9,6 +9,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from services.ai_service import adapt_resume_for_vacancy, finalize_resume_data
+from services.hh_text_service import format_hh_text
 from services.payment_fulfillment import parse_resume_data
 from services.payment_validation import resume_belongs_to_telegram
 from services.pdf_async import generate_pdf_async
@@ -66,6 +67,7 @@ async def fulfill_adapt_resume(
     template_id = resume.get("template_id") or "classic"
     clean_answers = {k: v for k, v in answers.items() if not str(k).startswith("_")}
     paid_at = datetime.now(timezone.utc).isoformat()
+    hh_text = format_hh_text(adapted)
     db.create_resume(
         {
             "id": new_id,
@@ -73,11 +75,12 @@ async def fulfill_adapt_resume(
             "data": adapted,
             "user_answers": clean_answers,
             "is_paid": True,
+            "paid_at": paid_at,
             "template_id": template_id,
+            "hh_text": hh_text,
             "created_at": paid_at,
         }
     )
-    db.update_resume(new_id, {"is_paid": True, "paid_at": paid_at})
 
     answers.pop("_pending_adapt_vacancy", None)
     db.update_resume(source_resume_id, {"user_answers": answers})
