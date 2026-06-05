@@ -60,7 +60,7 @@ def verify_telegram_webhook_secret(header_value: str | None) -> bool:
 
 
 async def send_document_to_user(user_telegram_id: int, document: bytes, filename: str, caption: str) -> None:
-    bot = Bot(token=settings.BOT_TOKEN)
+    from services.telegram_bot import get_bot
     payload = io.BytesIO(document)
     payload.name = filename
-    await bot.send_document(chat_id=user_telegram_id, document=payload, filename=filename, caption=caption)
+    await get_bot().send_document(chat_id=user_telegram_id, document=payload, filename=filename, caption=caption)

@@ -4,6 +4,9 @@ from pydantic import BaseModel, Field, field_validator
 
 from services.name_format import capitalize_person_name
 
+# Single source of truth — import this in all services/routers
+VALID_TEMPLATES: frozenset[str] = frozenset({"classic", "modern", "compact"})
+
 
 class SetTemplateRequest(BaseModel):
     template_id: str

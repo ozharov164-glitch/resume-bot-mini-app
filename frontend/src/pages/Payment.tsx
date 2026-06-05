@@ -5,7 +5,7 @@ import {
   ensureAuthToken,
   fetchActivePromo,
   fetchMe,
-  fetchTodayCount,
+  fetchStats,
   validatePromo,
 } from "../api";
 import { openStarsPayment } from "../lib/openStarsPayment";
@@ -57,15 +57,21 @@ export function PaymentPage() {
   useEffect(() => {
     if (!authToken) return;
     let cancelled = false;
-    (async () => {
+    void (async () => {
       try {
-        const active = await fetchActivePromo(authToken);
-        if (cancelled || !active.active || !active.code || !active.discount_percent) return;
-        setPromoCode(active.code);
-        setPromoDiscount(active.discount_percent);
-        setShowPromo(true);
-      } catch {
-        /* no active promo */
+        const [active, me, stats] = await Promise.all([
+          fetchActivePromo(authToken).catch(() => null),
+          ensureAuthToken().then(fetchMe).catch(() => null),
+          fetchStats().catch(() => null),
+        ]);
+        if (cancelled) return;
+        if (active?.active && active.code && active.discount_percent) {
+          setPromoCode(active.code);
+          setPromoDiscount(active.discount_percent);
+          setShowPromo(true);
+        }
+        if (me) setBonusStars(me.bonus_stars ?? 0);
+        if (stats) setTodayCount(stats.today_count);
       } finally {
         if (!cancelled) setPromoReady(true);
       }
@@ -74,18 +80,6 @@ export function PaymentPage() {
       cancelled = true;
     };
   }, [authToken]);
-
-  useEffect(() => {
-    if (!authToken) return;
-    void ensureAuthToken()
-      .then(fetchMe)
-      .then((me) => setBonusStars(me.bonus_stars ?? 0))
-      .catch(() => setBonusStars(0));
-  }, [authToken]);
-
-  useEffect(() => {
-    void fetchTodayCount().then(setTodayCount);
-  }, []);
 
   if (!authToken || !resumeId) return null;
 

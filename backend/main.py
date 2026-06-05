@@ -1,4 +1,5 @@
 import logging
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -33,10 +34,23 @@ logging.basicConfig(
     format="%(asctime)s %(levelname)s %(name)s %(message)s",
 )
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    ensure_fonts()
+    redis_available()
+    await start_pdf_workers()
+    yield
+    await stop_pdf_workers()
+    await close_http_clients()
+    await close_redis()
+
+
 app = FastAPI(
     title="ResumeBot API",
     docs_url="/docs" if settings.DEBUG else None,
     redoc_url="/redoc" if settings.DEBUG else None,
+    lifespan=lifespan,
 )
 
 _github_pages_origins = [
@@ -69,20 +83,6 @@ app.include_router(voice.router)
 app.include_router(enrich.router)
 app.include_router(user_stats.router)
 app.include_router(affiliate_me.router)
-
-
-@app.on_event("startup")
-async def startup_event():
-    ensure_fonts()
-    redis_available()
-    await start_pdf_workers()
-
-
-@app.on_event("shutdown")
-async def shutdown_event():
-    await stop_pdf_workers()
-    await close_http_clients()
-    await close_redis()
 
 
 @app.get("/health")

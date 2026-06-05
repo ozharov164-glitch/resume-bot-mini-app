@@ -48,8 +48,8 @@ async def send_admin_message(text: str, *, parse_mode: str = "HTML") -> bool:
         logger.debug("admin notify skipped: ADMIN_GROUP_CHAT_ID not set")
         return False
     try:
-        bot = Bot(token=settings.BOT_TOKEN)
-        await bot.send_message(chat_id=chat_id, text=text, parse_mode=parse_mode)
+        from services.telegram_bot import get_bot
+        await get_bot().send_message(chat_id=chat_id, text=text, parse_mode=parse_mode)
         return True
     except Exception as exc:
         logger.error("admin notify failed chat_id=%s: %s", chat_id, exc)

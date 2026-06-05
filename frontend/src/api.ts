@@ -340,25 +340,42 @@ export async function setResumeTemplate(token: string, resumeId: string, templat
   });
 }
 
-export async function fetchStatsCount(): Promise<number> {
+interface StatsData {
+  count: number;
+  today_count: number;
+  paid_count: number;
+}
+
+let _statsCache: { data: StatsData; ts: number } | null = null;
+const STATS_TTL_MS = 60_000;
+
+export async function fetchStats(): Promise<StatsData> {
+  const now = Date.now();
+  if (_statsCache && now - _statsCache.ts < STATS_TTL_MS) {
+    return _statsCache.data;
+  }
   try {
     const response = await fetchWithTimeout(`${API_URL}/api/stats/count`, {}, 8_000);
     if (!response.ok) throw new Error("stats unavailable");
-    const data = (await response.json()) as { count?: number };
-    if (typeof data.count === "number" && data.count > 0) return data.count;
-    return 1200;
+    const raw = (await response.json()) as Partial<StatsData>;
+    const data: StatsData = {
+      count: typeof raw.count === "number" && raw.count > 0 ? raw.count : 1200,
+      today_count: raw.today_count ?? 0,
+      paid_count: raw.paid_count ?? 0,
+    };
+    _statsCache = { data, ts: now };
+    return data;
   } catch {
-    return 1200;
+    return { count: 1200, today_count: 0, paid_count: 0 };
   }
 }
 
+/** @deprecated Use fetchStats() instead */
+export async function fetchStatsCount(): Promise<number> {
+  return (await fetchStats()).count;
+}
+
+/** @deprecated Use fetchStats() instead */
 export async function fetchTodayCount(): Promise<number> {
-  try {
-    const response = await fetchWithTimeout(`${API_URL}/api/stats/count`, {}, 5_000);
-    if (!response.ok) return 0;
-    const data = (await response.json()) as { today_count?: number };
-    return data.today_count ?? 0;
-  } catch {
-    return 0;
-  }
+  return (await fetchStats()).today_count;
 }

@@ -3,7 +3,7 @@
 import os
 import tempfile
 import unittest
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from unittest.mock import AsyncMock, patch
 
@@ -60,8 +60,8 @@ class ReferralRewardsTests(unittest.IsolatedAsyncioTestCase):
                 "user_id": user["id"],
                 "data": {"full_name": "Test"},
                 "is_paid": True,
-                "paid_at": datetime.utcnow().isoformat(),
-                "created_at": datetime.utcnow().isoformat(),
+                "paid_at": datetime.now(timezone.utc).isoformat(),
+                "created_at": datetime.now(timezone.utc).isoformat(),
             }
         )
         self.db.update_resume(

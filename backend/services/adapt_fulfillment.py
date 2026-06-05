@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import logging
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 
 from services.ai_service import adapt_resume_for_vacancy, finalize_resume_data
@@ -65,7 +65,7 @@ async def fulfill_adapt_resume(
     new_id = str(uuid.uuid4())
     template_id = resume.get("template_id") or "classic"
     clean_answers = {k: v for k, v in answers.items() if not str(k).startswith("_")}
-    paid_at = datetime.utcnow().isoformat()
+    paid_at = datetime.now(timezone.utc).isoformat()
     db.create_resume(
         {
             "id": new_id,

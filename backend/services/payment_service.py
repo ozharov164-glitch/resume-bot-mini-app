@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 
 from telegram import Bot, LabeledPrice
 from yookassa import Configuration, Payment
@@ -62,8 +62,8 @@ async def create_stars_invoice_link(
     description: str | None = None,
 ) -> str:
     """Invoice link for Telegram Mini App WebApp.openInvoice (in-app Stars payment)."""
-    bot = Bot(token=settings.BOT_TOKEN)
-    link = await bot.create_invoice_link(
+    from services.telegram_bot import get_bot
+    link = await get_bot().create_invoice_link(
         title=title or _STARS_TITLE,
         description=description or _STARS_DESCRIPTION,
         payload=encode_invoice_payload(
@@ -79,4 +79,4 @@ async def create_stars_invoice_link(
 
 
 def paid_timestamp() -> str:
-    return datetime.utcnow().isoformat()
+    return datetime.now(timezone.utc).isoformat()

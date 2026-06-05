@@ -1,7 +1,8 @@
+import json as _json
 import logging
 import time
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone, timezone
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import JSONResponse, Response
@@ -9,7 +10,7 @@ from pydantic import BaseModel, Field
 
 from database import get_db
 from dependencies import get_current_user
-from models.schemas import GenerateResumeRequest, ResumeGenerationResponse, SetTemplateRequest
+from models.schemas import VALID_TEMPLATES, GenerateResumeRequest, ResumeGenerationResponse, SetTemplateRequest
 from services.ai_service import generate_resume
 from services.name_format import build_full_name
 from services.resume_schema import normalize_resume_data
@@ -27,7 +28,7 @@ from services.telegram_service import send_document_to_user
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/resume", tags=["resume"])
 
-VALID_TEMPLATES = frozenset({"classic", "modern", "compact"})
+# VALID_TEMPLATES imported from models.schemas — single source of truth
 
 
 async def _send_docx_best_effort(
@@ -116,11 +117,8 @@ async def create_resume(
         hh_text = format_hh_text(resume_data)
         resume_id = str(uuid.uuid4())
         founder = is_founder(current_user.get("telegram_id"))
-        bonus = db.get_referral_bonus(current_user["telegram_id"])
-        is_paid_by_bonus = bonus > 0 and db.use_referral_bonus(current_user["telegram_id"])
-        # Founders go through the full funnel (locked preview -> payment) like real
-        # users; their payment is fulfilled for free in test mode at /create-invoice.
-        is_paid = is_paid_by_bonus
+        # referral_bonus is deprecated — bonus_stars is the active bonus system
+        is_paid = False
         template_id = (user_data.template_id or "classic").strip().lower()
         if template_id not in VALID_TEMPLATES:
             template_id = "classic"
@@ -133,7 +131,7 @@ async def create_resume(
                 "is_paid": is_paid,
                 "template_id": template_id,
                 "hh_text": hh_text,
-                "created_at": datetime.utcnow().isoformat(),
+                "created_at": datetime.now(timezone.utc).isoformat(),
             }
         )
         if founder:
@@ -141,25 +139,6 @@ async def create_resume(
                 "founder resume generated telegram_id=%s resume_id=%s",
                 current_user.get("telegram_id"),
                 resume_id,
-            )
-        if is_paid_by_bonus:
-            pdf_bytes = await generate_pdf_async(resume_data, template_id)
-            safe_name = resume_data.get("full_name", "resume").replace(" ", "_")[:80]
-            filename = f"resume_{safe_name}.pdf"
-            name = (resume_data.get("full_name") or "").strip()
-            caption = f"Готово! PDF, DOCX уже в чате. Удачи в поиске работы{f', {name}' if name else ''}!"
-            await send_document_to_user(
-                user_telegram_id=current_user["telegram_id"],
-                document=pdf_bytes,
-                filename=filename,
-                caption=caption.strip(),
-            )
-            await _send_docx_best_effort(
-                current_user["telegram_id"], resume_data, safe_name, template_id
-            )
-            db.update_resume(
-                resume_id,
-                {"is_paid": True, "paid_at": datetime.utcnow().isoformat()},
             )
         record_resume_generate_ms((time.perf_counter() - gen_started) * 1000, ok=True)
         return ResumeGenerationResponse(resume_id=resume_id, resume=resume_data, paid=is_paid)
@@ -262,6 +241,11 @@ async def preview_resume_image(
     current_user: dict = Depends(get_current_user),
     db=Depends(get_db),
 ):
+    try:
+        await check_rate_limit("pdf_preview", current_user.get("telegram_id"))
+    except RateLimitExceeded as exc:
+        from fastapi.responses import JSONResponse
+        return JSONResponse(status_code=429, content={"error": "rate_limit", "retry_after_hours": exc.retry_after_hours})
     """Watermarked PNG preview — not the final PDF file."""
     resume = db.find_resume(resume_id, current_user["id"])
     if not resume:
@@ -358,8 +342,6 @@ async def adapt_resume(
 
     answers = resume.get("user_answers") or {}
     if isinstance(answers, str):
-        import json as _json
-
         try:
             answers = _json.loads(answers)
         except _json.JSONDecodeError:
@@ -373,6 +355,10 @@ async def adapt_resume(
 
 @router.get("/{resume_id}/download")
 async def download_pdf(resume_id: str, current_user: dict = Depends(get_current_user), db=Depends(get_db)):
+    try:
+        await check_rate_limit("pdf_download", current_user.get("telegram_id"))
+    except RateLimitExceeded as exc:
+        raise HTTPException(status_code=429, detail=f"Лимит загрузок исчерпан. Повторите через {exc.retry_after_hours} ч.")
     resume = db.find_resume(resume_id, current_user["id"])
     if not resume:
         raise HTTPException(status_code=404, detail="Резюме не найдено.")
@@ -383,7 +369,7 @@ async def download_pdf(resume_id: str, current_user: dict = Depends(get_current_
     if founder and not resume.get("is_paid"):
         db.update_resume(
             resume_id,
-            {"is_paid": True, "paid_at": datetime.utcnow().isoformat()},
+            {"is_paid": True, "paid_at": datetime.now(timezone.utc).isoformat()},
         )
 
     resume_data = parse_resume_data(resume["data"])

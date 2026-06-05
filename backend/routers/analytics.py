@@ -1,7 +1,7 @@
 import json
 import logging
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
@@ -87,7 +87,7 @@ async def track_event(
             "telegram_id": claimed_tid,
             "step": step_db,
             "metadata": meta_json,
-            "created_at": datetime.utcnow().isoformat(),
+            "created_at": datetime.now(timezone.utc).isoformat(),
         }
     )
     return {"ok": True}

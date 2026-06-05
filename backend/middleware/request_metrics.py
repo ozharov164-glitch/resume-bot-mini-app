@@ -9,11 +9,12 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import Response
 
+from config import settings
 from services.ops_metrics import inc, observe_ms, record_http_status
 
 logger = logging.getLogger(__name__)
 
-_SLOW_MS = 3000
+_SLOW_MS = settings.SLOW_REQUEST_MS
 
 
 class RequestMetricsMiddleware(BaseHTTPMiddleware):

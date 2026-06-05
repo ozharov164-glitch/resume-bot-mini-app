@@ -1,8 +1,10 @@
 import logging
 
-from fastapi import APIRouter, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 
 from config import settings
+from database import get_db
+from dependencies import get_current_user
 from services.http_clients import get_api_client
 from services.rate_limiter import RateLimitExceeded, check_rate_limit
 
@@ -97,12 +99,10 @@ async def suggest_company(
     request: Request,
     q: str = Query(..., min_length=2, max_length=120),
     limit: int = Query(5, ge=1, le=10),
+    current_user: dict = Depends(get_current_user),
 ):
+    """Автодополнение работодателя — только официальные названия из ЕГРЮЛ (DaData)."""
     await _enforce_enrich_limit(request)
-    """
-    Автодополнение работодателя — только официальные названия из ЕГРЮЛ (DaData).
-    Без ключа DaData подсказок нет: пользователь вводит текст вручную.
-    """
     results = await _dadata_party(q, limit)
     return {"suggestions": results[:limit]}
 
@@ -112,11 +112,10 @@ async def suggest_institution(
     request: Request,
     q: str = Query(..., min_length=2, max_length=120),
     limit: int = Query(5, ge=1, le=10),
+    current_user: dict = Depends(get_current_user),
 ):
+    """Автодополнение учебного заведения — DaData party, отфильтровано по типу организации."""
     await _enforce_enrich_limit(request)
-    """
-    Автодополнение учебного заведения — DaData party, отфильтровано по типу организации.
-    """
     raw = await _dadata_party(q, limit * 3)
     filtered = [item for item in raw if _looks_like_education(item["name"], item.get("type", ""))]
     if not filtered and raw:

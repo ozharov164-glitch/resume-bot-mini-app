@@ -1,7 +1,7 @@
 import json
 import logging
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 
 from config import settings
@@ -48,7 +48,7 @@ async def fulfill_paid_resume(
         logger.warning("fulfill: resume %s not found", resume_id)
         return False
 
-    paid_at = datetime.utcnow().isoformat()
+    paid_at = datetime.now(timezone.utc).isoformat()
     first_payment = db.mark_resume_paid_if_unpaid(resume_id, paid_at)
     if first_payment:
         if payment:
@@ -71,9 +71,9 @@ async def fulfill_paid_resume(
         logger.exception("fulfill: invalid resume data for %s", resume_id)
         raise exc
 
-    valid_templates = {"classic", "modern", "compact"}
+    from models.schemas import VALID_TEMPLATES
     selected_template = (template_name or resume.get("template_id") or "classic").strip().lower()
-    if selected_template not in valid_templates:
+    if selected_template not in VALID_TEMPLATES:
         selected_template = "classic"
     if template_name and selected_template != (resume.get("template_id") or "classic"):
         db.update_resume(resume_id, {"template_id": selected_template})
@@ -114,7 +114,7 @@ async def fulfill_paid_resume(
                         "telegram_id": telegram_id,
                         "step": None,
                         "metadata": json.dumps({"resume_id": resume_id}, ensure_ascii=False),
-                        "created_at": datetime.utcnow().isoformat(),
+                        "created_at": datetime.now(timezone.utc).isoformat(),
                     }
                 )
             except Exception:

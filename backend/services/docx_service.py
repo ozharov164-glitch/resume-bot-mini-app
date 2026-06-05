@@ -13,12 +13,12 @@ from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.shared import Cm, Pt, RGBColor
 
+from models.schemas import VALID_TEMPLATES
 from services.docx_font_embed import embed_nunito_fonts
 from services.resume_schema import normalize_resume_data
 from services.resume_text_utils import split_bullets
 
 FONT_NAME = "Nunito Sans"
-VALID_TEMPLATES = frozenset({"classic", "modern", "compact"})
 
 # Classic PDF palette — pixel-matched to get_pdf_styles() / resume_classic.html
 C_SIDEBAR_BG = "0D1F14"

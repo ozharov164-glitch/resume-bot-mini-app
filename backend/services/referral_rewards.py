@@ -63,10 +63,9 @@ async def process_first_payment_attribution(
 
 
 async def _notify_friend_referral_bonus(referrer_id: int) -> None:
-    from telegram import Bot
+    from services.telegram_bot import get_bot
 
-    bot = Bot(token=settings.BOT_TOKEN)
-    await bot.send_message(
+    await get_bot().send_message(
         chat_id=referrer_id,
         text=(
             f"Ваш друг оплатил резюме! +{REFERRAL_FRIEND_BONUS_STARS} бонусных Stars "
@@ -76,10 +75,9 @@ async def _notify_friend_referral_bonus(referrer_id: int) -> None:
 
 
 async def _notify_affiliate_sale(affiliate_id: int, *, code: str) -> None:
-    from telegram import Bot
+    from services.telegram_bot import get_bot
 
-    bot = Bot(token=settings.BOT_TOKEN)
-    await bot.send_message(
+    await get_bot().send_message(
         chat_id=affiliate_id,
         text=(
             f"✅ По вашему промокоду <code>{code}</code> купили резюме.\n\n"

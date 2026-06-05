@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from services.founder import founder_telegram_ids
@@ -39,7 +39,7 @@ def get_admin_funnel_stats(
     include_template: bool = True,
 ) -> dict[str, Any]:
     """Funnel for founder admin: unique users per step, founder traffic excluded."""
-    since = (datetime.utcnow() - timedelta(days=days)).isoformat()
+    since = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
     exclude = stats_exclude_telegram_ids()
 
     events = list(FUNNEL_STEP_EVENTS)

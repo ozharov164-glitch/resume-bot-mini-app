@@ -2,7 +2,7 @@ import json
 import logging
 import sqlite3
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
@@ -20,6 +20,9 @@ class SQLiteBackend:
     def _connect(self) -> sqlite3.Connection:
         conn = sqlite3.connect(self.db_path, check_same_thread=False)
         conn.row_factory = sqlite3.Row
+        conn.execute("PRAGMA journal_mode=WAL")
+        conn.execute("PRAGMA synchronous=NORMAL")
+        conn.execute("PRAGMA foreign_keys=ON")
         return conn
 
     def _init_schema(self) -> None:
@@ -77,6 +80,7 @@ class SQLiteBackend:
                 );
                 CREATE INDEX IF NOT EXISTS idx_analytics_events_event ON analytics_events(event);
                 CREATE INDEX IF NOT EXISTS idx_analytics_events_created ON analytics_events(created_at);
+                CREATE INDEX IF NOT EXISTS idx_analytics_events_event_created ON analytics_events(event, created_at);
                 CREATE TABLE IF NOT EXISTS processed_payments (
                     payment_key TEXT PRIMARY KEY,
                     resume_id TEXT NOT NULL,
@@ -102,6 +106,17 @@ class SQLiteBackend:
             ]:
                 try:
                     conn.execute(col_sql)
+                except Exception:
+                    pass
+            # Indexes added after schema migrations (idempotent)
+            for idx_sql in [
+                "CREATE INDEX IF NOT EXISTS idx_resumes_user_id ON resumes(user_id)",
+                "CREATE INDEX IF NOT EXISTS idx_resumes_is_paid_created ON resumes(is_paid, created_at)",
+                "CREATE INDEX IF NOT EXISTS idx_resumes_paid_at ON resumes(paid_at)",
+                "CREATE INDEX IF NOT EXISTS idx_users_referred_by ON users(referred_by)",
+            ]:
+                try:
+                    conn.execute(idx_sql)
                 except Exception:
                     pass
 
@@ -160,7 +175,7 @@ class SQLiteBackend:
         username: str = "",
     ) -> dict:
         user_id = str(uuid.uuid4())
-        now = datetime.utcnow().isoformat()
+        now = datetime.now(timezone.utc).isoformat()
         with self._connect() as conn:
             conn.execute(
                 """
@@ -255,7 +270,7 @@ class SQLiteBackend:
         key = (payment_key or "").strip()
         if not key:
             return True
-        now = datetime.utcnow().isoformat()
+        now = datetime.now(timezone.utc).isoformat()
         with self._connect() as conn:
             cur = conn.execute(
                 """
@@ -334,7 +349,7 @@ class SQLiteBackend:
         return int(row["c"]) if row else 0
 
     def count_resumes_today(self, exclude_telegram_ids: list[int] | None = None) -> int:
-        today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
+        today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
         try:
             with self._connect() as conn:
                 if exclude_telegram_ids:
@@ -373,7 +388,7 @@ class SQLiteBackend:
             if max_uses and uses_count >= max_uses:
                 return None
             expires_at = promo.get("expires_at")
-            if expires_at and expires_at < datetime.utcnow().isoformat():
+            if expires_at and expires_at < datetime.now(timezone.utc).isoformat():
                 return None
             return promo
         except Exception as e:
@@ -402,7 +417,7 @@ class SQLiteBackend:
         max_uses: int = 100,
     ) -> dict:
         promo_id = str(uuid.uuid4())
-        now = datetime.utcnow().isoformat()
+        now = datetime.now(timezone.utc).isoformat()
         with self._connect() as conn:
             conn.execute(
                 """
@@ -458,7 +473,7 @@ class SQLiteBackend:
             raise ValueError("Промокод не найден или недействителен.")
         upper_code = str(promo["code"]).strip().upper()
 
-        now = datetime.utcnow().isoformat()
+        now = datetime.now(timezone.utc).isoformat()
         owner = promo.get("owner_tg_id")
         with self._connect() as conn:
             conn.execute(
@@ -491,7 +506,7 @@ class SQLiteBackend:
         if not user or not user.get("active_promo_code"):
             return
         code = user["active_promo_code"]
-        now = datetime.utcnow().isoformat()
+        now = datetime.now(timezone.utc).isoformat()
         with self._connect() as conn:
             conn.execute(
                 """
@@ -853,16 +868,22 @@ class SQLiteBackend:
             conn.commit()
 
     def use_bonus_stars(self, telegram_id: int, amount: int) -> int:
-        """Deduct up to `amount` bonus stars; returns stars actually applied."""
-        available = self.get_bonus_stars(telegram_id)
-        applied = min(available, max(0, amount))
-        if applied <= 0:
+        """Deduct up to `amount` bonus stars atomically; returns stars actually applied."""
+        if amount <= 0:
             return 0
         with self._connect() as conn:
-            conn.execute(
-                "UPDATE users SET bonus_stars = bonus_stars - ? WHERE telegram_id = ?",
-                (applied, telegram_id),
-            )
+            conn.execute("BEGIN IMMEDIATE")
+            row = conn.execute(
+                "SELECT bonus_stars FROM users WHERE telegram_id = ? LIMIT 1",
+                (telegram_id,),
+            ).fetchone()
+            available = int((row["bonus_stars"] or 0)) if row else 0
+            applied = min(available, amount)
+            if applied > 0:
+                conn.execute(
+                    "UPDATE users SET bonus_stars = bonus_stars - ? WHERE telegram_id = ? AND bonus_stars >= ?",
+                    (applied, telegram_id, applied),
+                )
             conn.commit()
         return applied
 
@@ -875,8 +896,8 @@ class SQLiteBackend:
     def list_unpaid_for_reengagement(
         self, min_age_hours: int = 3, max_age_hours: int = 24
     ) -> list[dict]:
-        created_after = (datetime.utcnow() - timedelta(hours=max_age_hours)).isoformat()
-        created_before = (datetime.utcnow() - timedelta(hours=min_age_hours)).isoformat()
+        created_after = (datetime.now(timezone.utc) - timedelta(hours=max_age_hours)).isoformat()
+        created_before = (datetime.now(timezone.utc) - timedelta(hours=min_age_hours)).isoformat()
         with self._connect() as conn:
             rows = conn.execute(
                 """
@@ -942,7 +963,7 @@ class SupabaseBackend:
                 "first_name": first_name,
                 "last_name": last_name,
                 "username": username,
-                "created_at": datetime.utcnow().isoformat(),
+                "created_at": datetime.now(timezone.utc).isoformat(),
             }
         ).execute()
         user = self.find_user_by_telegram_id(telegram_id)
@@ -986,7 +1007,7 @@ class SupabaseBackend:
             "payment_key": key,
             "resume_id": resume_id,
             "provider": provider,
-            "created_at": datetime.utcnow().isoformat(),
+            "created_at": datetime.now(timezone.utc).isoformat(),
         }
         try:
             self.client.table("processed_payments").insert(record).execute()
@@ -996,11 +1017,11 @@ class SupabaseBackend:
             if "duplicate" in err or "unique" in err or "23505" in err:
                 return False
             logger.warning(
-                "try_claim_payment insert failed key=%s (proceeding): %s",
+                "try_claim_payment insert failed key=%s — treating as duplicate to prevent double-fulfill: %s",
                 key,
                 exc,
             )
-            return True
+            return False
 
     def count_resumes(self) -> int:
         result = self.client.table("resumes").select("id", count="exact").execute()
@@ -1132,21 +1153,36 @@ class SupabaseBackend:
         since_iso: str,
         exclude_telegram_ids: list[int] | None = None,
     ) -> int:
+        """Count distinct telegram_ids for an event since a timestamp.
+
+        Supabase PostgREST does not support COUNT(DISTINCT) natively, so we
+        paginate in batches and count in Python — but only fetch telegram_id
+        (1 column, minimal payload). For current scale this is acceptable;
+        a Postgres RPC would be optimal at very high volumes.
+        """
         try:
-            query = (
-                self.client.table("analytics_events")
-                .select("telegram_id")
-                .eq("event", event)
-                .gte("created_at", since_iso)
-            )
-            if exclude_telegram_ids:
-                query = query.not_.in_("telegram_id", exclude_telegram_ids)
-            result = query.execute()
+            page_size = 1000
+            offset = 0
             seen: set[int] = set()
-            for row in result.data or []:
-                tid = row.get("telegram_id")
-                if tid is not None:
-                    seen.add(int(tid))
+            while True:
+                query = (
+                    self.client.table("analytics_events")
+                    .select("telegram_id")
+                    .eq("event", event)
+                    .gte("created_at", since_iso)
+                    .range(offset, offset + page_size - 1)
+                )
+                if exclude_telegram_ids:
+                    query = query.not_.in_("telegram_id", exclude_telegram_ids)
+                result = query.execute()
+                batch = result.data or []
+                for row in batch:
+                    tid = row.get("telegram_id")
+                    if tid is not None:
+                        seen.add(int(tid))
+                if len(batch) < page_size:
+                    break
+                offset += page_size
             return len(seen)
         except Exception:
             return 0
@@ -1239,13 +1275,34 @@ class SupabaseBackend:
         ).execute()
 
     def use_bonus_stars(self, telegram_id: int, amount: int) -> int:
-        available = self.get_bonus_stars(telegram_id)
-        applied = min(available, max(0, amount))
+        """Deduct up to `amount` bonus stars with optimistic locking; returns actually applied."""
+        if amount <= 0:
+            return 0
+        user = self.find_user_by_telegram_id(telegram_id)
+        if not user:
+            return 0
+        available = int(user.get("bonus_stars") or 0)
+        applied = min(available, amount)
         if applied <= 0:
             return 0
-        self.client.table("users").update({"bonus_stars": available - applied}).eq(
-            "telegram_id", telegram_id
-        ).execute()
+        # Conditional update: only succeeds if bonus_stars hasn't changed since we read it
+        result = (
+            self.client.table("users")
+            .update({"bonus_stars": available - applied})
+            .eq("telegram_id", telegram_id)
+            .eq("bonus_stars", available)
+            .execute()
+        )
+        if not result.data:
+            # Race condition: re-read once and retry
+            user2 = self.find_user_by_telegram_id(telegram_id)
+            available2 = int((user2 or {}).get("bonus_stars") or 0)
+            applied = min(available2, amount)
+            if applied <= 0:
+                return 0
+            self.client.table("users").update({"bonus_stars": available2 - applied}).eq(
+                "telegram_id", telegram_id
+            ).execute()
         return applied
 
     def delete_all_resumes_for_user(self, user_id: str) -> int:
@@ -1261,7 +1318,7 @@ class SupabaseBackend:
             logger.warning("save_referral failed: %s", e)
 
     def count_resumes_today(self, exclude_telegram_ids: list[int] | None = None) -> int:
-        today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
+        today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
         try:
             query = (
                 self.client.table("resumes")
@@ -1299,7 +1356,7 @@ class SupabaseBackend:
             if max_uses and uses_count >= max_uses:
                 return None
             expires_at = promo.get("expires_at")
-            if expires_at and expires_at < datetime.utcnow().isoformat():
+            if expires_at and expires_at < datetime.now(timezone.utc).isoformat():
                 return None
             return promo
         except Exception as e:
@@ -1331,7 +1388,7 @@ class SupabaseBackend:
         max_uses: int = 100,
     ) -> dict:
         promo_id = str(uuid.uuid4())
-        now = datetime.utcnow().isoformat()
+        now = datetime.now(timezone.utc).isoformat()
         upper = code.strip().upper()
         self.client.table("promo_codes").insert(
             {
@@ -1399,7 +1456,7 @@ class SupabaseBackend:
             raise ValueError("Промокод не найден или недействителен.")
         upper_code = str(promo["code"]).strip().upper()
 
-        now = datetime.utcnow().isoformat()
+        now = datetime.now(timezone.utc).isoformat()
         owner = promo.get("owner_tg_id")
         user = self.find_user_by_telegram_id(user_tg_id)
         self.client.table("users").update(
@@ -1433,7 +1490,7 @@ class SupabaseBackend:
         if not user or not user.get("active_promo_code"):
             return
         code = user["active_promo_code"]
-        now = datetime.utcnow().isoformat()
+        now = datetime.now(timezone.utc).isoformat()
         try:
             pending = (
                 self.client.table("promo_activations")
@@ -1519,6 +1576,66 @@ class SupabaseBackend:
             return len(result.data or [])
         except Exception as e:
             logger.warning("count_referred_users failed: %s", e)
+            return 0
+
+    def sum_affiliate_commission_owed_rub(self, owner_tg_id: int) -> int:
+        """Total ₽ owed to trafficker — sum across all paid activations for their promo codes."""
+        from config import settings as app_settings
+
+        fallback_rub = int(app_settings.RUB_PRICE_SINGLE_PDF)
+        try:
+            acts_result = (
+                self.client.table("promo_activations")
+                .select("promo_code, resume_id")
+                .eq("owner_tg_id", owner_tg_id)
+                .not_.is_("paid_at", "null")
+                .execute()
+            )
+            rows = acts_result.data or []
+            if not rows:
+                return 0
+
+            # Collect promo commission rates
+            codes = list({str(r["promo_code"]) for r in rows if r.get("promo_code")})
+            commission_map: dict[str, int] = {}
+            if codes:
+                promo_rows = (
+                    self.client.table("promo_codes")
+                    .select("code, commission_percent, discount_percent")
+                    .in_("code", codes)
+                    .execute()
+                ).data or []
+                for p in promo_rows:
+                    commission_map[str(p["code"]).upper()] = int(p.get("commission_percent") or 20)
+
+            # Collect resume final prices
+            resume_ids = [str(r["resume_id"]) for r in rows if r.get("resume_id")]
+            price_map: dict[str, int] = {}
+            if resume_ids:
+                res_rows = (
+                    self.client.table("resumes")
+                    .select("id, final_price_rub, discount_applied")
+                    .in_("id", resume_ids)
+                    .execute()
+                ).data or []
+                for res in res_rows:
+                    fp = res.get("final_price_rub")
+                    if fp is not None:
+                        price_map[str(res["id"])] = int(fp)
+                    else:
+                        disc = int(res.get("discount_applied") or 0)
+                        price_map[str(res["id"])] = max(1, round(fallback_rub * (1 - disc / 100)))
+
+            total = 0
+            for row in rows:
+                code_key = str(row.get("promo_code") or "").upper()
+                pct = commission_map.get(code_key, 20)
+                rid = str(row.get("resume_id") or "")
+                paid_rub = price_map.get(rid, fallback_rub)
+                total += max(0, round(paid_rub * pct / 100))
+            return total
+        except Exception as exc:
+            logger.warning("sum_affiliate_commission_owed_rub failed owner=%s: %s", owner_tg_id, exc)
             return 0
 
     def top_referrers(self, limit: int = 10) -> list[dict[str, Any]]:
@@ -1641,8 +1758,8 @@ class SupabaseBackend:
     def list_unpaid_for_reengagement(
         self, min_age_hours: int = 3, max_age_hours: int = 24
     ) -> list[dict]:
-        created_after = (datetime.utcnow() - timedelta(hours=max_age_hours)).isoformat()
-        created_before = (datetime.utcnow() - timedelta(hours=min_age_hours)).isoformat()
+        created_after = (datetime.now(timezone.utc) - timedelta(hours=max_age_hours)).isoformat()
+        created_before = (datetime.now(timezone.utc) - timedelta(hours=min_age_hours)).isoformat()
         try:
             result = (
                 self.client.table("resumes")

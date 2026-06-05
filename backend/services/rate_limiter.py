@@ -17,6 +17,8 @@ MSK = ZoneInfo("Europe/Moscow")
 
 LIMITS: dict[str, tuple[int, str]] = {
     "resume_generate": (3, "24h"),
+    "pdf_download": (10, "24h"),
+    "pdf_preview": (30, "24h"),
     "skills_suggest": (10, "24h"),
     "voice_transcribe": (5, "24h"),
     "voice_polish": (30, "24h"),
@@ -31,6 +33,8 @@ _window_day: str | None = None
 _FOUNDER_ENDPOINTS = frozenset(
     {
         "resume_generate",
+        "pdf_download",
+        "pdf_preview",
         "skills_suggest",
         "voice_transcribe",
         "voice_polish",

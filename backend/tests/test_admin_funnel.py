@@ -1,6 +1,6 @@
 import tempfile
 import unittest
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from storage.backends import SQLiteBackend
@@ -20,7 +20,7 @@ class AdminFunnelStatsTests(unittest.TestCase):
         return str(user["id"])
 
     def _event(self, event: str, telegram_id: int, *, minutes_ago: int = 0, suffix: str = "") -> None:
-        created = (datetime.utcnow() - timedelta(minutes=minutes_ago)).isoformat()
+        created = (datetime.now(timezone.utc) - timedelta(minutes=minutes_ago)).isoformat()
         self.db.insert_analytics_event(
             {
                 "id": f"ev-{event}-{telegram_id}-{minutes_ago}-{suffix}",
@@ -53,7 +53,7 @@ class AdminFunnelStatsTests(unittest.TestCase):
     def test_payments_real_from_db_not_analytics(self) -> None:
         real = 900202
         uid = self._user(real)
-        paid_at = datetime.utcnow().isoformat()
+        paid_at = datetime.now(timezone.utc).isoformat()
         self.db.create_resume(
             {
                 "id": "resume-paid-1",
@@ -75,7 +75,7 @@ class AdminFunnelStatsTests(unittest.TestCase):
     def test_old_events_outside_window_excluded(self) -> None:
         real = 900303
         self._user(real)
-        old = (datetime.utcnow() - timedelta(days=10)).isoformat()
+        old = (datetime.now(timezone.utc) - timedelta(days=10)).isoformat()
         self.db.insert_analytics_event(
             {
                 "id": "ev-old",
@@ -97,7 +97,7 @@ class AdminFunnelStatsTests(unittest.TestCase):
 
         self.db.create_user(telegram_id=founder, first_name="Founder")
         self.db.create_user(telegram_id=recent, first_name="Recent")
-        old_created = (datetime.utcnow() - timedelta(days=10)).isoformat()
+        old_created = (datetime.now(timezone.utc) - timedelta(days=10)).isoformat()
         with self.db._connect() as conn:
             conn.execute(
                 """
