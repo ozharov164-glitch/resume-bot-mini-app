@@ -60,7 +60,12 @@ jobs:
   build:
     runs-on: ubuntu-latest
     needs: [changes, backend-bot]
-    if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.frontend == 'true'
+    # Always rebuild on main after backend tests pass — otherwise a backend-only
+    # fix commit can skip deploy even when an earlier frontend commit never built.
+    if: >-
+      github.event_name == 'workflow_dispatch'
+      || needs.changes.outputs.frontend == 'true'
+      || github.ref == 'refs/heads/main'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -100,7 +105,10 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     needs: [build, changes]
-    if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.frontend == 'true'
+    if: >-
+      github.event_name == 'workflow_dispatch'
+      || needs.changes.outputs.frontend == 'true'
+      || github.ref == 'refs/heads/main'
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
