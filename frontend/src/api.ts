@@ -89,7 +89,7 @@ export async function authWithTelegram(initData: string) {
   );
 }
 
-export { HttpTimeoutError };
+export { HttpTimeoutError, fetchWithTimeout };
 
 export async function fetchMe(token: string, timeoutMs = AUTH_TIMEOUT_MS) {
   return http<{

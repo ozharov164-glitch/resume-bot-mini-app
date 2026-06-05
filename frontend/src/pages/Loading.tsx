@@ -15,7 +15,7 @@ const PHRASES = [
 const SECONDARY = "Создаём идеальную структуру для работодателя";
 const PHRASE_MS = 3000;
 const PROGRESS_MS = 12_000;
-const PROGRESS_TARGET = 85;
+const PROGRESS_TARGET = 88;
 
 export function LoadingPage() {
   const [phraseIndex, setPhraseIndex] = useState(0);
@@ -26,7 +26,10 @@ export function LoadingPage() {
   useEffect(() => {
     if (generateStarted.current) return;
     generateStarted.current = true;
-    void runResumeGenerate();
+    void runResumeGenerate().then(() => {
+      // Snap to 100% on completion for a polished feel
+      setProgress(100);
+    });
   }, []);
 
   useEffect(() => {
@@ -92,11 +95,11 @@ export function LoadingPage() {
           <div className="loading-screen__progress mt-6 w-full overflow-hidden rounded-full bg-[#f4f4f5]">
             <div
               className="loading-assembly__progress relative h-[3px] rounded-full bg-[#10b981]"
-              style={{ width: `${progress}%` }}
+              style={{ width: `${progress}%`, transition: progress === 100 ? "width 0.4s ease-out" : "width 0.1s linear" }}
               role="progressbar"
               aria-valuenow={progress}
               aria-valuemin={0}
-              aria-valuemax={PROGRESS_TARGET}
+              aria-valuemax={100}
               aria-label="Подготовка резюме"
             >
               <div className="loading-assembly__progress-pulse absolute right-0 top-0 h-full w-4 bg-white/60 blur-[2px]" />

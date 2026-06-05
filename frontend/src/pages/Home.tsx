@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "motion/react";
 
-import { fetchStatsCount } from "../api";
+import { fetchStats } from "../api";
 import { ExamplesGallery } from "../components/examples/ExamplesGallery";
 import { AppHeader } from "../components/ui/AppHeader";
 import { Button } from "../components/ui/Button";
@@ -126,7 +126,7 @@ export function HomePage({ onStart, onHistory }: HomeProps) {
 
   useEffect(() => {
     getTg()?.MainButton?.hide();
-    const loadStats = () => void fetchStatsCount().then(setStatsCount);
+    const loadStats = () => void fetchStats().then((s) => setStatsCount(s.count));
     if ("requestIdleCallback" in window) {
       const id = window.requestIdleCallback(loadStats, { timeout: 2500 });
       return () => window.cancelIdleCallback(id);

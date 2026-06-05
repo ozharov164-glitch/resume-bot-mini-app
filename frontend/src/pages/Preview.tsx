@@ -7,7 +7,7 @@ import { PreviewPaidHero } from "../components/preview/PreviewPaidHero";
 import { PreviewLoadingSkeleton } from "../components/preview/PreviewLoadingSkeleton";
 import { PreviewResumeCard } from "../components/preview/PreviewResumeCard";
 import { HhTextEntryCard } from "../components/hh/HhTextEntryCard";
-import { ensureAuthToken, getResume, requestPdf } from "../api";
+import { ensureAuthToken, getResume, requestPdf, fetchWithTimeout } from "../api";
 import { AppHeader } from "../components/ui/AppHeader";
 import { Button } from "../components/ui/Button";
 import { FixedBottomBar } from "../components/ui/FixedBottomBar";
@@ -67,9 +67,9 @@ export function PreviewPage() {
     setResendingPdf(true);
     try {
       const token = authToken || (await ensureAuthToken());
-      const result = await requestPdf(token, resumeId);
+      await requestPdf(token, resumeId);
       getTg()?.HapticFeedback?.notificationOccurred("success");
-      showToast(`PDF, DOCX отправлены в чат с ботом`);
+      showToast("PDF, DOCX отправлены в чат с ботом");
       trackEvent("pdf_resent", { source: "preview" });
     } catch (err) {
       const message = err instanceof Error ? err.message : "Не удалось отправить PDF, DOCX";
@@ -123,9 +123,11 @@ export function PreviewPage() {
     (async () => {
       try {
         const token = authToken || (await ensureAuthToken());
-        const res = await fetch(`${API_URL}/api/resume/${resumeId}/preview-image`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const res = await fetchWithTimeout(
+          `${API_URL}/api/resume/${resumeId}/preview-image`,
+          { headers: { Authorization: `Bearer ${token}` } },
+          15_000,
+        );
         if (cancelled) return;
         if (!res.ok) {
           setPreviewError(true);
