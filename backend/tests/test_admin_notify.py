@@ -43,16 +43,12 @@ async def test_notify_new_user_sends_message():
         db.create_user(telegram_id=1, first_name="A", username="alice")
 
         with patch("services.admin_notify.admin_group_chat_id", return_value=-1003959501619):
-            with patch("services.admin_notify.Bot") as bot_cls:
-                bot = MagicMock()
-                bot.send_message = AsyncMock()
-                bot_cls.return_value = bot
-
+            with patch("services.admin_notify.send_admin_message", new_callable=AsyncMock) as send:
                 db.create_user(telegram_id=2, first_name="Bob", username="bob")
                 await notify_new_user(db, telegram_id=2, first_name="Bob", username="bob")
 
-                bot.send_message.assert_awaited_once()
-                text = bot.send_message.await_args.kwargs["text"]
+                send.assert_awaited_once()
+                text = send.await_args.args[0]
                 assert "Новый пользователь" in text
                 assert "Всего пользователей: <b>2</b>" in text
                 assert "@bob" in text
