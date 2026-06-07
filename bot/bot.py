@@ -35,12 +35,14 @@ from config import settings  # noqa: E402
 from database import get_db  # noqa: E402
 from services.admin_notify import PaymentNotifyInfo, notify_promo_activation  # noqa: E402
 from services.promo_service import activate_promo  # noqa: E402
+from services.bot_analytics import track_bot_start  # noqa: E402
 from services.user_registration import register_telegram_user  # noqa: E402
 from services.founder_contact import (  # noqa: E402
     ensure_founder_username,
     founder_chat_hint_text,
     founder_display_name,
     founder_dm_url,
+    partner_apply_dm_url,
     support_hub_text,
 )
 from services.bot_copy import (  # noqa: E402
@@ -51,6 +53,7 @@ from services.bot_copy import (  # noqa: E402
     how_it_works_text,
     invite_text,
     my_resumes_text,
+    partner_hub_text,
     payment_error_text,
     promo_activated_text,
     promo_invalid_text,
@@ -279,7 +282,7 @@ async def adm_stats_callback(update: Update, context: ContextTypes.DEFAULT_TYPE)
         text = (
             f"📊 <b>Статистика</b>\n"
             f"<i>Без ваших тестовых аккаунтов</i>\n\n"
-            f"👥 Зашли в бота (/start): <b>{data.get('users', 0)}</b>\n"
+            f"👥 Всего пользователей в базе: <b>{data.get('users', 0)}</b>\n"
             f"💳 Оплачено резюме: <b>{data.get('paid_count', 0)}</b>\n"
             f"📅 Создано сегодня: <b>{data.get('today_count', 0)}</b>\n"
             f"🔗 Пришли по реф-ссылкам: <b>{data.get('referred', 0)}</b>\n"
@@ -353,13 +356,17 @@ def _format_affiliate_panel_text(stats: dict) -> str:
     promo_link = f"https://t.me/{bot_user}?start=promo_{code_esc}"
     status = "активен ✅" if stats.get("is_active") else "отключён ❌"
     discount = int(stats.get("discount_percent") or 0)
-    return (
-        "📈 <b>Панель траффера</b>\n\n"
-        f"Промокод: <code>{code_esc}</code> (−{discount}%) · {status}\n"
-        f"Ссылка: {html.escape(promo_link)}\n\n"
-        f"👤 Активировали промокод: <b>{stats.get('activations', 0)}</b>\n"
-        f"💳 Купили резюме: <b>{stats.get('paid_count', 0)}</b>"
-    )
+    commission_pct = int(stats.get("commission_percent") or 20)
+    owed = int(stats.get("commission_owed_rub") or 0)
+    lines = [
+        "📈 <b>Панель траффера</b>\n\n",
+        f"Промокод: <code>{code_esc}</code> (−{discount}%) · {status}\n",
+        f"Ссылка: {html.escape(promo_link)}\n\n",
+        f"👤 Активировали промокод: <b>{stats.get('activations', 0)}</b>\n",
+        f"💳 Купили резюме: <b>{stats.get('paid_count', 0)}</b>\n",
+        f"💰 Начислено ({commission_pct}%): <b>{owed} ₽</b>",
+    ]
+    return "".join(lines)
 
 
 def _affiliate_panel_keyboard() -> InlineKeyboardMarkup:
@@ -723,11 +730,25 @@ def _format_admin_funnel_text(d: dict) -> str:
             return f"• {label}: <b>{n}</b> <i>(−{drop}%)</i>"
         return f"• {label}: <b>{n}</b>"
 
+    users_total = int(d.get("users_total", 0) or 0)
+    bot_starts = int(d.get("bot_starts", 0) or 0)
+    bot_new = int(d.get("bot_users_new", d.get("bot_users", 0)) or 0)
+    start_label = (
+        f"Нажали /start (7 дн.): <b>{bot_starts}</b>"
+        if bot_starts
+        else f"Новые регистрации (7 дн.): <b>{bot_new}</b>"
+    )
     lines = [
         "📈 <b>Воронка (7 дней)</b>",
         "<i>Уникальные пользователи · без ваших тестов</i>",
+        f"👥 Всего в базе: <b>{users_total}</b>",
         "",
-        _step("Зашли в бота (/start)", "bot_users", None),
+        f"• {start_label}",
+    ]
+    if bot_starts and bot_new != bot_starts:
+        lines.append(f"• Новые регистрации (7 дн.): <b>{bot_new}</b>")
+    lines.extend(
+        [
         _step("Открыли Mini App", "mini_app_opened", "bot_users"),
         _step("Начали анкету", "onboarding_started", "mini_app_opened"),
         _step("Нажали «Сформировать»", "generate_started", "onboarding_started"),
@@ -737,7 +758,6 @@ def _format_admin_funnel_text(d: dict) -> str:
         "",
         f"💳 <b>Оплатили (реально):</b> {int(d.get('payments_real', 0) or 0)}",
         "",
-        f"Mini App / бот: <b>{d.get('bot_to_mini_app_rate', '0%')}</b>",
         f"Анкета / Mini App: <b>{d.get('mini_app_to_onboarding_rate', '0%')}</b>",
         f"Конверсия (оплата / анкета): <b>{d.get('conversion_rate', '0%')}</b>",
         f"Оплата после предпросмотра: <b>{d.get('preview_to_pay_rate', '0%')}</b>",
@@ -745,7 +765,12 @@ def _format_admin_funnel_text(d: dict) -> str:
         "",
         f"Поделились: {int(d.get('share_clicked', 0) or 0)} · "
         f"Share-rate: <b>{d.get('share_rate', '0%')}</b>",
-    ]
+        ]
+    )
+    if bot_starts:
+        lines.append(f"\nMini App / /start: <b>{d.get('start_to_mini_app_rate', '0%')}</b>")
+    else:
+        lines.append(f"\nMini App / новые: <b>{d.get('bot_to_mini_app_rate', '0%')}</b>")
     return "\n".join(lines)
 
 
@@ -805,7 +830,10 @@ def _start_keyboard(is_admin: bool = False, is_affiliate: bool = False) -> Inlin
             InlineKeyboardButton("🛡️ Почему мы", callback_data="trust"),
             InlineKeyboardButton("💬 Поддержка", callback_data="support_hub"),
         ],
-        [InlineKeyboardButton("🎁 Пригласить друга", callback_data="invite_prompt")],
+        [
+            InlineKeyboardButton("🎁 Пригласить друга", callback_data="invite_prompt"),
+            InlineKeyboardButton("💰 Зарабатывать", callback_data="partner_hub"),
+        ],
         [InlineKeyboardButton("🎟 Активировать промокод", callback_data="promo_prompt")],
     ]
     if is_affiliate:
@@ -937,6 +965,47 @@ async def _support_keyboard(bot) -> InlineKeyboardMarkup:
     )
 
 
+async def _partner_hub_keyboard(bot, user) -> InlineKeyboardMarkup:
+    username = await ensure_founder_username(bot)
+    who = founder_display_name()
+    apply_url = None
+    if user and username:
+        apply_url = partner_apply_dm_url(
+            username,
+            telegram_id=user.id,
+            user_username=user.username,
+            first_name=user.first_name,
+        )
+    rows: list[list[InlineKeyboardButton]] = []
+    if apply_url:
+        rows.append([InlineKeyboardButton(f"✉️ Стать партнёром — написать {who}", url=apply_url)])
+    else:
+        rows.append(
+            [InlineKeyboardButton(f"✉️ Стать партнёром — написать {who}", callback_data="founder_dm_hint")]
+        )
+    if user and _is_user_affiliate(user.id):
+        rows.append([InlineKeyboardButton("📈 Моя панель", callback_data="aff_panel")])
+    rows.append([InlineKeyboardButton("◀️ В меню", callback_data="back_to_start")])
+    return InlineKeyboardMarkup(rows)
+
+
+async def _reply_partner_hub(update: Update, *, edit: bool = False) -> None:
+    user = update.effective_user
+    text = partner_hub_text()
+    bot = update.get_bot()
+    keyboard = await _partner_hub_keyboard(bot, user)
+    if edit and update.callback_query:
+        await update.callback_query.edit_message_text(
+            text, reply_markup=keyboard, parse_mode="HTML", disable_web_page_preview=True
+        )
+        return
+    message = update.effective_message
+    if message:
+        await message.reply_text(
+            text, reply_markup=keyboard, parse_mode="HTML", disable_web_page_preview=True
+        )
+
+
 async def _reply_support_hub(update: Update, *, edit: bool = False) -> None:
     user = update.effective_user
     greeting = _display_name(user) if user else None
@@ -997,8 +1066,11 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             referrer_id = None
 
     promo_code_from_link = None
+    open_partner_hub = False
     if context.args and context.args[0].startswith("promo_"):
         promo_code_from_link = context.args[0][6:].strip()
+    elif context.args and context.args[0] == "partner":
+        open_partner_hub = True
 
     count = get_resume_count()
     text = start_text(count, _display_name(tg_user))
@@ -1008,8 +1080,12 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
     asyncio.create_task(_register_bot_contact(tg_user, referrer_id))
+    if tg_user:
+        asyncio.create_task(asyncio.to_thread(track_bot_start, get_db(), tg_user.id))
     if promo_code_from_link:
         asyncio.create_task(_activate_promo_for_user(tg_user, promo_code_from_link, message=update.message))
+    if open_partner_hub:
+        asyncio.create_task(_reply_partner_hub(update))
 
 
 async def resume_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -1107,6 +1183,16 @@ async def support_hub_callback(update: Update, context: ContextTypes.DEFAULT_TYP
     await _reply_support_hub(update, edit=True)
 
 
+async def partner_hub_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    user = query.from_user
+    if user and _is_user_affiliate(user.id):
+        await aff_panel_callback(update, context)
+        return
+    await _reply_partner_hub(update, edit=True)
+
+
 async def founder_dm_hint_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -1169,8 +1255,11 @@ async def cabinet_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.message.from_user
     if not user or not _is_user_affiliate(user.id):
         await update.message.reply_text(
-            "Кабинет траффера доступен только партнёрам с промокодом.\n"
-            "Если вы траффер — напишите в поддержку."
+            "Кабинет траффера доступен только одобренным партнёрам.\n\n"
+            "Нажмите «💰 Зарабатывать» в меню (/start) — там условия и кнопка заявки.",
+            reply_markup=InlineKeyboardMarkup(
+                [[InlineKeyboardButton("💰 Зарабатывать с нами", callback_data="partner_hub")]]
+            ),
         )
         return
     stats = await _fetch_affiliate_stats(user.id)
@@ -1310,6 +1399,8 @@ async def back_to_start_callback(update: Update, context: ContextTypes.DEFAULT_T
     await query.answer()
     count = get_resume_count()
     is_admin, is_affiliate = _menu_flags(query.from_user)
+    if query.from_user:
+        asyncio.create_task(asyncio.to_thread(track_bot_start, get_db(), query.from_user.id))
     await query.edit_message_text(
         start_text(count),
         reply_markup=_start_keyboard(is_admin, is_affiliate),
@@ -1760,6 +1851,7 @@ def main():
     app.add_handler(CallbackQueryHandler(trust_price_callback, pattern="^trust_price$"))
     app.add_handler(CallbackQueryHandler(trust_proof_callback, pattern="^trust_proof$"))
     app.add_handler(CallbackQueryHandler(support_hub_callback, pattern="^support_hub$"))
+    app.add_handler(CallbackQueryHandler(partner_hub_callback, pattern="^partner_hub$"))
     app.add_handler(CallbackQueryHandler(founder_dm_hint_callback, pattern="^founder_dm_hint$"))
     app.add_handler(CallbackQueryHandler(back_to_start_callback, pattern="^back_to_start$"))
     app.add_handler(CallbackQueryHandler(invite_prompt_callback, pattern="^invite_prompt$"))

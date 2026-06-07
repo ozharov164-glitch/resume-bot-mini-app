@@ -284,6 +284,44 @@ def promo_invalid_text() -> str:
     return "❌ Промокод не найден или недействителен. Проверьте написание и попробуйте снова."
 
 
+def partner_hub_text() -> str:
+    """Landing for the trafficker (affiliate) program — not the friend Stars invite."""
+    return (
+        "💰 <b>Зарабатывайте с ResumeBot</b>\n\n"
+        "Продвигаете карьеру, HR или аудиторию соискателей? "
+        "Станьте <b>партнёром-траффером</b>.\n\n"
+        "<b>Как это работает</b>\n"
+        "1️⃣ Получаете <b>личный промокод</b> и ссылку на бота\n"
+        "2️⃣ Делитесь с аудиторией — канал, чат, блог, курсы\n"
+        "3️⃣ С каждой <b>оплаченной</b> покупке по вашему промо — "
+        "<b>20% вашего дохода в ₽</b>\n"
+        "4️⃣ Статистика в <b>личной панели</b> в боте: активации, оплаты, начисления\n\n"
+        "<b>Чем отличается от «Пригласить друга»</b>\n"
+        "Друзьям — бонусные Stars на личную покупку. "
+        "Партнёрам — промокод, масштаб и выплаты в рублях.\n\n"
+        "<b>Хотите подключиться?</b> Напишите создателю — пришлём условия, "
+        "промокод и откроем панель."
+    )
+
+
+def partner_apply_prefill(
+    *,
+    telegram_id: int,
+    username: str | None = None,
+    first_name: str | None = None,
+) -> str:
+    """Plain-text message pre-filled when applying to become a trafficker."""
+    name_part = (first_name or "").strip() or "—"
+    handle = f"@{username.lstrip('@')}" if username else "—"
+    return (
+        "Здравствуйте! Хочу стать партнёром ResumeBot (траффер).\n\n"
+        f"Telegram ID: {telegram_id}\n"
+        f"Имя: {name_part}\n"
+        f"Username: {handle}\n\n"
+        "Моя аудитория: "
+    )
+
+
 def reengagement_text(position: str | None = None) -> str:
     pos_part = f" на позицию «{html.escape(position)}»" if position else ""
     return (

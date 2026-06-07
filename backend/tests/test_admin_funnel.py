@@ -113,6 +113,9 @@ class AdminFunnelStatsTests(unittest.TestCase):
 
         stats = get_admin_funnel_stats(self.db, days=7, include_template=False)
         self.assertEqual(stats["bot_users"], 1)
+        self.assertEqual(stats["bot_users_new"], 1)
+        self.assertEqual(stats["users_total"], 1)
+        self.assertEqual(stats["bot_starts"], 0)
         self.assertEqual(stats["mini_app_opened"], 1)
         self.assertEqual(stats["onboarding_started"], 1)
 

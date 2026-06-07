@@ -25,6 +25,8 @@ os.environ.setdefault("JWT_SECRET", "test-secret")
 os.environ.setdefault("APP_URL", "https://62-217-182-239.nip.io")
 os.environ.setdefault("FRONTEND_URL", "https://example.github.io/app")
 os.environ.setdefault("ADMIN_GROUP_CHAT_ID", "")
+os.environ.setdefault("DEBUG", "true")
+os.environ.setdefault("ADMIN_SECRET_KEY", "test-admin-secret-for-verify")
 
 from storage.backends import SQLiteBackend  # noqa: E402
 
@@ -79,6 +81,71 @@ async def test_start_referral_flow() -> None:
         rows = markup.inline_keyboard
         assert len(rows) >= 5
         assert any("promo_prompt" in (btn.callback_data or "") for row in rows for btn in row)
+        assert any("partner_hub" in (btn.callback_data or "") for row in rows for btn in row)
+
+
+async def test_partner_hub_callback() -> None:
+    update = MagicMock()
+    update.effective_user.id = 1001
+    update.effective_user.first_name = "Partner"
+    update.effective_user.username = "partner_user"
+    update.effective_user.last_name = ""
+    update.callback_query = MagicMock()
+    update.callback_query.from_user = update.effective_user
+    update.callback_query.answer = AsyncMock()
+    update.callback_query.edit_message_text = AsyncMock()
+    update.get_bot = MagicMock()
+
+    with patch.object(bot_module, "_is_user_affiliate", return_value=False):
+        with patch.object(bot_module, "ensure_founder_username", AsyncMock(return_value="founder_test")):
+            await bot_module.partner_hub_callback(update, MagicMock())
+
+    update.callback_query.answer.assert_awaited_once()
+    update.callback_query.edit_message_text.assert_awaited_once()
+    text = update.callback_query.edit_message_text.await_args.args[0]
+    assert "Зарабатывайте с ResumeBot" in text
+    markup = update.callback_query.edit_message_text.await_args.kwargs["reply_markup"]
+    apply_btn = markup.inline_keyboard[0][0]
+    assert apply_btn.url and "founder_test" in apply_btn.url
+    assert "1001" in apply_btn.url
+
+
+async def test_partner_hub_routes_affiliate_to_panel() -> None:
+    update = MagicMock()
+    update.effective_user.id = 2002
+    update.callback_query = MagicMock()
+    update.callback_query.from_user = update.effective_user
+    update.callback_query.answer = AsyncMock()
+
+    with patch.object(bot_module, "_is_user_affiliate", return_value=True):
+        with patch.object(bot_module, "aff_panel_callback", AsyncMock()) as aff_panel:
+            await bot_module.partner_hub_callback(update, MagicMock())
+
+    aff_panel.assert_awaited_once()
+
+
+async def test_start_partner_deep_link() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        db_path = Path(tmp) / "test.db"
+        backend = SQLiteBackend(db_path)
+
+        update = MagicMock()
+        update.message.from_user.id = 3003
+        update.message.from_user.first_name = "Deep"
+        update.message.from_user.last_name = ""
+        update.message.from_user.username = "deep_user"
+        update.message.reply_text = AsyncMock()
+
+        context = MagicMock()
+        context.args = ["partner"]
+
+        with patch.object(bot_module, "get_db", return_value=backend):
+            with patch.object(bot_module, "_get_resume_count", AsyncMock(return_value=800)):
+                with patch.object(bot_module, "_reply_partner_hub", AsyncMock()) as partner_hub:
+                    await bot_module.start(update, context)
+                    await asyncio.sleep(0.2)
+
+        partner_hub.assert_awaited_once()
 
 
 async def test_support_hub_callback() -> None:
@@ -129,6 +196,9 @@ def main() -> None:
     test_referral_columns_and_save()
     asyncio.run(test_start_referral_flow())
     asyncio.run(test_support_hub_callback())
+    asyncio.run(test_partner_hub_callback())
+    asyncio.run(test_partner_hub_routes_affiliate_to_panel())
+    asyncio.run(test_start_partner_deep_link())
     asyncio.run(test_fallback_and_help())
     test_main_registers_handlers()
     print("OK: all bot verification checks passed")

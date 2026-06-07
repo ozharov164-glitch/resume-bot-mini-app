@@ -5,9 +5,10 @@ from __future__ import annotations
 import html
 import logging
 from typing import TYPE_CHECKING
+from urllib.parse import quote
 
 from config import settings
-from services.bot_copy import PAYMENT_SHORT
+from services.bot_copy import PAYMENT_SHORT, partner_apply_prefill
 from services.founder import founder_telegram_ids
 
 if TYPE_CHECKING:
@@ -58,6 +59,25 @@ def founder_dm_url(username: str) -> str | None:
     if username:
         return f"https://t.me/{username.lstrip('@')}"
     return None
+
+
+def partner_apply_dm_url(
+    username: str,
+    *,
+    telegram_id: int,
+    user_username: str | None = None,
+    first_name: str | None = None,
+) -> str | None:
+    """Deep link to founder DM with a pre-filled partner application."""
+    base = founder_dm_url(username)
+    if not base:
+        return None
+    prefill = partner_apply_prefill(
+        telegram_id=telegram_id,
+        username=user_username,
+        first_name=first_name,
+    )
+    return f"{base}?text={quote(prefill)}"
 
 
 def support_hub_text(*, greeting: str | None = None) -> str:

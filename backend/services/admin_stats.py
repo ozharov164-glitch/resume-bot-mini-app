@@ -8,6 +8,7 @@ from typing import Any
 from services.founder import founder_telegram_ids
 
 FUNNEL_STEP_EVENTS: tuple[str, ...] = (
+    "bot_start",
     "mini_app_opened",
     "onboarding_started",
     "generate_started",
@@ -50,7 +51,9 @@ def get_admin_funnel_stats(
     for event in events:
         steps[event] = db.count_analytics_unique_users_since(event, since, exclude)
 
-    bot_users = db.count_users_since(since, exclude)
+    bot_users_new = db.count_users_since(since, exclude)
+    users_total = db.count_users(exclude_telegram_ids=exclude)
+    bot_starts = steps.get("bot_start", 0)
     payments_real = db.count_paid_resumes_since(since, exclude)
     mini_app = steps.get("mini_app_opened", 0)
     started = steps.get("onboarding_started", 0)
@@ -61,12 +64,16 @@ def get_admin_funnel_stats(
     return {
         "period_days": days,
         "since": since,
-        "bot_users": bot_users,
+        "bot_users": bot_users_new,
+        "bot_users_new": bot_users_new,
+        "bot_starts": bot_starts,
+        "users_total": users_total,
         **steps,
         "payments_real": payments_real,
         "payment_completed": payments_real,
         "conversion_rate": _pct(payments_real, started),
-        "bot_to_mini_app_rate": _pct(mini_app, bot_users),
+        "bot_to_mini_app_rate": _pct(mini_app, bot_users_new),
+        "start_to_mini_app_rate": _pct(mini_app, bot_starts or bot_users_new),
         "mini_app_to_onboarding_rate": _pct(started, mini_app),
         "preview_to_pay_rate": _pct(payments_real, previews),
         "pay_click_to_paid_rate": _pct(payments_real, pay_clicks),
