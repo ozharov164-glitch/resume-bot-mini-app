@@ -667,6 +667,104 @@ body {
   text-align: center;
 }
 
+.preview-page--assembly {
+  min-height: 100%;
+}
+
+.preview-page-assembly-main {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem 0 2rem;
+}
+
+.preview-page-reveal {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.preview-assembly-loader {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+
+.preview-assembly-loader--full {
+  flex: 1;
+  justify-content: center;
+  padding: 0.25rem 0 1rem;
+}
+
+.preview-assembly-loader--compact {
+  padding: 1rem 0;
+}
+
+.preview-assembly-loader__copy {
+  width: 100%;
+  max-width: 20rem;
+  text-align: center;
+}
+
+.preview-assembly-loader__phrase-slot {
+  min-height: 3.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.preview-assembly-loader__phrase {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 800;
+  line-height: 1.35;
+  letter-spacing: -0.02em;
+  color: #161d19;
+  transition: opacity 0.18s ease;
+}
+
+.preview-assembly-loader__secondary {
+  margin: 0.5rem 0 0;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  color: #3f4943;
+}
+
+.preview-assembly-loader__progress-track {
+  margin-top: 1.25rem;
+  width: 100%;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #f4f4f5;
+}
+
+.preview-assembly-loader__progress-bar {
+  position: relative;
+  height: 3px;
+  border-radius: 999px;
+  background: #10b981;
+  transition: width 0.12s linear;
+}
+
+.preview-assembly-loader__percent-row {
+  margin-top: 0.35rem;
+  width: 100%;
+  text-align: right;
+}
+
+.preview-assembly-loader__percent {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #10b981;
+  font-variant-numeric: tabular-nums;
+}
+
 .preview-page-caption {
   margin: 0;
   font-size: 0.875rem;

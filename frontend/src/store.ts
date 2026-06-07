@@ -58,6 +58,8 @@ interface AppState {
     isPaid: boolean,
     answers?: Partial<UserAnswers>,
   ) => void;
+  /** Navigate to preview immediately; Preview page hydrates data + image. */
+  openResumeFromHistoryPending: (resumeId: string, isPaid: boolean) => void;
 }
 
 export const useAppStore = create<AppState>((set, get) => ({
@@ -122,6 +124,16 @@ export const useAppStore = create<AppState>((set, get) => ({
       resumeData,
       isPaid,
       answers: answers ?? {},
+      page: "preview",
+      previewReturnPage: "history",
+      onboardingMode: "create",
+    }),
+  openResumeFromHistoryPending: (resumeId, isPaid) =>
+    set({
+      resumeId,
+      resumeData: null,
+      isPaid,
+      answers: {},
       page: "preview",
       previewReturnPage: "history",
       onboardingMode: "create",

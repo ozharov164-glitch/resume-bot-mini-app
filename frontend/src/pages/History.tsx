@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 
-import { clearResumeHistory, ensureAuthToken, fetchResumeList, getResume, type ResumeListItem } from "../api";
+import { clearResumeHistory, ensureAuthToken, fetchResumeList, type ResumeListItem } from "../api";
 import { AppHeader } from "../components/ui/AppHeader";
 import { Icon } from "../components/ui/Icon";
 import { PaidBadge } from "../components/ui/PaidBadge";
@@ -8,7 +8,6 @@ import { Screen } from "../components/ui/Screen";
 import { useTelegramBackButton } from "../hooks/useTelegramBackButton";
 import { useAppStore } from "../store";
 import { getTg } from "../telegram";
-import type { ResumeData } from "../types";
 
 function formatRelative(iso: string) {
   try {
@@ -32,10 +31,9 @@ const TEMPLATE_BADGE_COLOR: Record<string, string> = {
 };
 
 export function HistoryPage() {
-  const { setPage, openResumeFromHistory, openHhTextView } = useAppStore();
+  const { setPage, openResumeFromHistoryPending, openHhTextView } = useAppStore();
   const [items, setItems] = useState<ResumeListItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [openingId, setOpeningId] = useState<string | null>(null);
   const [clearing, setClearing] = useState(false);
 
   const handleBack = useCallback(() => setPage("home"), [setPage]);
@@ -58,20 +56,9 @@ export function HistoryPage() {
     void loadList();
   }, [loadList]);
 
-  const openItem = async (item: ResumeListItem) => {
-    if (openingId) return;
+  const openItem = (item: ResumeListItem) => {
     getTg()?.HapticFeedback?.impactOccurred("light");
-    setOpeningId(item.id);
-    try {
-      const token = await ensureAuthToken();
-      const record = await getResume(token, item.id);
-      const data = record.data as ResumeData;
-      openResumeFromHistory(record.id, data, record.is_paid, record.user_answers);
-    } catch {
-      alert("Не удалось открыть резюме. Попробуйте ещё раз.");
-    } finally {
-      setOpeningId(null);
-    }
+    openResumeFromHistoryPending(item.id, item.is_paid);
   };
 
   const openHhText = (item: ResumeListItem, e: React.MouseEvent) => {
@@ -147,8 +134,7 @@ export function HistoryPage() {
           <button
             key={item.id}
             type="button"
-            disabled={openingId === item.id}
-            onClick={() => void openItem(item)}
+            onClick={() => openItem(item)}
             className="history-card stitch-card flex w-full items-center gap-4 p-4 text-left active:scale-[0.99]"
           >
             <div className="history-card-icon-wrap">
