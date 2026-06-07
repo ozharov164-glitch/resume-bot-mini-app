@@ -1,20 +1,34 @@
 ---
-description: VPS deploy for ResumeBot — use paramiko script, never commit secrets
+description: VPS deploy for ResumeBot — local SFTP upload, never git pull on server
 alwaysApply: true
 ---
 
-# ResumeBot VPS deploy
+# ResumeBot deploy (two channels)
 
-When the user asks to deploy, update VPS, or restart production:
+## Backend + bot → VPS (local upload)
+
+When the user asks to deploy backend/bot or update VPS:
 
 1. Run from repo root: `python3 scripts/vps_update.py`
-2. Credentials live in **gitignored** `scripts/.deploy_env` (`DEPLOY_PASSWORD`, optional `DEPLOY_HOST`, `DEPLOY_USER`) or env `DEPLOY_PASSWORD`.
-3. Do **not** commit passwords, BOT_TOKEN, or OpenRouter keys.
-4. Production paths:
-   - Host: `62.217.182.239` (HTTPS API: `https://62-217-182-239.nip.io`)
-   - Code: `/opt/resumebot`
-   - Services: `resumebot-api`, `resumebot-bot`
-5. Frontend deploys via GitHub Actions on push to `main` (`frontend/`). Backend/bot need `vps_update.py` after backend/bot changes.
-6. Verify: `curl https://62-217-182-239.nip.io/health` → `{"status":"ok"}`
+2. Dry-run file list: `python3 scripts/vps_update.py --dry-run`
+3. Credentials: **gitignored** `scripts/.deploy_env` or env `DEPLOY_PASSWORD`.
+4. **Does NOT** `git pull` on the server — uploads `backend/`, `bot/`, `deploy/` (+ broadcast scripts) from **this machine** via SFTP.
+5. Never overwrites `backend/.env` on VPS (secrets stay on server).
+6. Does **not** upload frontend, docs, graphify-out, .agents, marketing, tests.
+7. Restart: `resumebot-api`, `resumebot-bot`.
+8. Verify: `curl https://62-217-182-239.nip.io/health` → `{"status":"ok"}`
 
-Full initial setup (rare): `DEPLOY_PASSWORD=... BOT_TOKEN=... python3 scripts/remote_deploy.py`
+Production: host `62.217.182.239`, code `/opt/resumebot`.
+
+Initial VPS setup (once): `DEPLOY_PASSWORD=... BOT_TOKEN=... python3 scripts/remote_deploy.py`
+
+## Frontend → GitHub Pages only
+
+- Push to `main` with changes under `frontend/` → GitHub Actions builds and deploys Pages.
+- Backend-only commits do **not** trigger frontend redeploy (CI path filter).
+- Do **not** deploy frontend to VPS.
+
+## Git push
+
+- `git push origin main` — source control + frontend CI when `frontend/` changed.
+- After backend/bot changes: always run `vps_update.py` locally (push alone does not update VPS).

@@ -1,11 +1,21 @@
 #!/usr/bin/env python3
-"""Pull main on VPS and restart API + bot. Credentials: scripts/.deploy_env or DEPLOY_PASSWORD."""
+"""
+Deploy backend + bot to VPS from LOCAL repo (SFTP). Does NOT git pull on server.
+
+Frontend → push to main → GitHub Actions (GitHub Pages only).
+Secrets stay on VPS (backend/.env is never overwritten).
+"""
 
 from __future__ import annotations
 
+import argparse
 import os
 import sys
 from pathlib import Path
+
+_SCRIPTS = Path(__file__).resolve().parent
+if str(_SCRIPTS) not in sys.path:
+    sys.path.insert(0, str(_SCRIPTS))
 
 try:
     import paramiko
@@ -15,33 +25,29 @@ except ImportError:
     subprocess.check_call([sys.executable, "-m", "pip", "install", "paramiko", "-q"])
     import paramiko
 
+from vps_sync import REMOTE_ROOT, upload_tree
+
 HOST = os.environ.get("DEPLOY_HOST", "62.217.182.239")
 USER = os.environ.get("DEPLOY_USER", "root")
 ENV_FILE = Path(__file__).resolve().parent / ".deploy_env"
 
-REMOTE_CMD = """
+REMOTE_POST_CMD = f"""
 set -e
-cd /opt/resumebot
-git fetch origin main
-git reset --hard origin/main
-mkdir -p /opt/resumebot/data
-if grep -q '^SQLITE_PATH=' backend/.env 2>/dev/null; then
-  sed -i 's|^SQLITE_PATH=.*|SQLITE_PATH=/opt/resumebot/data/resumebot.db|' backend/.env
+mkdir -p {REMOTE_ROOT}/data
+if grep -q '^SQLITE_PATH=' {REMOTE_ROOT}/backend/.env 2>/dev/null; then
+  sed -i 's|^SQLITE_PATH=.*|SQLITE_PATH={REMOTE_ROOT}/data/resumebot.db|' {REMOTE_ROOT}/backend/.env
 else
-  echo 'SQLITE_PATH=/opt/resumebot/data/resumebot.db' >> backend/.env
+  echo 'SQLITE_PATH={REMOTE_ROOT}/data/resumebot.db' >> {REMOTE_ROOT}/backend/.env
 fi
-cd backend && ./venv/bin/pip install -q -r requirements.txt
-# Enforce reliable non-reasoning model + free provider routing.
-# v4-flash через Parasail уходил в reasoning-режим и возвращал пустой ответ
-# (ломались навыки по профессии и род в резюме).
-set_env() {
+cd {REMOTE_ROOT}/backend && ./venv/bin/pip install -q -r requirements.txt
+set_env() {{
   local key="$1" val="$2"
-  if grep -q "^${key}=" .env 2>/dev/null; then
-    sed -i "s|^${key}=.*|${key}=${val}|" .env
+  if grep -q "^${{key}}=" .env 2>/dev/null; then
+    sed -i "s|^${{key}}=.*|${{key}}=${{val}}|" .env
   else
-    echo "${key}=${val}" >> .env
+    echo "${{key}}=${{val}}" >> .env
   fi
-}
+}}
 set_env OPENROUTER_MODEL deepseek/deepseek-chat-v3.1
 set_env OPENROUTER_MODEL_FALLBACK deepseek/deepseek-v3.2
 set_env OPENROUTER_PROVIDER_ONLY ''
@@ -84,24 +90,63 @@ def _load_password() -> str:
     )
 
 
-def main() -> None:
+def _connect() -> paramiko.SSHClient:
     password = _load_password()
     client = paramiko.SSHClient()
     client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     client.connect(HOST, username=USER, password=password, timeout=30)
+    return client
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description="Deploy backend/bot to VPS from local files.")
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="List files that would be uploaded; do not connect.",
+    )
+    parser.add_argument(
+        "--upload-only",
+        action="store_true",
+        help="Upload files without pip install / restart.",
+    )
+    args = parser.parse_args()
+
+    if args.dry_run:
+        from vps_sync import iter_upload_paths, ROOT
+
+        paths = iter_upload_paths()
+        for local, remote in paths:
+            print(f"  {local.relative_to(ROOT)} → {remote}")
+        print(f"dry-run: {len(paths)} files (no connection)")
+        return
+
+    client = _connect()
     print(f"Connected to {HOST}")
-    _, stdout, stderr = client.exec_command(REMOTE_CMD, get_pty=True, timeout=300)
-    code = stdout.channel.recv_exit_status()
-    out = stdout.read().decode(errors="replace")
-    err = stderr.read().decode(errors="replace")
-    if out:
-        print(out)
-    if err.strip():
-        print(err, file=sys.stderr)
-    client.close()
-    if code != 0 or "VPS_UPDATE_OK" not in out:
-        raise SystemExit(f"VPS update failed (exit {code})")
-    print("Deploy complete.")
+    try:
+        sftp = client.open_sftp()
+        try:
+            upload_tree(sftp)
+        finally:
+            sftp.close()
+
+        if args.upload_only:
+            print("Upload-only complete (services not restarted).")
+            return
+
+        _, stdout, stderr = client.exec_command(REMOTE_POST_CMD, get_pty=True, timeout=300)
+        code = stdout.channel.recv_exit_status()
+        out = stdout.read().decode(errors="replace")
+        err = stderr.read().decode(errors="replace")
+        if out:
+            print(out)
+        if err.strip():
+            print(err, file=sys.stderr)
+        if code != 0 or "VPS_UPDATE_OK" not in out:
+            raise SystemExit(f"VPS update failed (exit {code})")
+        print("Deploy complete (local → VPS, no git on server).")
+    finally:
+        client.close()
 
 
 if __name__ == "__main__":

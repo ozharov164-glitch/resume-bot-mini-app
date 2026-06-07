@@ -74,6 +74,7 @@ if $needs_backend; then
       backend/services/pdf_service.py \
       bot/bot.py
   fi
+  echo "pre-push: после push выполните деплой на VPS: python3 scripts/vps_update.py"
 fi
 
 echo "pre-push: all checks passed"

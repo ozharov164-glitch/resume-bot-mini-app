@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Pull latest main on VPS and restart services (uses scripts/.deploy_env).
+# Upload backend/bot to VPS from local repo (scripts/vps_update.py).
 set -euo pipefail
 cd "$(dirname "$0")/.."
-exec python3 scripts/vps_update.py
+exec python3 scripts/vps_update.py "$@"

@@ -1,3 +1,7 @@
+# Copy to scripts/.deploy_env (gitignored). Never commit real passwords.
 DEPLOY_HOST=62.217.182.239
 DEPLOY_USER=root
 DEPLOY_PASSWORD=your-root-password
+
+# vps_update.py uploads backend/, bot/, deploy/ from THIS machine via SFTP.
+# It does NOT git pull on the server and does NOT overwrite backend/.env on VPS.
