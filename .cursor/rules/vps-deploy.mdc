@@ -28,7 +28,8 @@ Initial VPS setup (once): `DEPLOY_PASSWORD=... BOT_TOKEN=... python3 scripts/rem
 - Backend-only commits do **not** trigger frontend redeploy (CI path filter).
 - Do **not** deploy frontend to VPS.
 
-## Git push
+## Git push (frontend ONLY)
 
-- `git push origin main` — source control + frontend CI when `frontend/` changed.
-- After backend/bot changes: always run `vps_update.py` locally (push alone does not update VPS).
+- **GitHub = `frontend/` only.** Never commit or push `backend/`, `bot/`, `deploy/`, or server scripts.
+- `git push origin main` — only when `frontend/` (or Pages workflow) changed → GitHub Pages deploy.
+- Backend/bot changes: **`python3 scripts/vps_update.py` only** — not git push.

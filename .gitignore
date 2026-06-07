@@ -21,3 +21,25 @@ backend/data/*.db
 # graphify — keep graph.json + report, skip local-only artifacts
 graphify-out/manifest.json
 graphify-out/cost.json
+
+# === Server-only (local + VPS). NEVER commit/push to GitHub ===
+backend/
+bot/
+deploy/
+scripts/.deploy_env.example
+scripts/vps_sync.py
+scripts/vps_update.py
+scripts/vps_update.sh
+scripts/remote_deploy.py
+scripts/broadcast.py
+scripts/run_broadcast_vps.py
+scripts/verify_bot_handlers.py
+scripts/update_vps_openrouter.py
+scripts/test_admin_notify_live.py
+scripts/send_test_docx.py
+scripts/generate_example_pngs.py
+scripts/generate_template_mocks.py
+scripts/sql/
+scripts/data/
+scripts/build_tiktok_video.sh
+scripts/opensearch_skill_search_demo.py

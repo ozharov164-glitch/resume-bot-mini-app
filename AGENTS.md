@@ -3,6 +3,7 @@
 ## Learned User Preferences
 
 - User communicates in Russian.
+- **GitHub repo = Mini App (`frontend/`) ONLY.** Never push `backend/`, `bot/`, `deploy/`, or server scripts to GitHub — server code stays local + VPS via `vps_update.py`. This is permanent.
 - Do not commit or push unless explicitly asked.
 - Expects autonomous end-to-end delivery: install deps, fetch assets, and produce deliverables (e.g. MP4) without asking the user to run manual steps.
 - After large fixes or deploys, prefers very brief executive summaries over long reports.
@@ -14,7 +15,7 @@
 - VPS deploy: `python3 scripts/vps_update.py` — local SFTP upload to VPS (**no git pull on server**); secrets in `scripts/.deploy_env` (gitignored).
 - Production: `https://62-217-182-239.nip.io/health` → `{"status":"ok"}`.
 - SkillPick: `backend/services/ai_service.py` → `suggest_skills()`; fallback is substring on `FALLBACK_SKILLS`.
-- Frontend: push to `main` with `frontend/` changes → GitHub Actions → GitHub Pages only. Production Mini App: `https://ozharov164-glitch.github.io/resume-bot-mini-app` (`FRONTEND_URL` on VPS). Backend/bot: always `vps_update.py` after local changes.
+- GitHub remote holds **frontend only** (`backend/`/`bot/` gitignored, not on GitHub). Push `frontend/` → GitHub Actions → Pages. Mini App: `https://ozharov164-glitch.github.io/resume-bot-mini-app`. Backend/bot: **never git push** — only `python3 scripts/vps_update.py`.
 - graphify knowledge graph at `graphify-out/` — run `graphify query` for architecture questions.
 - Local Python tooling uses repo-root `.venv` (not `backend/venv`, which is VPS-only).
 - TikTok marketing reel: `marketing/tiktok-reel/` — build with `./scripts/build_tiktok_video.sh` or `.venv/bin/python marketing/tiktok-reel/build_final.py` (Pillow + imageio-ffmpeg; no Homebrew required).

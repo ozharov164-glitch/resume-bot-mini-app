@@ -1,0 +1,18 @@
+---
+description: GitHub repo is frontend-only; backend/bot never go to GitHub
+alwaysApply: true
+---
+
+# GitHub = Mini App only (НАВСЕГДА)
+
+**GitHub (`resume-bot-mini-app`) — только Telegram Mini App (`frontend/`).**
+
+Никогда не коммить и не пушить на GitHub:
+- `backend/`, `bot/`, `deploy/`
+- серверные скрипты: `scripts/vps_*.py`, `scripts/remote_deploy.py`, `scripts/broadcast*.py`, `scripts/verify_bot_handlers.py`
+
+Backend + bot живут **локально** и на **VPS**. Деплой: `python3 scripts/vps_update.py` (SFTP с этой машины).
+
+GitHub Actions — **только** сборка и деплой `frontend/` на GitHub Pages. Без jobs для Python/backend.
+
+При изменениях backend/bot: `vps_update.py`, **не** `git push`.
