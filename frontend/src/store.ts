@@ -49,6 +49,8 @@ interface AppState {
   setHomeTab: (tab: HomeTab) => void;
   selectedTemplate: TemplateId;
   setSelectedTemplate: (template: TemplateId) => void;
+  pendingVacancyText: string;
+  setPendingVacancyText: (text: string) => void;
   startNewResume: () => void;
   startEditResume: () => void;
   cancelEditResume: () => void;
@@ -96,8 +98,10 @@ export const useAppStore = create<AppState>((set, get) => ({
   setOnboardingStep: (onboardingStep) => set({ onboardingStep }),
   homeTab: "main",
   setHomeTab: (homeTab) => set({ homeTab }),
-  selectedTemplate: "classic" as TemplateId,
+  selectedTemplate: "modern" as TemplateId,
   setSelectedTemplate: (selectedTemplate) => set({ selectedTemplate }),
+  pendingVacancyText: "",
+  setPendingVacancyText: (pendingVacancyText) => set({ pendingVacancyText }),
   startNewResume: () =>
     set({
       page: "onboarding",
@@ -108,7 +112,8 @@ export const useAppStore = create<AppState>((set, get) => ({
       resumeId: null,
       resumeData: null,
       isPaid: false,
-      selectedTemplate: "classic",
+      selectedTemplate: "modern",
+      pendingVacancyText: "",
     }),
   startEditResume: () => set({ page: "onboarding", onboardingMode: "edit" }),
   cancelEditResume: () => {

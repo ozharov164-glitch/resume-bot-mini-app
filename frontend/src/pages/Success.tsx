@@ -19,9 +19,9 @@ import { getTg } from "../telegram";
 const BOT_USERNAME = "resumeez_bot";
 
 export function SuccessPage() {
-  const { resumeId, authToken, openHhTextView, setPage } = useAppStore();
+  const { resumeId, authToken, openHhTextView, setPage, pendingVacancyText } = useAppStore();
   const [toast, setToast] = useState<string | null>(null);
-  const [vacancy, setVacancy] = useState("");
+  const [vacancy, setVacancy] = useState(pendingVacancyText);
   const [adaptBusy, setAdaptBusy] = useState(false);
 
   const handleBack = useCallback(() => {
@@ -29,6 +29,12 @@ export function SuccessPage() {
     setPage("preview");
   }, [setPage]);
   useTelegramBackButton(handleBack);
+
+  useEffect(() => {
+    if (pendingVacancyText && !vacancy) {
+      setVacancy(pendingVacancyText);
+    }
+  }, [pendingVacancyText, vacancy]);
 
   useEffect(() => {
     try {
@@ -150,7 +156,7 @@ export function SuccessPage() {
               Хотите ещё лучше?
             </h3>
             <p className="success-section__text">
-              Подстроим резюме под текст конкретной вакансии с hh.ru
+              Подстроим резюме под текст конкретной вакансии с hh.ru — добавим ключевые слова из ваших фактов
             </p>
           </div>
           <textarea

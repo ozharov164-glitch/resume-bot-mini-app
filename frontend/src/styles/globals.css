@@ -1640,6 +1640,19 @@ body {
   line-height: 1;
 }
 
+.ats-badge__vacancy-pct {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  opacity: 0.9;
+  line-height: 1;
+}
+
+.ats-badge__vacancy-pct::before {
+  content: "·";
+  margin: 0 0.15rem;
+  opacity: 0.5;
+}
+
 /* ── ATS Overlay (bottom sheet) ── */
 .ats-overlay-backdrop {
   position: fixed;
@@ -1939,6 +1952,82 @@ body {
   font-size: 0.6875rem;
   line-height: 1.4;
   color: var(--text-muted);
+}
+
+.ats-overlay__dual-metric {
+  margin: 0 1rem 0.75rem;
+  padding: 0.75rem 0.875rem;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.03);
+  border: 1px solid var(--border-subtle);
+}
+
+.ats-overlay__dual-metric-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: 0.8125rem;
+}
+
+.ats-overlay__dual-metric-row + .ats-overlay__dual-metric-row {
+  margin-top: 0.35rem;
+}
+
+.ats-overlay__dual-label {
+  color: var(--text-muted);
+}
+
+.ats-overlay__dual-value {
+  font-size: 0.9375rem;
+}
+
+.ats-overlay__jd-disclaimer {
+  margin: 0.5rem 0 0;
+  font-size: 0.6875rem;
+  line-height: 1.45;
+  color: var(--text-muted);
+}
+
+.ats-overlay__format-tip {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.35rem;
+  margin: 0 1rem 0.75rem;
+  font-size: 0.75rem;
+  line-height: 1.45;
+  color: #92400e;
+}
+
+.ats-overlay__adapt-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  width: 100%;
+  margin-top: 0.625rem;
+  padding: 0.625rem 0.75rem;
+  border: 1px solid;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.6);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.ats-overlay__adapt-cta:active {
+  transform: scale(0.98);
+}
+
+.template-pick-recommended {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  color: var(--brand);
+  background: rgba(0, 108, 73, 0.08);
+  border: 1px solid rgba(0, 108, 73, 0.18);
+  border-radius: 999px;
+  padding: 0.15rem 0.45rem;
+  white-space: nowrap;
 }
 
 /* ── ATS Score Card ── */

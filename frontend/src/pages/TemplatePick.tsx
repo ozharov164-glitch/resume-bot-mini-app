@@ -88,6 +88,9 @@ export function TemplatePickPage() {
                 <div className="template-pick-card-meta">
                   <div className="flex items-center justify-between gap-2">
                     <h3 className="font-bold">{tmpl.name}</h3>
+                    {tmpl.id === "modern" ? (
+                      <span className="template-pick-recommended">Рекомендуем</span>
+                    ) : null}
                     {selected ? (
                       <span className="template-pick-check">
                         <Icon name="check_circle" filled size={18} />

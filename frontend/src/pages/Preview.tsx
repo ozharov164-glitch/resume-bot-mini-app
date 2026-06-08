@@ -283,8 +283,8 @@ export function PreviewPage() {
 
                 {previewLocked ? (
                   <p className="preview-adapt-hint">
-                    После оплаты можно адаптировать резюме под вакансию за 99 ₽ — усилит ключевые слова под
-                    hh.ru.
+                    Вставьте текст вакансии в ATS — увидите, чего не хватает. Усиление под вакансию — 99 ₽ после
+                    оплаты PDF.
                   </p>
                 ) : null}
 
@@ -302,7 +302,12 @@ export function PreviewPage() {
                     Изменить ответы
                   </Button>
                   {resumeId && authToken ? (
-                    <AtsBadge token={authToken} resumeId={resumeId} />
+                    <AtsBadge
+                      token={authToken}
+                      resumeId={resumeId}
+                      isPaid={previewPaid}
+                      onGetPdf={goToCheckout}
+                    />
                   ) : null}
                 </div>
 

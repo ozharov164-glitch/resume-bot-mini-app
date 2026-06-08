@@ -103,6 +103,11 @@ export interface AtsScoreResult {
   missing_keywords: string[];
   has_vacancy: boolean;
   tips: string[];
+  readiness_score?: number;
+  readiness_percent?: number;
+  vacancy_match_percent?: number;
+  title_match_score?: number;
+  format_penalty?: number;
 }
 
 export async function fetchAtsScore(
