@@ -8,8 +8,9 @@ import { isFounderTelegramId } from "./lib/founder";
 import { readCachedAuthToken } from "./lib/authSession";
 import { trackEvent } from "./lib/analytics";
 import { runAppBootstrap } from "./lib/bootstrap";
-import { clearDeepLinkHash, parseDeepLink } from "./lib/deepLink";
+import { clearDeepLinkHash, parseCoverLetterResumeId, parseDeepLink } from "./lib/deepLink";
 import { completePaymentReturn, discoverPaymentReturnResumeId } from "./lib/paymentReturn";
+import { getResume } from "./api";
 import { useAppStore } from "./store";
 import { getTelegramUserId, getTg, initTelegramTheme } from "./telegram";
 
@@ -118,7 +119,22 @@ export default function App() {
       setHomeTab("examples");
     }
     if (route) clearDeepLinkHash();
-  }, [isLoading, authToken, setPage, setHomeTab]);
+
+    const coverResumeId = parseCoverLetterResumeId(window.location.hash);
+    if (coverResumeId) {
+      clearDeepLinkHash();
+      void (async () => {
+        try {
+          const record = await getResume(authToken, coverResumeId);
+          setResumeResult(coverResumeId, record.data, record.is_paid);
+          setPaid(Boolean(record.is_paid));
+          setPage("success");
+        } catch {
+          setPage("history");
+        }
+      })();
+    }
+  }, [isLoading, authToken, setPage, setHomeTab, setPaid, setResumeResult]);
 
   if (isLoading && !authToken) {
     return (

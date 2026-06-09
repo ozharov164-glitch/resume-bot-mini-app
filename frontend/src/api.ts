@@ -251,6 +251,23 @@ export interface ResumeRecord {
   data: ResumeData;
   user_answers?: Partial<UserAnswers>;
   created_at?: string;
+  cover_letter?: string | null;
+}
+
+export async function generateCoverLetter(
+  token: string,
+  resumeId: string,
+  vacancyText = "",
+): Promise<{ cover_letter: string; resume_id: string }> {
+  return http<{ cover_letter: string; resume_id: string }>(
+    `/api/resume/${resumeId}/cover-letter`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ vacancy_text: vacancyText }),
+    },
+    60_000,
+  );
 }
 
 export async function fetchResumeList(token: string) {

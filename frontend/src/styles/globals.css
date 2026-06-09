@@ -4258,6 +4258,11 @@ textarea::-moz-placeholder {
   color: var(--text-muted, #9ca3af);
 }
 
+.success-section__textarea--readonly {
+  resize: none;
+  background: var(--surface-muted, #f9fafb);
+}
+
 .success-section--referral {
   margin-bottom: 0.25rem;
 }
