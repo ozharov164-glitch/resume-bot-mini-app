@@ -26,7 +26,12 @@ export async function runResumeGenerate(): Promise<ResumeGenerateOutcome> {
       payload.last_job = last_job;
     }
 
-    const response = await generateResume(token, payload, state.selectedTemplate);
+    const response = await generateResume(
+      token,
+      payload,
+      state.selectedTemplate,
+      state.photoJpegBase64,
+    );
     if (!response?.resume_id || !response.resume) {
       throw new Error("Сервер вернул неполный ответ. Попробуйте ещё раз.");
     }

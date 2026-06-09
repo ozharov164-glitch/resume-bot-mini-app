@@ -27,6 +27,7 @@ export interface UserAnswers {
   work_schedule?: string[];
   relocation?: string;
   profession_extra?: Record<string, string | string[]>;
+  photo_jpeg_base64?: string;
 }
 
 export interface ResumeData {
@@ -56,4 +57,5 @@ export interface ResumeData {
   profession_extra?: Record<string, string | string[]>;
   key_achievements?: string[];
   documents_and_permits?: string[];
+  photo_jpeg_base64?: string;
 }

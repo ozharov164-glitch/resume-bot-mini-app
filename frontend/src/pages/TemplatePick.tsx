@@ -3,6 +3,7 @@ import { motion } from "motion/react";
 
 import { trackEvent } from "../lib/analytics";
 import { AppHeader } from "../components/ui/AppHeader";
+import { PhotoUpload } from "../components/ui/PhotoUpload";
 import { Button } from "../components/ui/Button";
 import { FixedBottomBar } from "../components/ui/FixedBottomBar";
 import { Icon } from "../components/ui/Icon";
@@ -51,6 +52,8 @@ export function TemplatePickPage() {
             Три готовых шаблона — после оплаты PDF и DOCX придут в чат в выбранном стиле.
           </p>
         </div>
+
+        <PhotoUpload mode="store" showSkip />
 
         <div className="flex flex-col gap-4">
           {PDF_TEMPLATES.map((tmpl, index) => {

@@ -154,16 +154,58 @@ export async function generateResume(
   token: string,
   data: Partial<UserAnswers>,
   templateId: TemplateId = "classic",
+  photoJpegBase64?: string | null,
 ) {
+  const body: Record<string, unknown> = { ...data, template_id: templateId };
+  if (photoJpegBase64) {
+    body.photo_jpeg_base64 = photoJpegBase64;
+  }
   return http<{ resume_id: string; resume: ResumeData; paid: boolean }>(
     "/api/resume/generate",
     {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ ...data, template_id: templateId }),
+      body: JSON.stringify(body),
     },
     120_000,
   );
+}
+
+export async function uploadResumePhoto(
+  token: string,
+  resumeId: string,
+  file: Blob,
+): Promise<{ status: string }> {
+  const form = new FormData();
+  form.append("file", file, "photo.jpg");
+  const response = await fetchWithTimeout(
+    `${API_URL}/api/resume/${resumeId}/photo`,
+    {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+      body: form,
+    },
+    DEFAULT_TIMEOUT_MS,
+  );
+  const text = await response.text();
+  if (!response.ok) {
+    let detail = text || "Не удалось загрузить фото";
+    try {
+      const parsed = JSON.parse(text) as { detail?: string };
+      if (parsed.detail) detail = parsed.detail;
+    } catch {
+      /* plain text */
+    }
+    throw new Error(detail);
+  }
+  return JSON.parse(text) as { status: string };
+}
+
+export async function deleteResumePhoto(token: string, resumeId: string): Promise<void> {
+  await http<{ status: string }>(`/api/resume/${resumeId}/photo`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${token}` },
+  });
 }
 
 export async function createStarsInvoice(

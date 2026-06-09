@@ -11,7 +11,11 @@ export type PreviewImageState =
   | { status: "error" };
 
 /** Fetch preview-image blob and wait for browser decode before marking ready. */
-export function usePreviewImage(resumeId: string | null, authToken: string | null) {
+export function usePreviewImage(
+  resumeId: string | null,
+  authToken: string | null,
+  refreshToken = 0,
+) {
   const [state, setState] = useState<PreviewImageState>({ status: "idle" });
   const activeUrlRef = useRef<string | null>(null);
 
@@ -77,7 +81,7 @@ export function usePreviewImage(resumeId: string | null, authToken: string | nul
       cancelled = true;
       revokeActive();
     };
-  }, [authToken, resumeId]);
+  }, [authToken, refreshToken, resumeId]);
 
   return state;
 }

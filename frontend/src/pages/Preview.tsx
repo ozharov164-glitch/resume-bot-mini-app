@@ -11,6 +11,7 @@ import { PreviewResumeCard } from "../components/preview/PreviewResumeCard";
 import { HhTextEntryCard } from "../components/hh/HhTextEntryCard";
 import { ensureAuthToken, getResume, requestPdf } from "../api";
 import { AppHeader } from "../components/ui/AppHeader";
+import { PhotoUpload } from "../components/ui/PhotoUpload";
 import { Button } from "../components/ui/Button";
 import { FixedBottomBar } from "../components/ui/FixedBottomBar";
 import { FounderBadge } from "../components/ui/FounderBadge";
@@ -42,11 +43,12 @@ export function PreviewPage() {
     openHhTextView,
   } = useAppStore();
   const founderActive = useFounderStatus();
-  const previewImage = usePreviewImage(resumeId, authToken);
+  const previewImage = usePreviewImage(resumeId, authToken, previewRefresh);
   const [hydrating, setHydrating] = useState(false);
   const [hydrateError, setHydrateError] = useState(false);
   const [resendingPdf, setResendingPdf] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  const [previewRefresh, setPreviewRefresh] = useState(0);
 
   const previewLocked = !isPaid;
   const previewPaid = isPaid;
@@ -221,6 +223,16 @@ export function PreviewPage() {
         <main className={mainClass}>
               {previewPaid ? (
                 <PreviewPaidHero onResendPdf={() => void handleResendPdf()} resending={resendingPdf} />
+              ) : null}
+
+              {previewLocked && resumeId ? (
+                <PhotoUpload
+                  variant="compact"
+                  mode="api"
+                  resumeId={resumeId}
+                  authToken={authToken}
+                  onChanged={() => setPreviewRefresh((n) => n + 1)}
+                />
               ) : null}
 
               <div className="preview-preview-slot">

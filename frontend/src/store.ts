@@ -51,6 +51,8 @@ interface AppState {
   setSelectedTemplate: (template: TemplateId) => void;
   pendingVacancyText: string;
   setPendingVacancyText: (text: string) => void;
+  photoJpegBase64: string | null;
+  setPhotoJpegBase64: (value: string | null) => void;
   startNewResume: () => void;
   startEditResume: () => void;
   cancelEditResume: () => void;
@@ -102,6 +104,8 @@ export const useAppStore = create<AppState>((set, get) => ({
   setSelectedTemplate: (selectedTemplate) => set({ selectedTemplate }),
   pendingVacancyText: "",
   setPendingVacancyText: (pendingVacancyText) => set({ pendingVacancyText }),
+  photoJpegBase64: null,
+  setPhotoJpegBase64: (photoJpegBase64) => set({ photoJpegBase64 }),
   startNewResume: () =>
     set({
       page: "onboarding",
@@ -114,6 +118,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       isPaid: false,
       selectedTemplate: "modern",
       pendingVacancyText: "",
+      photoJpegBase64: null,
     }),
   startEditResume: () => set({ page: "onboarding", onboardingMode: "edit" }),
   cancelEditResume: () => {

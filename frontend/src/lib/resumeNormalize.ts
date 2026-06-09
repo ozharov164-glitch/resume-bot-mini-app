@@ -51,5 +51,6 @@ export function normalizeResumeData(raw: ResumeData): ResumeData {
           year: asStr(e?.year),
         }))
       : [],
+    ...(raw.photo_jpeg_base64 ? { photo_jpeg_base64: asStr(raw.photo_jpeg_base64) } : {}),
   };
 }
