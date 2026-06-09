@@ -43,12 +43,12 @@ export function PreviewPage() {
     openHhTextView,
   } = useAppStore();
   const founderActive = useFounderStatus();
+  const [previewRefresh, setPreviewRefresh] = useState(0);
   const previewImage = usePreviewImage(resumeId, authToken, previewRefresh);
   const [hydrating, setHydrating] = useState(false);
   const [hydrateError, setHydrateError] = useState(false);
   const [resendingPdf, setResendingPdf] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
-  const [previewRefresh, setPreviewRefresh] = useState(0);
 
   const previewLocked = !isPaid;
   const previewPaid = isPaid;
