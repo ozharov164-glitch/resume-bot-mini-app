@@ -26,6 +26,7 @@ import {
 } from "../lib/onboardingSteps";
 import { PhotoSetupStep } from "../components/onboarding/PhotoSetupStep";
 import { photoModeNeedsUpload } from "../lib/photoModes";
+import { trackEvent } from "../lib/analytics";
 import { capitalizePersonName, isPersonNameField } from "../lib/formatPersonName";
 import { useAppStore } from "../store";
 import { getTg } from "../telegram";
