@@ -4,7 +4,7 @@ export const HOME_HEADLINE = "Резюме, которое замечают на
 
 export const HOME_TAGLINE =
   "Рекрутер решает за несколько секунд — успеете ли вы произвести впечатление. " +
-  "Ответьте на простые вопросы — готовые PDF и DOCX придут в Telegram. " +
+  "Фото и сопроводительное — с первого шага. PDF и DOCX придут в Telegram. " +
   "Пять минут, без Word и лишних сервисов.";
 
 export const HOME_BENEFITS = [
@@ -70,6 +70,7 @@ export const PREVIEW_CHECKLIST = [
   "PDF для отправки работодателю",
   "DOCX для hh.ru и ATS",
   "Текст для вставки на hh.ru",
+  "Сопроводительное письмо для отклика",
   "Оформление в выбранном шаблоне",
 ] as const;
 
@@ -81,7 +82,7 @@ export const HH_RU_BADGE = "Структура и подача — как жду
 /** SEO / meta */
 export const META_TITLE = "ResumeBot — резюме для hh.ru за 5 минут";
 export const META_DESCRIPTION =
-  "Создайте резюме для hh.ru за 5 минут в Telegram: ИИ только из ваших фактов, " +
-  "три шаблона PDF, бесплатный предпросмотр, готовый текст для hh.ru, DOCX для ATS.";
+  "Создайте резюме для hh.ru за 5 минут в Telegram: фото 3:4, сопроводительное письмо, " +
+  "ИИ только из ваших фактов, PDF и DOCX, бесплатный предпросмотр, текст для hh.ru.";
 
 export const PRICE_ANCHOR_LINE = "149 ₽ вместо 300–1000 ₽ у конструкторов резюме";
