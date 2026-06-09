@@ -1,3 +1,5 @@
+export type PhotoMode = "none" | "pdf" | "docx" | "both" | "chat";
+
 export interface WorkEntry {
   company: string;
   position: string;
@@ -58,4 +60,6 @@ export interface ResumeData {
   key_achievements?: string[];
   documents_and_permits?: string[];
   photo_jpeg_base64?: string;
+  photo_mode?: PhotoMode;
+  photo_enabled?: boolean;
 }

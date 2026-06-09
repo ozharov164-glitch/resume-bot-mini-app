@@ -24,7 +24,8 @@ import {
   professionOtherSelected,
   salaryFromOption,
 } from "../lib/onboardingSteps";
-import { trackEvent } from "../lib/analytics";
+import { PhotoSetupStep } from "../components/onboarding/PhotoSetupStep";
+import { photoModeNeedsUpload } from "../lib/photoModes";
 import { capitalizePersonName, isPersonNameField } from "../lib/formatPersonName";
 import { useAppStore } from "../store";
 import { getTg } from "../telegram";
@@ -67,9 +68,17 @@ export function OnboardingPage() {
     cancelEditResume,
     onboardingStep,
     setOnboardingStep,
+    photoMode,
+    photoJpegBase64,
   } = useAppStore();
 
-  const visibleSteps = useMemo(() => getVisibleSteps(answers), [answers]);
+  const isEdit = onboardingMode === "edit";
+
+  const visibleSteps = useMemo(() => {
+    const steps = getVisibleSteps(answers);
+    if (isEdit) return steps.filter((s) => s.id !== "photo_setup");
+    return steps;
+  }, [answers, isEdit]);
   const step = Math.min(onboardingStep, Math.max(visibleSteps.length - 1, 0));
   const [value, setValue] = useState(() =>
     readStringAnswer(answers, visibleSteps[step]?.id ?? "name"),
@@ -87,7 +96,6 @@ export function OnboardingPage() {
   const [fieldError, setFieldError] = useState<string | null>(null);
   const [multiValues, setMultiValues] = useState<string[]>([]);
 
-  const isEdit = onboardingMode === "edit";
   const current =
     visibleSteps[step] ??
     visibleSteps[0] ?? {
@@ -172,6 +180,10 @@ export function OnboardingPage() {
   ]);
 
   const canContinue = useMemo(() => {
+    if (current.type === "photo_setup") {
+      if (!photoModeNeedsUpload(photoMode)) return true;
+      return Boolean(photoJpegBase64);
+    }
     if (current.required === false || current.optional) return true;
     if (current.type === "contacts_dual") return true;
     if (current.type === "options_with_input") return true;
@@ -179,7 +191,7 @@ export function OnboardingPage() {
     if (current.type === "multi_select") return multiValues.length > 0;
     if (current.type === "options") return value.trim().length > 0;
     return value.trim().length > 0;
-  }, [current.optional, current.required, current.type, multiValues.length, value]);
+  }, [current.optional, current.required, current.type, multiValues.length, photoJpegBase64, photoMode, value]);
 
   const goToStep = useCallback(
     (nextStep: number) => {
@@ -265,6 +277,10 @@ export function OnboardingPage() {
 
   const next = async () => {
     if (submitting) return;
+    if (current.type === "photo_setup" && !canContinue) {
+      setFieldError("Добавьте фото или выберите «Без фото»");
+      return;
+    }
     if (!canContinue && !current.optional) return;
 
     const error = current.validate?.(value);
@@ -407,6 +423,8 @@ export function OnboardingPage() {
                 </p>
               )}
             </div>
+
+            {current.type === "photo_setup" ? <PhotoSetupStep /> : null}
 
             {current.type === "profession" && (
               <>

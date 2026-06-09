@@ -2,7 +2,7 @@ import { create } from "zustand";
 
 import { readCachedAuthToken } from "./lib/authSession";
 import { normalizeResumeData } from "./lib/resumeNormalize";
-import type { ResumeData, UserAnswers, WorkEntry } from "./types";
+import type { ResumeData, UserAnswers, WorkEntry, PhotoMode } from "./types";
 
 type Page =
   | "home"
@@ -53,6 +53,8 @@ interface AppState {
   setPendingVacancyText: (text: string) => void;
   photoJpegBase64: string | null;
   setPhotoJpegBase64: (value: string | null) => void;
+  photoMode: PhotoMode;
+  setPhotoMode: (mode: PhotoMode) => void;
   startNewResume: () => void;
   startEditResume: () => void;
   cancelEditResume: () => void;
@@ -80,6 +82,8 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({
       resumeId,
       resumeData: normalizeResumeData(resumeData),
+      photoMode: resumeData.photo_mode ?? "none",
+      photoJpegBase64: resumeData.photo_jpeg_base64 ?? null,
       ...(isPaid !== undefined ? { isPaid } : {}),
     }),
   isLoading: !readCachedAuthToken(),
@@ -106,6 +110,8 @@ export const useAppStore = create<AppState>((set, get) => ({
   setPendingVacancyText: (pendingVacancyText) => set({ pendingVacancyText }),
   photoJpegBase64: null,
   setPhotoJpegBase64: (photoJpegBase64) => set({ photoJpegBase64 }),
+  photoMode: "none" as PhotoMode,
+  setPhotoMode: (photoMode) => set({ photoMode }),
   startNewResume: () =>
     set({
       page: "onboarding",
@@ -119,6 +125,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       selectedTemplate: "modern",
       pendingVacancyText: "",
       photoJpegBase64: null,
+      photoMode: "none",
     }),
   startEditResume: () => set({ page: "onboarding", onboardingMode: "edit" }),
   cancelEditResume: () => {
@@ -134,6 +141,8 @@ export const useAppStore = create<AppState>((set, get) => ({
       resumeData,
       isPaid,
       answers: answers ?? {},
+      photoMode: (resumeData.photo_mode as PhotoMode) ?? "none",
+      photoJpegBase64: resumeData.photo_jpeg_base64 ?? null,
       page: "preview",
       previewReturnPage: "history",
       onboardingMode: "create",

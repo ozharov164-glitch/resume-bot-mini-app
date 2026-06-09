@@ -31,6 +31,7 @@ export async function runResumeGenerate(): Promise<ResumeGenerateOutcome> {
       payload,
       state.selectedTemplate,
       state.photoJpegBase64,
+      state.photoMode,
     );
     if (!response?.resume_id || !response.resume) {
       throw new Error("Сервер вернул неполный ответ. Попробуйте ещё раз.");

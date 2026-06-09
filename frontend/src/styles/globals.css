@@ -4361,3 +4361,38 @@ textarea::-moz-placeholder {
   color: #b91c1c;
 }
 
+.photo-setup__modes {
+  margin-top: 0.25rem;
+}
+
+.photo-setup__mode {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.15rem;
+  width: 100%;
+  padding: 0.85rem 1rem;
+  border-radius: 14px;
+  border: 1.5px solid var(--border, rgba(255, 255, 255, 0.12));
+  background: var(--surface-elevated, rgba(255, 255, 255, 0.04));
+  text-align: left;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.photo-setup__mode--active {
+  border-color: var(--brand);
+  background: color-mix(in srgb, var(--brand) 12%, transparent);
+}
+
+.photo-setup__mode-label {
+  font-size: 0.95rem;
+  font-weight: 650;
+  color: var(--text);
+}
+
+.photo-setup__mode-desc {
+  font-size: 0.78rem;
+  line-height: 1.35;
+  color: var(--text-muted);
+}
+

@@ -1,4 +1,4 @@
-import type { ResumeData, UserAnswers } from "./types";
+import type { PhotoMode, ResumeData, UserAnswers } from "./types";
 import { clearCachedAuthToken, readCachedAuthToken, writeCachedAuthToken } from "./lib/authSession";
 import { fetchWithTimeout, HttpTimeoutError, withRetries } from "./lib/http";
 import { useAppStore } from "./store";
@@ -155,8 +155,9 @@ export async function generateResume(
   data: Partial<UserAnswers>,
   templateId: TemplateId = "classic",
   photoJpegBase64?: string | null,
+  photoMode: PhotoMode = "none",
 ) {
-  const body: Record<string, unknown> = { ...data, template_id: templateId };
+  const body: Record<string, unknown> = { ...data, template_id: templateId, photo_mode: photoMode };
   if (photoJpegBase64) {
     body.photo_jpeg_base64 = photoJpegBase64;
   }

@@ -8,7 +8,8 @@ export type StepType =
   | "contacts_dual"
   | "options_with_input"
   | "multi_select"
-  | "work_history";
+  | "work_history"
+  | "photo_setup";
 
 export interface OnboardingStep {
   id: keyof UserAnswers | string;
@@ -65,6 +66,13 @@ function getAchievementsPlaceholder(position: string): string {
 }
 
 export const ONBOARDING_STEPS: OnboardingStep[] = [
+  {
+    id: "photo_setup",
+    question: "Фото для резюме",
+    type: "photo_setup",
+    hint: "Первый шаг — выберите, нужен ли портрет",
+    optional: true,
+  },
   {
     id: "name",
     question: "Имя и фамилия",
