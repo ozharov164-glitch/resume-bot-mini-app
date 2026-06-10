@@ -9,7 +9,7 @@ import { PreviewImageFrame } from "../components/preview/PreviewImageFrame";
 import { PreviewPaidHero } from "../components/preview/PreviewPaidHero";
 import { PreviewResumeCard } from "../components/preview/PreviewResumeCard";
 import { HhTextEntryCard } from "../components/hh/HhTextEntryCard";
-import { ensureAuthToken, getResume, requestPdf } from "../api";
+import { claimFreeResume, ensureAuthToken, fetchFreeTierStatus, getResume, requestPdf } from "../api";
 import { AppHeader } from "../components/ui/AppHeader";
 import { PhotoUpload } from "../components/ui/PhotoUpload";
 import { Button } from "../components/ui/Button";
@@ -41,6 +41,7 @@ export function PreviewPage() {
     previewReturnPage,
     isPaid,
     openHhTextView,
+    pendingVacancyText,
   } = useAppStore();
   const founderActive = useFounderStatus();
   const [previewRefresh, setPreviewRefresh] = useState(0);
@@ -49,6 +50,9 @@ export function PreviewPage() {
   const [hydrateError, setHydrateError] = useState(false);
   const [resendingPdf, setResendingPdf] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+
+  const [hasFreeRemaining, setHasFreeRemaining] = useState<boolean | null>(null);
+  const [claimingFree, setClaimingFree] = useState(false);
 
   const previewLocked = !isPaid;
   const previewPaid = isPaid;
@@ -91,6 +95,33 @@ export function PreviewPage() {
   useEffect(() => {
     trackEvent("preview_viewed");
   }, []);
+
+  useEffect(() => {
+    if (!authToken || !previewLocked) return;
+    fetchFreeTierStatus(authToken)
+      .then((r) => setHasFreeRemaining(r.has_free_remaining))
+      .catch(() => setHasFreeRemaining(false));
+  }, [authToken, previewLocked]);
+
+  const handleClaimFree = useCallback(async () => {
+    if (!resumeId || claimingFree) return;
+    getTg()?.HapticFeedback?.impactOccurred("medium");
+    setClaimingFree(true);
+    try {
+      const token = authToken || (await ensureAuthToken());
+      const result = await claimFreeResume(token, resumeId);
+      if (result.ok) {
+        useAppStore.setState({ isPaid: true });
+        getTg()?.HapticFeedback?.notificationOccurred("success");
+        setPage("success");
+        trackEvent("free_resume_claimed");
+      }
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Не удалось получить резюме. Попробуйте снова.");
+    } finally {
+      setClaimingFree(false);
+    }
+  }, [authToken, resumeId, claimingFree, setPage]);
 
   useEffect(() => {
     if (previewLocked && resumeData?.summary?.trim()) {
@@ -293,11 +324,14 @@ export function PreviewPage() {
                   </ul>
                 ) : null}
 
-                {previewLocked ? (
-                  <p className="preview-adapt-hint">
-                    Вставьте текст вакансии в ATS — увидите, чего не хватает. Усиление под вакансию — 99 ₽ после
-                    оплаты PDF.
-                  </p>
+                {previewLocked && !pendingVacancyText ? (
+                  <div className="preview-vacancy-cta">
+                    <span className="preview-vacancy-cta__icon" aria-hidden>🎯</span>
+                    <div className="preview-vacancy-cta__copy">
+                      <strong className="preview-vacancy-cta__title">Проверьте совпадение с вакансией</strong>
+                      <span className="preview-vacancy-cta__sub">Нажмите ATS → вставьте текст → увидите пробелы</span>
+                    </div>
+                  </div>
                 ) : null}
 
                 <div className="preview-edit-ats-row">
@@ -323,7 +357,23 @@ export function PreviewPage() {
                   ) : null}
                 </div>
 
-                {previewLocked ? (
+                {previewLocked && hasFreeRemaining === true ? (
+                  <Button
+                    variant="brand"
+                    onClick={() => void handleClaimFree()}
+                    disabled={claimingFree}
+                    className="preview-pdf-btn preview-pdf-btn--free"
+                  >
+                    {claimingFree ? (
+                      "Готовлю резюме…"
+                    ) : (
+                      <>
+                        <Icon name="card_giftcard" size={20} />
+                        Получить бесплатно (первое резюме)
+                      </>
+                    )}
+                  </Button>
+                ) : previewLocked ? (
                   <Button variant="brand" onClick={goToCheckout} className="preview-pdf-btn">
                     <Icon name="picture_as_pdf" size={20} />
                     Получить PDF, DOCX и текст hh.ru

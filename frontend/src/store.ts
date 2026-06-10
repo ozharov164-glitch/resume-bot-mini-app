@@ -51,6 +51,8 @@ interface AppState {
   setSelectedTemplate: (template: TemplateId) => void;
   pendingVacancyText: string;
   setPendingVacancyText: (text: string) => void;
+  fastMode: boolean;
+  setFastMode: (v: boolean) => void;
   photoJpegBase64: string | null;
   setPhotoJpegBase64: (value: string | null) => void;
   photoMode: PhotoMode;
@@ -108,6 +110,8 @@ export const useAppStore = create<AppState>((set, get) => ({
   setSelectedTemplate: (selectedTemplate) => set({ selectedTemplate }),
   pendingVacancyText: "",
   setPendingVacancyText: (pendingVacancyText) => set({ pendingVacancyText }),
+  fastMode: false,
+  setFastMode: (fastMode) => set({ fastMode }),
   photoJpegBase64: null,
   setPhotoJpegBase64: (photoJpegBase64) => set({ photoJpegBase64 }),
   photoMode: "none" as PhotoMode,

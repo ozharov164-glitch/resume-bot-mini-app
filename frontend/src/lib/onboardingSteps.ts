@@ -21,6 +21,8 @@ export interface OnboardingStep {
   skipText?: string;
   optional?: boolean;
   required?: boolean;
+  /** Step is kept in fast-mode (quick 5-step flow); others are skipped */
+  fastModeCore?: boolean;
   showIf?: (answers: Partial<UserAnswers>) => boolean;
   optionsByPosition?: Record<string, readonly string[]>;
   allowCustomInput?: boolean;
@@ -72,6 +74,7 @@ export const ONBOARDING_STEPS: OnboardingStep[] = [
     type: "photo_setup",
     hint: "Первый шаг — выберите, нужен ли портрет",
     optional: true,
+    skipText: "Пропустить",
   },
   {
     id: "name",
@@ -79,6 +82,7 @@ export const ONBOARDING_STEPS: OnboardingStep[] = [
     type: "text",
     placeholder: "Иван Петров",
     hint: "Как в резюме — без отчества",
+    fastModeCore: true,
     validate: (value: string) => {
       const hasVowel = /[аеёиоуыьъэюяАЕЁИОУЫЬЪЭЮЯaeiouyAEIOUY]/.test(value);
       const hasSpace = value.trim().includes(" ");
@@ -97,15 +101,6 @@ export const ONBOARDING_STEPS: OnboardingStep[] = [
     hint: "Необязательно — можно пропустить",
     skipText: "Пропустить",
     optional: true,
-    validate: (value: string) => {
-      const trimmed = value.trim();
-      if (!trimmed) return null;
-      const hasVowel = /[аеёиоуыьъэюяАЕЁИОУЫЬЪЭЮЯ]/.test(trimmed);
-      if (trimmed.length < 3 || !hasVowel) {
-        return "Введите отчество полностью (например: Сергеевич)";
-      }
-      return null;
-    },
   },
   {
     id: "gender",
@@ -114,6 +109,7 @@ export const ONBOARDING_STEPS: OnboardingStep[] = [
     options: ["Мужской", "Женский"],
     hint: "Нужно для правильных формулировок в резюме",
     required: true,
+    fastModeCore: true,
   },
   {
     id: "contacts",
@@ -129,6 +125,7 @@ export const ONBOARDING_STEPS: OnboardingStep[] = [
     hint: "Выберите профессию из списка или напишите свой вариант.",
     type: "profession",
     placeholder: "Например: водитель-экспедитор",
+    fastModeCore: true,
   },
   {
     id: "salary",
@@ -147,6 +144,7 @@ export const ONBOARDING_STEPS: OnboardingStep[] = [
     hint: "Добавьте до 3 мест работы — чем больше деталей, тем лучше резюме.",
     skipText: "Нет опыта работы",
     required: false,
+    fastModeCore: true,
   },
   {
     id: "achievements",
@@ -163,6 +161,8 @@ export const ONBOARDING_STEPS: OnboardingStep[] = [
     question: "Образование",
     type: "options",
     options: ["Среднее", "Колледж", "Незаконченное высшее", "Высшее", "Курсы"],
+    skipText: "Пропустить",
+    optional: true,
   },
   {
     id: "education_place",
@@ -172,7 +172,8 @@ export const ONBOARDING_STEPS: OnboardingStep[] = [
     hint: "Необязательно — можно пропустить",
     skipText: "Пропустить",
     required: false,
-    showIf: (answers) => answers.education !== "Среднее",
+    optional: true,
+    showIf: (answers) => answers.education !== "Среднее" && Boolean(answers.education),
   },
   {
     id: "certificates",
@@ -197,7 +198,16 @@ export const ONBOARDING_STEPS: OnboardingStep[] = [
     skipText: "Только русский",
     optional: true,
   },
-  { id: "city", question: "Город поиска работы", type: "text", placeholder: "Казань" },
+  {
+    id: "city",
+    question: "Город поиска работы",
+    type: "text",
+    placeholder: "Казань",
+    hint: "Необязательно — можно пропустить",
+    skipText: "Пропустить",
+    optional: true,
+    fastModeCore: true,
+  },
   {
     id: "work_schedule",
     question: "Удобный график работы",
@@ -232,6 +242,9 @@ export const ONBOARDING_STEPS: OnboardingStep[] = [
     question: "Коротко о себе",
     type: "textarea",
     placeholder: "Например: ответственный, доброжелательный, быстро обучаюсь.",
+    hint: "Необязательно — можно пропустить",
+    skipText: "Пропустить",
+    optional: true,
   },
 ];
 
@@ -376,9 +389,16 @@ export function isProfessionExtraStep(step: OnboardingStep): boolean {
   return String(step.id).startsWith("prof_");
 }
 
-export function getVisibleSteps(answers: Partial<UserAnswers>): OnboardingStep[] {
+export function getVisibleSteps(
+  answers: Partial<UserAnswers>,
+  fastMode = false,
+): OnboardingStep[] {
   const positionPlaceholder = answers?.target_position ? String(answers.target_position) : "";
-  const filtered = ONBOARDING_STEPS.filter((s) => !s.showIf || s.showIf(answers));
+  const filtered = ONBOARDING_STEPS.filter((s) => {
+    if (s.showIf && !s.showIf(answers)) return false;
+    if (fastMode && !s.fastModeCore) return false;
+    return true;
+  });
   const base = filtered.map((s) => {
     if (s.id !== "achievements") return s;
     return {
@@ -386,6 +406,8 @@ export function getVisibleSteps(answers: Partial<UserAnswers>): OnboardingStep[]
       placeholder: getAchievementsPlaceholder(positionPlaceholder),
     };
   });
+  // profession-specific extras are skipped in fast mode
+  if (fastMode) return base;
   const extras = PROFESSION_EXTRA_STEPS.filter((s) => !s.showIf || s.showIf(answers));
   if (!extras.length) return base;
 

@@ -3,10 +3,13 @@ import confetti from "canvas-confetti";
 
 import {
   createAdaptInvoice,
+  createAdaptYookassaInvoice,
   ensureAuthToken,
+  fetchAtsScore,
   generateCoverLetter,
   getResume,
   saveAdaptVacancy,
+  type AtsScoreResult,
 } from "../api";
 import { AppHeader } from "../components/ui/AppHeader";
 import { Button } from "../components/ui/Button";
@@ -18,7 +21,131 @@ import { trackEvent } from "../lib/analytics";
 import { useAppStore } from "../store";
 import { getTg } from "../telegram";
 
+const ATS_LEVEL_CFG = {
+  great:  { color: "#059669", bg: "rgba(5,150,105,0.1)",  border: "rgba(5,150,105,0.28)"  },
+  good:   { color: "#065f46", bg: "rgba(16,185,129,0.1)", border: "rgba(16,185,129,0.30)" },
+  medium: { color: "#92400e", bg: "rgba(217,119,6,0.1)",  border: "rgba(217,119,6,0.25)"  },
+  low:    { color: "#991b1b", bg: "rgba(220,38,38,0.09)", border: "rgba(220,38,38,0.22)"  },
+} as const;
+
+function AtsShareRing({ score, color }: { score: number; color: string }) {
+  const r = 22;
+  const c = 2 * Math.PI * r;
+  const dash = (score / 100) * c;
+  return (
+    <svg width={56} height={56} viewBox="0 0 56 56" fill="none" aria-hidden>
+      <circle cx={28} cy={28} r={r} stroke="rgba(0,0,0,0.07)" strokeWidth={4} />
+      <circle
+        cx={28} cy={28} r={r}
+        stroke={color} strokeWidth={4}
+        strokeLinecap="round"
+        strokeDasharray={`${dash} ${c}`}
+        transform="rotate(-90 28 28)"
+        style={{ transition: "stroke-dasharray 0.8s cubic-bezier(0.4,0,0.2,1)" }}
+      />
+      <text x={28} y={33} textAnchor="middle" fill={color} fontSize={13} fontWeight={800} fontFamily="inherit">
+        {score}
+      </text>
+    </svg>
+  );
+}
+
+function AtsShareCard({ token, resumeId }: { token: string; resumeId: string }) {
+  const [result, setResult] = useState<AtsScoreResult | null>(null);
+
+  useEffect(() => {
+    fetchAtsScore(token, resumeId).then(setResult).catch(() => undefined);
+  }, [token, resumeId]);
+
+  const share = () => {
+    if (!result) return;
+    const tg = getTg();
+    const userId = tg?.initDataUnsafe?.user?.id;
+    const link = userId ? `https://t.me/resumeez_bot?start=ref_${userId}` : "https://t.me/resumeez_bot";
+    const text = `Мой ATS-балл резюме: ${result.score}/100 (${result.label}) 🎯\nСделал в ResumeBot за 5 минут → ${link}`;
+    trackEvent("ats_share_clicked");
+    tg?.openTelegramLink?.(`https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent(text)}`);
+  };
+
+  if (!result) return null;
+
+  const cfg = ATS_LEVEL_CFG[result.level];
+
+  return (
+    <div className="success-ats-share">
+      <div className="success-ats-share__header">
+        <div className="success-ats-share__ring-wrap">
+          <AtsShareRing score={result.score} color={cfg.color} />
+        </div>
+        <div className="success-ats-share__copy">
+          <div className="success-ats-share__title">ATS-готовность резюме</div>
+          <div className="success-ats-share__desc">{result.description}</div>
+          <span
+            className="success-ats-share__badge"
+            style={{ color: cfg.color, background: cfg.bg, borderColor: cfg.border }}
+          >
+            {result.label}
+          </span>
+        </div>
+      </div>
+      <div className="success-ats-share__actions">
+        <button type="button" className="success-ats-share__btn success-ats-share__btn--share" onClick={share}>
+          <Icon name="share" size={15} />
+          Поделиться
+        </button>
+      </div>
+    </div>
+  );
+}
+
 const BOT_USERNAME = "resumeez_bot";
+
+function AdaptCardPayBtn({
+  resumeId,
+  authToken,
+  vacancy,
+  busy,
+  setBusy,
+}: {
+  resumeId: string | null;
+  authToken: string | null;
+  vacancy: string;
+  busy: boolean;
+  setBusy: (v: boolean) => void;
+}) {
+  const handleCardPay = async () => {
+    if (!resumeId || !authToken || vacancy.trim().length < 20) {
+      alert("Вставьте текст вакансии (не менее 20 символов).");
+      return;
+    }
+    setBusy(true);
+    try {
+      const token = authToken || (await ensureAuthToken());
+      await saveAdaptVacancy(token, resumeId, vacancy.trim());
+      const { confirmation_url } = await createAdaptYookassaInvoice(token, resumeId);
+      if (confirmation_url) {
+        const tg = getTg();
+        tg?.openLink?.(confirmation_url) ?? window.open(confirmation_url, "_blank");
+      }
+      trackEvent("adapt_yookassa_redirect");
+    } catch {
+      alert("Не удалось создать платёж. Попробуйте позже.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Button
+      variant="outline"
+      onClick={() => void handleCardPay()}
+      disabled={busy}
+      className="success-adapt-pay-btn"
+    >
+      💳 Картой
+    </Button>
+  );
+}
 
 export function SuccessPage() {
   const { resumeId, authToken, openHhTextView, setPage, pendingVacancyText } = useAppStore();
@@ -93,7 +220,7 @@ export function SuccessPage() {
     }
     const tg = getTg();
     if (!tg?.openInvoice) {
-      alert("Оплата доступна только в Telegram.");
+      alert("Stars-оплата доступна только в Telegram. Используйте кнопку «Картой».");
       return;
     }
     trackEvent("adapt_clicked");
@@ -104,10 +231,7 @@ export function SuccessPage() {
       const { invoice_link: invoiceLink } = await createAdaptInvoice(token, resumeId);
       await new Promise<void>((resolve, reject) => {
         tg.openInvoice!(invoiceLink, (status) => {
-          if (status === "paid") {
-            resolve();
-            return;
-          }
+          if (status === "paid") { resolve(); return; }
           if (status === "cancelled") reject(new Error("cancelled"));
           if (status === "failed") reject(new Error("failed"));
         });
@@ -183,6 +307,10 @@ export function SuccessPage() {
             Вернуться в бот
           </Button>
 
+          {resumeId && authToken && (
+            <AtsShareCard token={authToken} resumeId={resumeId} />
+          )}
+
           <button type="button" className="success-hh-card" onClick={openHhText}>
             <span className="success-hh-card__badge">Включено в оплату</span>
             <span className="success-hh-card__icon-wrap" aria-hidden>
@@ -252,14 +380,23 @@ export function SuccessPage() {
             className="success-section__textarea"
             aria-label="Текст вакансии"
           />
-          <Button
-            variant="outline"
-            onClick={() => void payAdapt()}
-            disabled={adaptBusy}
-            className="w-full"
-          >
-            {adaptBusy ? "Оплата…" : "Адаптировать за 99 ₽"}
-          </Button>
+          <div className="success-adapt-pay-row">
+            <Button
+              variant="brand"
+              onClick={() => void payAdapt()}
+              disabled={adaptBusy}
+              className="success-adapt-pay-btn"
+            >
+              {adaptBusy ? "Оплата…" : "⭐ 99 Stars"}
+            </Button>
+            <AdaptCardPayBtn
+              resumeId={resumeId}
+              authToken={authToken}
+              vacancy={vacancy}
+              busy={adaptBusy}
+              setBusy={setAdaptBusy}
+            />
+          </div>
         </section>
 
         <section className="success-section success-section--referral" aria-labelledby="success-referral-heading">

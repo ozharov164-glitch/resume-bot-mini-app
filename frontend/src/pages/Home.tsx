@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "motion/react";
 
-import { fetchStats } from "../api";
+import { fetchStats, importResumeText } from "../api";
 import { ExamplesGallery } from "../components/examples/ExamplesGallery";
 import { AppHeader } from "../components/ui/AppHeader";
 import { Button } from "../components/ui/Button";
@@ -20,6 +20,7 @@ import {
 } from "../lib/marketingCopy";
 import { useAppStore } from "../store";
 import { getTg } from "../telegram";
+import type { UserAnswers, WorkEntry } from "../types";
 
 interface HomeProps {
   onStart: () => void;
@@ -117,12 +118,45 @@ function useCountUp(target: number, durationMs = 1400) {
 }
 
 export function HomePage({ onStart, onHistory }: HomeProps) {
-  const { homeTab, setHomeTab } = useAppStore();
+  const { homeTab, setHomeTab, authToken, setAnswers, setPage } = useAppStore();
   const [statsCount, setStatsCount] = useState(0);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [avatarBucket, setAvatarBucket] = useState(() => Math.floor(Date.now() / AVATAR_ROTATION_MS));
   const displayCount = useCountUp(statsCount);
   const isFounder = useFounderStatus();
+
+  const [importOpen, setImportOpen] = useState(false);
+  const [importText, setImportText] = useState("");
+  const [importing, setImporting] = useState(false);
+  const [importError, setImportError] = useState<string | null>(null);
+
+  const handleImport = useCallback(async () => {
+    if (!authToken || importText.trim().length < 50) return;
+    setImporting(true);
+    setImportError(null);
+    try {
+      const result = await importResumeText(authToken, importText.trim());
+      if (result.ok && result.answers) {
+        const raw = result.answers as Record<string, unknown>;
+        const answers: Partial<UserAnswers> = {};
+        const strFields = ["name","patronymic","gender","target_position","city","phone","email","salary","education","education_place","about","achievements","certificates","languages"] as const;
+        for (const k of strFields) {
+          if (typeof raw[k] === "string") (answers as Record<string, unknown>)[k] = raw[k];
+        }
+        if (Array.isArray(raw.work_schedule)) answers.work_schedule = raw.work_schedule as string[];
+        if (Array.isArray(raw.skills)) answers.skills = raw.skills as string[];
+        if (Array.isArray(raw.work_history)) answers.work_history = raw.work_history as WorkEntry[];
+        setAnswers(answers);
+        setImportOpen(false);
+        setImportText("");
+        setPage("onboarding");
+      }
+    } catch {
+      setImportError("Не удалось распознать резюме. Проверьте текст и попробуйте ещё раз.");
+    } finally {
+      setImporting(false);
+    }
+  }, [authToken, importText, setAnswers, setPage]);
 
   useEffect(() => {
     getTg()?.MainButton?.hide();
@@ -325,19 +359,70 @@ export function HomePage({ onStart, onHistory }: HomeProps) {
             Создать резюме
             <Icon name="arrow_forward" size={20} />
           </Button>
-          <Button
-            variant="secondary"
-            onClick={() => {
-              getTg()?.HapticFeedback?.impactOccurred("light");
-              onHistory();
-            }}
-            className="flex items-center justify-center gap-2"
-          >
-            <Icon name="history" size={20} />
-            Мои резюме
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="secondary"
+              onClick={() => {
+                getTg()?.HapticFeedback?.impactOccurred("light");
+                onHistory();
+              }}
+              className="flex flex-1 items-center justify-center gap-2"
+            >
+              <Icon name="history" size={18} />
+              Мои резюме
+            </Button>
+            <button
+              type="button"
+              className="home-import-btn"
+              onClick={() => { setImportOpen(true); }}
+              title="Импортировать существующее резюме"
+            >
+              <Icon name="upload_file" size={18} />
+              Импорт
+            </button>
+          </div>
         </div>
       </FixedBottomBar>
+
+      {importOpen && (
+        <div className="home-import-overlay" role="dialog" aria-modal aria-label="Импорт резюме">
+          <div className="home-import-sheet">
+            <div className="home-import-sheet__header">
+              <span className="home-import-sheet__title">Импортировать резюме</span>
+              <button
+                type="button"
+                className="home-import-sheet__close"
+                onClick={() => { setImportOpen(false); setImportError(null); }}
+                aria-label="Закрыть"
+              >
+                <Icon name="close" size={20} />
+              </button>
+            </div>
+            <p className="home-import-sheet__hint">
+              Вставьте текст вашего резюме — AI автоматически заполнит анкету.
+            </p>
+            <textarea
+              className="home-import-sheet__textarea"
+              placeholder="Скопируйте и вставьте текст вашего резюме сюда..."
+              value={importText}
+              onChange={(e) => { setImportText(e.target.value); setImportError(null); }}
+              rows={8}
+              autoFocus
+            />
+            {importError && (
+              <p className="home-import-sheet__error">{importError}</p>
+            )}
+            <Button
+              variant="brand"
+              onClick={() => void handleImport()}
+              disabled={importing || importText.trim().length < 50}
+              className="w-full"
+            >
+              {importing ? "Анализирую…" : "Заполнить анкету"}
+            </Button>
+          </div>
+        </div>
+      )}
     </Screen>
   );
 }

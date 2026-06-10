@@ -71,15 +71,17 @@ export function OnboardingPage() {
     setOnboardingStep,
     photoMode,
     photoJpegBase64,
+    fastMode,
+    setFastMode,
   } = useAppStore();
 
   const isEdit = onboardingMode === "edit";
 
   const visibleSteps = useMemo(() => {
-    const steps = getVisibleSteps(answers);
+    const steps = getVisibleSteps(answers, fastMode);
     if (isEdit) return steps.filter((s) => s.id !== "photo_setup");
     return steps;
-  }, [answers, isEdit]);
+  }, [answers, isEdit, fastMode]);
   const step = Math.min(onboardingStep, Math.max(visibleSteps.length - 1, 0));
   const [value, setValue] = useState(() =>
     readStringAnswer(answers, visibleSteps[step]?.id ?? "name"),
@@ -198,7 +200,7 @@ export function OnboardingPage() {
     (nextStep: number) => {
       setFieldError(null);
       setOnboardingStep(nextStep);
-      const steps = getVisibleSteps(useAppStore.getState().answers);
+      const steps = getVisibleSteps(useAppStore.getState().answers, useAppStore.getState().fastMode);
       const next = steps[nextStep];
       if (!next) return;
       if (next.type === "contacts_dual") {
@@ -296,7 +298,7 @@ export function OnboardingPage() {
     trackEvent("step_completed", { step: current.id });
 
     if (current.id === "target_position" || isProfessionExtraStep(current)) {
-      const steps = getVisibleSteps(useAppStore.getState().answers);
+      const steps = getVisibleSteps(useAppStore.getState().answers, useAppStore.getState().fastMode);
       const nextIdx = step + 1;
       if (nextIdx < steps.length && isProfessionExtraStep(steps[nextIdx])) {
         goToStep(nextIdx);
@@ -401,11 +403,23 @@ export function OnboardingPage() {
           </div>
         )}
 
-        <ProgressBar
-          current={step + 1}
-          total={visibleSteps.length}
-          hint={progressHint}
-        />
+        <div className="onboarding-progress-row">
+          <ProgressBar
+            current={step + 1}
+            total={visibleSteps.length}
+            hint={progressHint}
+          />
+          {!isEdit && step === 0 && (
+            <button
+              type="button"
+              className={`onboarding-fast-toggle${fastMode ? " onboarding-fast-toggle--active" : ""}`}
+              onClick={() => { setFastMode(!fastMode); }}
+              title={fastMode ? "Выключить быстрый режим" : "Быстрый режим: только 5 ключевых шагов"}
+            >
+              ⚡ {fastMode ? "Стандарт" : "Быстро"}
+            </button>
+          )}
+        </div>
 
         <AnimatePresence mode="wait">
           <motion.div

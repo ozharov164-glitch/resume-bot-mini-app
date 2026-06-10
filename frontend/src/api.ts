@@ -279,6 +279,16 @@ export async function createAdaptInvoice(token: string, resumeId: string) {
   );
 }
 
+export async function createAdaptYookassaInvoice(token: string, resumeId: string) {
+  return http<{ confirmation_url: string; amount_rub: string; provider: string }>(
+    `/api/payment/create-yookassa-adapt/${resumeId}`,
+    {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+    },
+  );
+}
+
 export interface ResumeListItem {
   id: string;
   full_name: string;
@@ -469,4 +479,29 @@ export async function fetchStatsCount(): Promise<number> {
 /** @deprecated Use fetchStats() instead */
 export async function fetchTodayCount(): Promise<number> {
   return (await fetchStats()).today_count;
+}
+
+export async function fetchFreeTierStatus(token: string): Promise<{ has_free_remaining: boolean }> {
+  return http<{ has_free_remaining: boolean }>("/api/user/free-tier", {
+    method: "GET",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export async function claimFreeResume(token: string, resumeId: string): Promise<{ ok: boolean; already_paid: boolean }> {
+  return http<{ ok: boolean; already_paid: boolean }>(`/api/resume/${resumeId}/claim-free`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export async function importResumeText(
+  token: string,
+  text: string,
+): Promise<{ ok: boolean; answers: Record<string, unknown> }> {
+  return http<{ ok: boolean; answers: Record<string, unknown> }>("/api/resume/import-text", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ text }),
+  });
 }
