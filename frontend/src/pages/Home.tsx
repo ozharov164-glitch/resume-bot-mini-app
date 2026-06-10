@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "motion/react";
 
-import { fetchStats, importResumeText } from "../api";
+import { fetchStats, importResumeFile, importResumeText } from "../api";
 import { ExamplesGallery } from "../components/examples/ExamplesGallery";
 import { AppHeader } from "../components/ui/AppHeader";
 import { Button } from "../components/ui/Button";
@@ -129,6 +129,25 @@ export function HomePage({ onStart, onHistory }: HomeProps) {
   const [importText, setImportText] = useState("");
   const [importing, setImporting] = useState(false);
   const [importError, setImportError] = useState<string | null>(null);
+  const importFileRef = useRef<HTMLInputElement | null>(null);
+
+  const applyImportedAnswers = useCallback(
+    (raw: Record<string, unknown>) => {
+      const answers: Partial<UserAnswers> = {};
+      const strFields = ["name","patronymic","gender","target_position","city","phone","email","salary","education","education_place","about","achievements","certificates","languages"] as const;
+      for (const k of strFields) {
+        if (typeof raw[k] === "string") (answers as Record<string, unknown>)[k] = raw[k];
+      }
+      if (Array.isArray(raw.work_schedule)) answers.work_schedule = raw.work_schedule as string[];
+      if (Array.isArray(raw.skills)) answers.skills = raw.skills as string[];
+      if (Array.isArray(raw.work_history)) answers.work_history = raw.work_history as WorkEntry[];
+      setAnswers(answers);
+      setImportOpen(false);
+      setImportText("");
+      setPage("onboarding");
+    },
+    [setAnswers, setPage],
+  );
 
   const handleImport = useCallback(async () => {
     if (!authToken || importText.trim().length < 50) return;
@@ -137,26 +156,43 @@ export function HomePage({ onStart, onHistory }: HomeProps) {
     try {
       const result = await importResumeText(authToken, importText.trim());
       if (result.ok && result.answers) {
-        const raw = result.answers as Record<string, unknown>;
-        const answers: Partial<UserAnswers> = {};
-        const strFields = ["name","patronymic","gender","target_position","city","phone","email","salary","education","education_place","about","achievements","certificates","languages"] as const;
-        for (const k of strFields) {
-          if (typeof raw[k] === "string") (answers as Record<string, unknown>)[k] = raw[k];
-        }
-        if (Array.isArray(raw.work_schedule)) answers.work_schedule = raw.work_schedule as string[];
-        if (Array.isArray(raw.skills)) answers.skills = raw.skills as string[];
-        if (Array.isArray(raw.work_history)) answers.work_history = raw.work_history as WorkEntry[];
-        setAnswers(answers);
-        setImportOpen(false);
-        setImportText("");
-        setPage("onboarding");
+        applyImportedAnswers(result.answers as Record<string, unknown>);
       }
     } catch {
       setImportError("Не удалось распознать резюме. Проверьте текст и попробуйте ещё раз.");
     } finally {
       setImporting(false);
     }
-  }, [authToken, importText, setAnswers, setPage]);
+  }, [authToken, importText, applyImportedAnswers]);
+
+  const handleImportFile = useCallback(
+    async (file: File) => {
+      if (!authToken) return;
+      if (file.type !== "application/pdf" && !file.name.toLowerCase().endsWith(".pdf")) {
+        setImportError("Поддерживается только PDF. Или вставьте текст резюме ниже.");
+        return;
+      }
+      if (file.size > 8 * 1024 * 1024) {
+        setImportError("Файл слишком большой (макс. 8 МБ).");
+        return;
+      }
+      setImporting(true);
+      setImportError(null);
+      try {
+        const result = await importResumeFile(authToken, file);
+        if (result.ok && result.answers) {
+          applyImportedAnswers(result.answers as Record<string, unknown>);
+        }
+      } catch (err) {
+        const msg = err instanceof Error && err.message ? err.message : "Не удалось распознать PDF. Попробуйте вставить текст вручную.";
+        setImportError(msg);
+      } finally {
+        setImporting(false);
+        if (importFileRef.current) importFileRef.current.value = "";
+      }
+    },
+    [authToken, applyImportedAnswers],
+  );
 
   useEffect(() => {
     getTg()?.MainButton?.hide();
@@ -399,15 +435,40 @@ export function HomePage({ onStart, onHistory }: HomeProps) {
               </button>
             </div>
             <p className="home-import-sheet__hint">
-              Вставьте текст вашего резюме — AI автоматически заполнит анкету.
+              Загрузите PDF или вставьте текст резюме — AI автоматически заполнит анкету.
             </p>
+            <input
+              ref={importFileRef}
+              type="file"
+              accept="application/pdf,.pdf"
+              className="home-import-sheet__file-input"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) void handleImportFile(f);
+              }}
+              aria-label="Загрузить PDF резюме"
+            />
+            <button
+              type="button"
+              className="home-import-sheet__upload"
+              onClick={() => importFileRef.current?.click()}
+              disabled={importing}
+            >
+              <Icon name="upload_file" size={22} />
+              <span className="home-import-sheet__upload-title">
+                {importing ? "Анализирую PDF…" : "Загрузить PDF"}
+              </span>
+              <span className="home-import-sheet__upload-hint">до 8 МБ</span>
+            </button>
+            <div className="home-import-sheet__divider">
+              <span>или вставьте текст</span>
+            </div>
             <textarea
               className="home-import-sheet__textarea"
               placeholder="Скопируйте и вставьте текст вашего резюме сюда..."
               value={importText}
               onChange={(e) => { setImportText(e.target.value); setImportError(null); }}
-              rows={8}
-              autoFocus
+              rows={6}
             />
             {importError && (
               <p className="home-import-sheet__error">{importError}</p>

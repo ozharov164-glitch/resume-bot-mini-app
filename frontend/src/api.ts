@@ -505,3 +505,20 @@ export async function importResumeText(
     body: JSON.stringify({ text }),
   });
 }
+
+export async function importResumeFile(
+  token: string,
+  file: File,
+): Promise<{ ok: boolean; answers: Record<string, unknown> }> {
+  const form = new FormData();
+  form.append("file", file);
+  return http<{ ok: boolean; answers: Record<string, unknown> }>(
+    "/api/resume/import-file",
+    {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+      body: form,
+    },
+    30_000,
+  );
+}
