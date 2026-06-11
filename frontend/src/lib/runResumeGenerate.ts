@@ -39,7 +39,6 @@ export async function runResumeGenerate(): Promise<ResumeGenerateOutcome> {
 
     state.setResumeResult(response.resume_id, response.resume, response.paid);
     if (response.paid) {
-      state.setFounder(true);
       state.setPaid(true);
     }
     if (state.onboardingMode === "create") {
