@@ -75,6 +75,13 @@ export function HistoryPage() {
     openHhTextView("history");
   };
 
+  const openCoverLetter = (item: ResumeListItem, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!item.is_paid) return;
+    getTg()?.HapticFeedback?.impactOccurred("light");
+    openResumeFromHistoryPending(item.id, item.is_paid, "cover-letter");
+  };
+
   const clearHistory = async () => {
     if (clearing || items.length === 0) return;
     const ok = window.confirm(
@@ -186,6 +193,17 @@ export function HistoryPage() {
               </div>
             </div>
             <div className="flex shrink-0 items-center gap-1">
+              {item.is_paid ? (
+                <button
+                  type="button"
+                  className="flex h-9 w-9 items-center justify-center rounded-full"
+                  style={{ background: "var(--surface-variant, #f3f4f6)" }}
+                  aria-label="Сопроводительное письмо"
+                  onClick={(e) => openCoverLetter(item, e)}
+                >
+                  <Icon name="mail" size={18} style={{ color: "var(--brand)" }} />
+                </button>
+              ) : null}
               {item.is_paid ? (
                 <button
                   type="button"

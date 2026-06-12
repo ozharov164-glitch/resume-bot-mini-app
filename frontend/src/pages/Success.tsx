@@ -6,11 +6,10 @@ import {
   createAdaptYookassaInvoice,
   ensureAuthToken,
   fetchAtsScore,
-  generateCoverLetter,
-  getResume,
   saveAdaptVacancy,
   type AtsScoreResult,
 } from "../api";
+import { CoverLetterSection } from "../components/cover/CoverLetterSection";
 import { AppHeader } from "../components/ui/AppHeader";
 import { Button } from "../components/ui/Button";
 import { FixedBottomBar } from "../components/ui/FixedBottomBar";
@@ -152,28 +151,12 @@ export function SuccessPage() {
   const [toast, setToast] = useState<string | null>(null);
   const [vacancy, setVacancy] = useState(pendingVacancyText);
   const [adaptBusy, setAdaptBusy] = useState(false);
-  const [coverLetter, setCoverLetter] = useState<string | null>(null);
-  const [coverLetterLoading, setCoverLetterLoading] = useState(false);
 
   const handleBack = useCallback(() => {
     getTg()?.HapticFeedback?.impactOccurred("light");
     setPage("preview");
   }, [setPage]);
   useTelegramBackButton(handleBack);
-
-  useEffect(() => {
-    if (!resumeId || !authToken) return;
-    void (async () => {
-      try {
-        const record = await getResume(authToken, resumeId);
-        if (record.cover_letter?.trim()) {
-          setCoverLetter(record.cover_letter.trim());
-        }
-      } catch {
-        /* ignore */
-      }
-    })();
-  }, [resumeId, authToken]);
 
   useEffect(() => {
     if (pendingVacancyText && !vacancy) {
@@ -255,38 +238,6 @@ export function SuccessPage() {
     openHhTextView("success");
   };
 
-  const handleGenerateCoverLetter = async () => {
-    if (!resumeId || !authToken || coverLetterLoading) return;
-    setCoverLetterLoading(true);
-    trackEvent("cover_letter_generate");
-    try {
-      const token = authToken || (await ensureAuthToken());
-      const { cover_letter: text } = await generateCoverLetter(
-        token,
-        resumeId,
-        vacancy.trim(),
-      );
-      setCoverLetter(text);
-      getTg()?.HapticFeedback?.notificationOccurred("success");
-      showToast("Сопроводительное письмо готово");
-    } catch {
-      alert("Не удалось создать письмо. Попробуйте позже.");
-    } finally {
-      setCoverLetterLoading(false);
-    }
-  };
-
-  const copyCoverLetter = async () => {
-    if (!coverLetter) return;
-    try {
-      await navigator.clipboard.writeText(coverLetter);
-      getTg()?.HapticFeedback?.notificationOccurred("success");
-      showToast("Письмо скопировано");
-    } catch {
-      showToast("Не удалось скопировать");
-    }
-  };
-
   return (
     <Screen withBottomBar className="success-page px-4">
       <AppHeader onBack={handleBack} showBack />
@@ -326,40 +277,13 @@ export function SuccessPage() {
             </span>
           </button>
 
-          <section className="success-section" aria-labelledby="success-cover-heading">
-            <div className="success-section__head">
-              <h3 id="success-cover-heading" className="success-section__title">
-                ✉️ Сопроводительное письмо
-              </h3>
-              <p className="success-section__text">
-                Отклики с письмом получают на 27% больше приглашений на собеседование
-              </p>
-            </div>
-            {coverLetter ? (
-              <>
-                <textarea
-                  readOnly
-                  value={coverLetter}
-                  rows={6}
-                  className="success-section__textarea success-section__textarea--readonly"
-                  aria-label="Сопроводительное письмо"
-                />
-                <Button variant="outline" onClick={() => void copyCoverLetter()} className="w-full">
-                  <Icon name="content_copy" size={18} />
-                  Скопировать письмо
-                </Button>
-              </>
-            ) : (
-              <Button
-                variant="brand"
-                onClick={() => void handleGenerateCoverLetter()}
-                disabled={coverLetterLoading}
-                className="w-full"
-              >
-                {coverLetterLoading ? "Генерирую письмо…" : "✨ Создать сопроводительное письмо"}
-              </Button>
-            )}
-          </section>
+          {resumeId && authToken ? (
+            <CoverLetterSection
+              resumeId={resumeId}
+              authToken={authToken}
+              initialVacancyText={vacancy}
+            />
+          ) : null}
         </div>
 
         <section className="success-section" aria-labelledby="success-adapt-heading">

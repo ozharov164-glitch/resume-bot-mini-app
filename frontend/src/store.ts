@@ -41,6 +41,7 @@ interface AppState {
   setFounder: (value: boolean) => void;
   onboardingMode: OnboardingMode;
   previewReturnPage: Page;
+  previewScrollTarget: "cover-letter" | null;
   hhTextReturnPage: Page;
   openHhTextView: (returnPage?: Page) => void;
   onboardingStep: number;
@@ -67,7 +68,7 @@ interface AppState {
     answers?: Partial<UserAnswers>,
   ) => void;
   /** Navigate to preview immediately; Preview page hydrates data + image. */
-  openResumeFromHistoryPending: (resumeId: string, isPaid: boolean) => void;
+  openResumeFromHistoryPending: (resumeId: string, isPaid: boolean, scrollTarget?: "cover-letter") => void;
 }
 
 export const useAppStore = create<AppState>((set, get) => ({
@@ -96,6 +97,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   setFounder: (value) => set({ isFounder: value }),
   onboardingMode: "create",
   previewReturnPage: "home",
+  previewScrollTarget: null,
   hhTextReturnPage: "preview",
   openHhTextView: (returnPage) =>
     set((state) => ({
@@ -151,7 +153,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       previewReturnPage: "history",
       onboardingMode: "create",
     }),
-  openResumeFromHistoryPending: (resumeId, isPaid) =>
+  openResumeFromHistoryPending: (resumeId, isPaid, scrollTarget) =>
     set({
       resumeId,
       resumeData: null,
@@ -161,6 +163,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       photoMode: "none",
       page: "preview",
       previewReturnPage: "history",
+      previewScrollTarget: scrollTarget ?? null,
       onboardingMode: "create",
     }),
 }));

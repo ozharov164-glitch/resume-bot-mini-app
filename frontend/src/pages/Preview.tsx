@@ -4,6 +4,7 @@ import { motion } from "motion/react";
 import { trackEvent } from "../lib/analytics";
 
 import { AtsBadge } from "../components/preview/AtsBadge";
+import { CoverLetterSection } from "../components/cover/CoverLetterSection";
 import { PreviewAssemblyLoader } from "../components/preview/PreviewAssemblyLoader";
 import { PreviewImageFrame } from "../components/preview/PreviewImageFrame";
 import { PreviewPaidHero } from "../components/preview/PreviewPaidHero";
@@ -44,6 +45,7 @@ export function PreviewPage() {
     setPage,
     startEditResume,
     previewReturnPage,
+    previewScrollTarget,
     isPaid,
     openHhTextView,
     pendingVacancyText,
@@ -163,6 +165,15 @@ export function PreviewPage() {
       cancelled = true;
     };
   }, [authToken, resumeData, resumeId]);
+
+  useEffect(() => {
+    if (!assemblyDone || previewScrollTarget !== "cover-letter") return;
+    const timer = window.setTimeout(() => {
+      document.getElementById("cover-letter-section")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      useAppStore.setState({ previewScrollTarget: null });
+    }, 400);
+    return () => window.clearTimeout(timer);
+  }, [assemblyDone, previewScrollTarget]);
 
   if (hydrateError || (!resumeId && !resumeData)) {
     return (
@@ -310,6 +321,15 @@ export function PreviewPage() {
 
               {previewPaid ? (
                 <HhTextEntryCard onClick={() => openHhTextView("preview")} />
+              ) : null}
+
+              {previewPaid && resumeId && authToken ? (
+                <CoverLetterSection
+                  resumeId={resumeId}
+                  authToken={authToken}
+                  initialVacancyText={pendingVacancyText}
+                  compact
+                />
               ) : null}
 
               {founderActive ? <FounderBadge /> : null}
