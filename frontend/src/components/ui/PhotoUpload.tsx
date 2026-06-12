@@ -116,15 +116,19 @@ export function PhotoUpload({
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [imgBroken, setImgBroken] = useState(false);
   const applyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const isCompact = variant === "compact";
 
   useEffect(() => {
-    if (photoJpegBase64 && !previewUrl && !sourceImg) {
+    setImgBroken(false);
+    if (photoJpegBase64?.trim()) {
       setPreviewUrl(`data:image/jpeg;base64,${photoJpegBase64}`);
+    } else if (!sourceImg) {
+      setPreviewUrl(null);
     }
-  }, [photoJpegBase64, previewUrl, sourceImg]);
+  }, [photoJpegBase64, sourceImg]);
 
   const persistCrop = useCallback(
     async (img: HTMLImageElement, zoomLevel: number) => {
@@ -217,7 +221,7 @@ export function PhotoUpload({
     void handleRemove();
   };
 
-  const hasPhoto = Boolean(previewUrl || photoJpegBase64);
+  const hasPhoto = Boolean((previewUrl || photoJpegBase64?.trim()) && !imgBroken);
 
   return (
     <section className={`photo-upload${isCompact ? " photo-upload--compact" : ""}`}>
@@ -236,6 +240,7 @@ export function PhotoUpload({
             src={previewUrl || (photoJpegBase64 ? `data:image/jpeg;base64,${photoJpegBase64}` : "")}
             alt="Предпросмотр фото"
             className="photo-upload__preview-img"
+            onError={() => setImgBroken(true)}
           />
         </div>
       ) : null}

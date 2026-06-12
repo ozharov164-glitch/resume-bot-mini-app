@@ -296,6 +296,7 @@ export interface ResumeListItem {
   is_paid: boolean;
   created_at: string;
   template_id?: string;
+  has_photo?: boolean;
 }
 
 export interface ResumeRecord {

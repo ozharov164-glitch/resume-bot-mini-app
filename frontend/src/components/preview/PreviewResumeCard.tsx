@@ -12,6 +12,32 @@ function initialsFromName(name: string | undefined): string {
   return (parts[0]?.slice(0, 2) ?? "?").toUpperCase();
 }
 
+function ProfileAvatar({ resume }: { resume: ResumeData }) {
+  const photoB64 = resume.photo_jpeg_base64?.trim();
+  if (photoB64) {
+    return (
+      <img
+        src={`data:image/jpeg;base64,${photoB64}`}
+        alt=""
+        className="h-16 w-16 shrink-0 rounded-full border object-cover"
+        style={{ borderColor: "var(--border-subtle)" }}
+      />
+    );
+  }
+  return (
+    <div
+      className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full border text-lg font-bold"
+      style={{
+        background: "var(--surface-card)",
+        borderColor: "var(--border-subtle)",
+        color: "var(--brand)",
+      }}
+    >
+      {initialsFromName(resume.full_name)}
+    </div>
+  );
+}
+
 interface PreviewResumeCardProps {
   resume: ResumeData;
 }
@@ -44,16 +70,7 @@ export function PreviewResumeCard({ resume: raw }: PreviewResumeCardProps) {
           className="relative mb-4 flex items-center gap-4 border-b pb-4"
           style={{ borderColor: "var(--border-subtle)" }}
         >
-          <div
-            className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full border text-lg font-bold"
-            style={{
-              background: "var(--surface-card)",
-              borderColor: "var(--border-subtle)",
-              color: "var(--brand)",
-            }}
-          >
-            {initialsFromName(resume.full_name)}
-          </div>
+          <ProfileAvatar resume={resume} />
           <div className="min-w-0">
             <h3 className="truncate text-lg font-bold">{resume.full_name || "Кандидат"}</h3>
             <p className="mt-1 text-sm font-semibold" style={{ color: "var(--brand)" }}>

@@ -30,6 +30,12 @@ const TEMPLATE_BADGE_COLOR: Record<string, string> = {
   compact: "#7c3aed",
 };
 
+function initialsFromName(name: string | undefined): string {
+  const parts = (name ?? "").trim().split(/\s+/).filter(Boolean);
+  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+  return (parts[0]?.slice(0, 2) ?? "?").toUpperCase();
+}
+
 export function HistoryPage() {
   const { setPage, openResumeFromHistoryPending, openHhTextView } = useAppStore();
   const [items, setItems] = useState<ResumeListItem[]>([]);
@@ -139,10 +145,10 @@ export function HistoryPage() {
           >
             <div className="history-card-icon-wrap">
               <div
-                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl"
-                style={{ background: "var(--brand-muted)" }}
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-sm font-bold"
+                style={{ background: "var(--brand-muted)", color: "var(--brand)" }}
               >
-                <Icon name="description" style={{ color: "var(--brand)" }} />
+                {initialsFromName(item.full_name)}
               </div>
               {item.is_paid ? (
                 <span className="history-card-paid-mark" aria-hidden>
@@ -153,12 +159,17 @@ export function HistoryPage() {
             <div className="min-w-0 flex-1">
               <div className="flex items-start justify-between gap-2">
                 <div className="truncate font-semibold">{item.full_name || "Без имени"}</div>
-                {item.is_paid ? <PaidBadge /> : null}
+                {item.is_paid ? <PaidBadge /> : (
+                  <span className="history-unpaid-badge">Не оплачено</span>
+                )}
               </div>
               <div className="truncate text-sm" style={{ color: "var(--text-muted)" }}>
                 {item.target_position || "Должность не указана"}
               </div>
               <div className="mt-1 flex flex-wrap items-center gap-2">
+                {item.has_photo ? (
+                  <span className="history-photo-badge">С фото</span>
+                ) : null}
                 {item.template_id ? (
                   <span
                     className="history-template-badge"

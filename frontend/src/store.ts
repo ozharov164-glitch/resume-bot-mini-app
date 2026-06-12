@@ -157,6 +157,8 @@ export const useAppStore = create<AppState>((set, get) => ({
       resumeData: null,
       isPaid,
       answers: {},
+      photoJpegBase64: null,
+      photoMode: "none",
       page: "preview",
       previewReturnPage: "history",
       onboardingMode: "create",

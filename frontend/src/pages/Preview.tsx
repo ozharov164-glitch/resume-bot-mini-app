@@ -31,6 +31,11 @@ function summaryTeaserText(summary: string, maxLen = 180): string {
   return `${trimmed.slice(0, maxLen).trimEnd()}…`;
 }
 
+function previewScreenTitle(fromHistory: boolean, isPaid: boolean): string {
+  if (!fromHistory) return "Предпросмотр";
+  return isPaid ? "Моё резюме" : "Незавершённое резюме";
+}
+
 export function PreviewPage() {
   const {
     resumeData,
@@ -56,6 +61,8 @@ export function PreviewPage() {
 
   const previewLocked = !isPaid;
   const previewPaid = isPaid;
+  const fromHistory = previewReturnPage === "history";
+  const screenTitle = previewScreenTitle(fromHistory, previewPaid);
   const useFitLayout = previewLocked || previewPaid;
 
   const imageReady = previewImage.status === "ready";
@@ -160,11 +167,13 @@ export function PreviewPage() {
   if (hydrateError || (!resumeId && !resumeData)) {
     return (
       <Screen centered className="preview-page px-4">
-        <AppHeader onBack={handleBack} showBack title="Предпросмотр" />
+        <AppHeader onBack={handleBack} showBack title={screenTitle} />
         <main className="preview-page-empty">
-          <p className="preview-page-error-title">Не удалось открыть предпросмотр</p>
+          <p className="preview-page-error-title">Не удалось открыть резюме</p>
           <p className="preview-page-caption">
-            Попробуйте сформировать резюме ещё раз или откройте его из истории.
+            {fromHistory
+              ? "Попробуйте обновить список или создайте резюме заново."
+              : "Попробуйте сформировать резюме ещё раз или откройте его из истории."}
           </p>
           <Button variant="brand" onClick={() => setPage("home")}>
             На главную
@@ -177,12 +186,12 @@ export function PreviewPage() {
   if (!assemblyDone) {
     return (
       <Screen className="preview-page preview-page--assembly px-4">
-        <AppHeader onBack={handleBack} showBack title="Предпросмотр" />
+        <AppHeader onBack={handleBack} showBack title={screenTitle} />
         <main className="preview-page-assembly-main">
           <PreviewAssemblyLoader
             secondary={
-              previewReturnPage === "history"
-                ? "Открываем сохранённое резюме из истории"
+              fromHistory
+                ? "Загружаем ваше сохранённое резюме"
                 : "Секунду — собираем экран предпросмотра"
             }
           />
@@ -242,7 +251,7 @@ export function PreviewPage() {
           : "preview-page"
       }
     >
-      <AppHeader onBack={handleBack} showBack title="Предпросмотр" />
+      <AppHeader onBack={handleBack} showBack title={screenTitle} />
 
       <motion.div
         key="preview-content"
@@ -252,6 +261,12 @@ export function PreviewPage() {
         transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
       >
         <main className={mainClass}>
+              {fromHistory && !previewPaid ? (
+                <p className="preview-history-hint">
+                  Резюме не оплачено — ниже можно доплатить и получить PDF, DOCX и текст для hh.ru.
+                </p>
+              ) : null}
+
               {previewPaid ? (
                 <PreviewPaidHero onResendPdf={() => void handleResendPdf()} resending={resendingPdf} />
               ) : null}
@@ -301,8 +316,8 @@ export function PreviewPage() {
             </main>
 
             <FixedBottomBar>
-              <div className={`preview-bottom-stack${previewLocked ? " preview-bottom-stack--compact" : ""}`}>
-                {previewLocked ? (
+              <div className={`preview-bottom-stack${previewLocked && !fromHistory ? " preview-bottom-stack--compact" : ""}`}>
+                {previewLocked && !fromHistory ? (
                   <div className="preview-share-hint">
                     <span>Знаете кого-то, кто ищет работу?</span>
                     <button type="button" className="preview-share-link" onClick={handleShare}>
@@ -311,7 +326,7 @@ export function PreviewPage() {
                   </div>
                 ) : null}
 
-                {previewLocked ? (
+                {previewLocked && !fromHistory ? (
                   <ul className="preview-checklist">
                     {PREVIEW_CHECKLIST.map((text) => (
                       <li key={text} className="preview-checklist-item">
@@ -324,7 +339,7 @@ export function PreviewPage() {
                   </ul>
                 ) : null}
 
-                {previewLocked && !pendingVacancyText ? (
+                {previewLocked && !pendingVacancyText && !fromHistory ? (
                   <div className="preview-vacancy-cta">
                     <span className="preview-vacancy-cta__icon" aria-hidden>🎯</span>
                     <div className="preview-vacancy-cta__copy">
